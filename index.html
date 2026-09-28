@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sakura Breeze AR - Main Display</title>
+  <meta name="description" content="Sakura Breeze AR - Web Native interactive installation" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Non-HTTPS Security Warning Banner -->
+    <div id="https-warning" class="https-warning" style="display: none;">
+      <div class="warning-content">
+        <span class="warning-icon">⚠️</span>
+        <span class="warning-text">Please open this website via HTTPS. Secure context is strictly required for Web Native sensors and connectivity.</span>
+      </div>
+    </div>
+
+    <div class="installation-container">
+      <div class="zen-backdrop">
+        <div class="sakura-glow"></div>
+        <div class="ambient-circle"></div>
+      </div>
+
+      <main class="content-wrapper">
+        <header class="header">
+          <div class="badge">WEB NATIVE INSTALLATION</div>
+          <h1 class="title">Sakura Breeze</h1>
+          <p class="subtitle">"Let the breeze begin with your voice."</p>
+        </header>
+
+        <!-- Main Status Panel -->
+        <section class="status-panel">
+          <div id="status-badge" class="status-badge status-disconnected">
+            <span id="status-dot" class="pulsing-dot"></span>
+            <span id="connection-status" class="status-text">DISCONNECTED</span>
+          </div>
+          <div id="ar-status" class="ar-status-text">AR Renderer Ready</div>
+        </section>
+
+        <!-- WebRTC Connection Section (Phase 3) -->
+        <section class="webrtc-card">
+          <div class="webrtc-header">
+            <h2 class="webrtc-title">
+              <span>WebRTC Connection</span>
+            </h2>
+            <div class="webrtc-actions">
+              <span class="webrtc-badge">RTCDataChannel (sakura)</span>
+              <button id="btn-reset-webrtc" class="btn-reset" type="button">Reset WebRTC</button>
+            </div>
+          </div>
+
+          <!-- Dedicated Error Diagnostics Banner -->
+          <div id="error-diagnostics" class="error-box"></div>
+
+          <div class="webrtc-sections">
+            <!-- Step 1: Offer Signaling JSON -->
+            <div class="webrtc-step">
+              <div class="step-header">
+                <span class="step-label">1. Offer Signaling JSON</span>
+                <span class="step-badge">MacBook &rarr; iPhone</span>
+              </div>
+              <textarea
+                id="offer-sdp"
+                class="sdp-textarea"
+                placeholder="Click 'Create Offer' to generate Offer Signaling JSON..."
+                readonly
+              ></textarea>
+              <div class="btn-group">
+                <button id="btn-create-offer" class="btn-primary" type="button">Create Offer</button>
+                <button id="btn-copy-offer" class="btn-secondary" type="button">Copy Offer</button>
+                <button id="btn-clear-offer" class="btn-clear" type="button">Clear</button>
+              </div>
+            </div>
+
+            <!-- Step 2: Paste Answer Signaling JSON & Connect -->
+            <div class="webrtc-step">
+              <div class="step-header">
+                <span class="step-label">2. Paste Answer Signaling JSON</span>
+                <span class="step-badge">From iPhone</span>
+              </div>
+              <textarea
+                id="answer-sdp"
+                class="sdp-textarea"
+                placeholder='Paste the Answer Signaling JSON (e.g. {"type":"answer","sdp":"..."}) from iPhone here...'
+              ></textarea>
+              <div class="btn-group">
+                <button id="btn-connect" class="btn-primary" type="button">Connect</button>
+                <button id="btn-clear-answer" class="btn-clear" type="button">Clear</button>
+              </div>
+            </div>
+
+            <!-- Signaling Diagnostics -->
+            <div class="signaling-diagnostics-panel">
+              <div class="sig-header">
+                <span class="sig-title">Signaling Diagnostics</span>
+              </div>
+              <div class="sig-grid">
+                <div class="sig-item">
+                  <span class="sig-label">Payload Type</span>
+                  <span id="sig-payload-type" class="sig-value">none</span>
+                </div>
+                <div class="sig-item">
+                  <span class="sig-label">SDP Length</span>
+                  <span id="sig-sdp-length" class="sig-value">0 chars</span>
+                </div>
+                <div class="sig-item">
+                  <span class="sig-label">First Line</span>
+                  <span id="sig-first-line" class="sig-value">-</span>
+                </div>
+                <div class="sig-item">
+                  <span class="sig-label">Last Line</span>
+                  <span id="sig-last-line" class="sig-value">-</span>
+                </div>
+                <div class="sig-item">
+                  <span class="sig-label">SDP Lines</span>
+                  <span id="sig-line-count" class="sig-value">0</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- DataChannel Test & Log -->
+            <div class="datachannel-panel">
+              <div class="step-header">
+                <span class="step-label">DataChannel Test & Activity</span>
+                <span id="dc-state-badge" class="step-badge">channel: sakura</span>
+              </div>
+              <div id="datachannel-log" class="log-box">
+                <div class="log-entry log-system">
+                  <span class="log-time">[System]</span> Ready to establish DataChannel.
+                </div>
+              </div>
+              <div class="custom-msg-row">
+                <input
+                  id="custom-msg-input"
+                  class="custom-msg-input"
+                  type="text"
+                  placeholder="Send a test message over DataChannel..."
+                  disabled
+                />
+                <button id="btn-send-msg" class="btn-secondary" type="button" disabled>Send</button>
+              </div>
+            </div>
+
+            <!-- Developer Mode / PeerConnection Session Diagnostics -->
+            <div class="debug-panel">
+              <div class="debug-header">
+                <span class="debug-title">Developer Mode &mdash; PeerConnection Session Diagnostics</span>
+              </div>
+              <div class="debug-grid">
+                <div class="debug-item">
+                  <span class="debug-label">Session ID</span>
+                  <span id="debug-session-id" class="debug-value">-</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">signalingState</span>
+                  <span id="debug-signal-state" class="debug-value">stable</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Local Desc</span>
+                  <span id="debug-local-desc" class="debug-value">none</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Remote Desc</span>
+                  <span id="debug-remote-desc" class="debug-value">none</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">DataChannel</span>
+                  <span id="debug-dc-state" class="debug-value">none</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">connectionState</span>
+                  <span id="debug-conn-state" class="debug-value">new</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">iceConnection</span>
+                  <span id="debug-ice-conn-state" class="debug-value">new</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">iceGathering</span>
+                  <span id="debug-ice-gather-state" class="debug-value">new</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Connection Environment & Diagnostics (Preserved from Phase 2) -->
+        <section class="diagnostics-card">
+          <div class="diagnostics-header">
+            <h2 class="diagnostics-title">Connection Environment</h2>
+            <span class="diagnostics-badge">MacBook Display</span>
+          </div>
+
+          <div class="diagnostics-grid">
+            <div class="diag-item">
+              <span class="diag-label">Browser</span>
+              <span id="diag-browser" class="diag-value">Detecting...</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">HTTPS</span>
+              <span id="diag-https" class="diag-value">Detecting...</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Online</span>
+              <span id="diag-online" class="diag-value">Detecting...</span>
+            </div>
+          </div>
+
+          <div class="architecture-notice">
+            <p class="notice-title">💡 Architecture Note</p>
+            <p class="notice-body">
+              USB-C is primarily used to establish a network environment between devices.
+              Camera, Microphone, and Motion will later be transmitted via WebRTC.
+            </p>
+            <p class="notice-subtext">
+              * Note: Web browsers do not access USB hardware directly; USB creates local IP networking across connected devices.
+            </p>
+          </div>
+        </section>
+
+        <footer class="footer-nav">
+          <a href="phone.html" class="controller-link" target="_blank" rel="noopener">
+            📱 Open iPhone Controller (phone.html)
+          </a>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <script src="./diagnostics.js"></script>
+  <script src="./ar.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
