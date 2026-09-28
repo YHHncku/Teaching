@@ -239,6 +239,11 @@
         pointer-events: auto;
       }
 
+      .game-left-hud {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
       .game-title-group {
         display: flex;
         flex-direction: column;
@@ -258,10 +263,100 @@
         color: var(--text-cyan);
       }
 
+      /* Prominent HUD for Score & Lives (20-24px font, Layer 4 above scanlines) */
+      .hud-score-lives {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        background: rgba(3, 12, 22, 0.92);
+        border: 2px solid var(--border-color);
+        border-radius: 6px;
+        padding: 6px 16px;
+        box-shadow: 0 0 16px rgba(0, 240, 255, 0.18);
+      }
+      .hud-item {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-family: var(--font-mono);
+        font-size: 22px; /* 20-24px as requested */
+        font-weight: 900;
+        letter-spacing: 1.5px;
+      }
+      .hud-label {
+        font-size: 14px;
+        color: var(--text-dim);
+        font-weight: 800;
+        letter-spacing: 1.2px;
+      }
+      .hud-value-score {
+        color: #ffffff;
+        text-shadow: 0 0 14px rgba(0, 240, 255, 0.95);
+        min-width: 60px;
+      }
+      .hud-value-lives {
+        color: var(--text-pink);
+        text-shadow: 0 0 16px rgba(255, 0, 127, 0.95);
+        letter-spacing: 4px;
+      }
+
       .game-actions {
         display: flex;
         align-items: center;
         gap: 10px;
+      }
+
+      /* FULLSCREEN DARK SEMI-TRANSPARENT PAUSE OVERLAY */
+      #pause-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(4, 11, 20, 0.85);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 60; /* Above game graphics & scanlines, below drawer */
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        cursor: pointer;
+      }
+      #pause-overlay.active {
+        display: flex;
+      }
+      .pause-box {
+        text-align: center;
+        padding: 34px 52px;
+        background: rgba(6, 20, 34, 0.96);
+        border: 2px solid var(--text-amber);
+        border-radius: 10px;
+        box-shadow: 0 0 45px rgba(255, 190, 11, 0.45);
+        animation: pausePulse 2.2s infinite ease-in-out;
+      }
+      @keyframes pausePulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 35px rgba(255, 190, 11, 0.35); }
+        50% { transform: scale(1.02); box-shadow: 0 0 55px rgba(255, 190, 11, 0.65); }
+      }
+      .pause-title {
+        font-size: clamp(44px, 6vw, 68px);
+        font-weight: 900;
+        letter-spacing: 5px;
+        color: var(--text-amber);
+        text-shadow: 0 0 28px rgba(255, 190, 11, 0.9);
+        margin-bottom: 14px;
+      }
+      .pause-subtitle {
+        font-size: clamp(20px, 2.8vw, 28px);
+        font-weight: 800;
+        letter-spacing: 2.5px;
+        color: #ffffff;
+        text-shadow: 0 0 16px rgba(255, 255, 255, 0.8);
+        margin-bottom: 16px;
+      }
+      .pause-hint {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 1.5px;
+        color: var(--text-dim);
       }
 
       /* CENTERED ANNOUNCEMENT BANNER (READY, PAUSED, GAME OVER - scaled to ~70%) */
@@ -318,18 +413,18 @@
         transform: scale(1.2);
       }
 
-      /* PAIRING DRAWER / MODAL IN GAME MODE */
+      /* PAIRING DRAWER / MODAL IN GAME MODE (COMPACT FOR UNIVERSAL CLIPBOARD) */
       .modal-drawer {
         position: fixed;
         top: 85px;
-        right: 24px;
-        width: 480px;
-        max-width: calc(100vw - 48px);
+        right: 20px;
+        width: 380px;
+        max-width: calc(100vw - 36px);
         background: var(--bg-card);
         border: 2px solid var(--border-glow);
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 240, 255, 0.25);
+        box-shadow: 0 10px 35px rgba(0, 0, 0, 0.85), 0 0 24px rgba(0, 240, 255, 0.22);
         border-radius: 8px;
-        padding: 22px;
+        padding: 16px;
         z-index: 100;
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -345,13 +440,13 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
         border-bottom: 1px solid var(--border-color);
       }
       .drawer-title {
-        font-size: 18px;
-        letter-spacing: 2px;
+        font-size: 15px;
+        letter-spacing: 1.5px;
         color: var(--text-cyan);
         text-transform: uppercase;
         font-weight: 900;
@@ -360,52 +455,36 @@
         background: transparent;
         border: none;
         color: var(--text-dim);
-        font-size: 24px;
-        padding: 2px 8px;
+        font-size: 20px;
+        padding: 2px 6px;
         box-shadow: none;
       }
       .drawer-close:hover {
         color: #ffffff;
       }
 
-      /* REAL SCANNABLE QR CODE CONTAINER */
-      .qr-showcase {
+      /* COMPACT PHONE LINK BOX (UNIVERSAL CLIPBOARD) */
+      .phone-link-box {
         display: flex;
         flex-direction: column;
-        align-items: center;
-        background: rgba(2, 8, 16, 0.8);
+        background: rgba(2, 8, 16, 0.85);
         border: 1px solid var(--border-color);
         border-radius: 6px;
-        padding: 16px;
-        margin-bottom: 16px;
-      }
-      .qr-canvas-box {
-        background: #ffffff; /* STRICT WHITE BACKGROUND FOR SCANNABILITY */
         padding: 12px;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+        margin-bottom: 14px;
       }
-      #qr-code-canvas {
-        display: block;
-        width: 220px;
-        height: 220px;
-        image-rendering: pixelated;
-      }
-      .qr-url-text {
-        font-size: 13px;
+      .ctrl-url-text {
+        font-size: 12px;
         color: var(--text-cyan);
         word-break: break-all;
-        text-align: center;
-        margin-top: 10px;
         user-select: all;
         -webkit-user-select: all;
-        padding: 6px;
+        padding: 8px;
         background: rgba(0, 240, 255, 0.08);
+        border: 1px solid rgba(0, 240, 255, 0.2);
         border-radius: 4px;
         width: 100%;
+        line-height: 1.4;
       }
 
       .step-block {
@@ -786,9 +865,23 @@
 
       <!-- Layer 4: Top Header HUD -->
       <header id="game-header">
-        <div class="game-title-group">
-          <div class="game-logo">BREAKOUT</div>
-          <div class="game-sublogo">// EMBODIED IPHONE CONTROLLER</div>
+        <div class="game-left-hud">
+          <div class="game-title-group">
+            <div class="game-logo">BREAKOUT</div>
+            <div class="game-sublogo">// EMBODIED IPHONE CONTROLLER</div>
+          </div>
+
+          <!-- Bright high-contrast SCORE and LIVES HUD (20-24px) -->
+          <div class="hud-score-lives">
+            <span class="hud-item">
+              <span class="hud-label">SCORE</span>
+              <span id="hud-score-val" class="hud-value-score">0000</span>
+            </span>
+            <span class="hud-item">
+              <span class="hud-label">LIVES</span>
+              <span id="hud-lives-val" class="hud-value-lives">● ● ●</span>
+            </span>
+          </div>
         </div>
 
         <div class="game-actions">
@@ -798,6 +891,9 @@
           </div>
           <button id="btn-manual-start" class="btn-green" title="Start Game (Space / Triple-Tap)">
             START GAME
+          </button>
+          <button id="btn-manual-pause" class="btn-amber" title="Pause / Resume Game (P / Shake)">
+            PAUSE
           </button>
           <button id="btn-toggle-pair" class="btn-cyan" title="Connect iPhone motion controller">
             CONNECT PHONE
@@ -811,7 +907,16 @@
         </div>
       </header>
 
-      <!-- Center Announcement Overlay (READY, PAUSED, GAME OVER, TRIPLE TAP PROGRESS) -->
+      <!-- Fullscreen Dark Semi-Transparent Pause Overlay -->
+      <div id="pause-overlay" title="Click or shake phone to resume">
+        <div class="pause-box">
+          <div class="pause-title">PAUSED</div>
+          <div class="pause-subtitle">SHAKE PHONE TO RESUME</div>
+          <div class="pause-hint">[ PRESS 'P' OR CLICK TO RESUME ]</div>
+        </div>
+      </div>
+
+      <!-- Center Announcement Overlay (READY, GAME OVER, TRIPLE TAP PROGRESS) -->
       <div id="game-banner-overlay">
         <div id="banner-main" class="banner-main-title">READY</div>
         <div id="banner-sub" class="banner-sub-title">TAP PHONE 3× TO START</div>
@@ -822,27 +927,24 @@
         </div>
       </div>
 
-      <!-- Pairing Drawer (With REAL SCANNABLE QR Code) -->
+      <!-- Pairing Drawer - Compact for Apple Universal Clipboard -->
       <div id="game-pair-drawer" class="modal-drawer collapsed">
         <div class="drawer-header">
           <div class="drawer-title">CONNECT IPHONE CONTROLLER</div>
           <button id="btn-close-pair" class="drawer-close">&times;</button>
         </div>
 
-        <!-- Real Scannable QR Code Section -->
-        <div class="qr-showcase">
-          <div style="font-size: 14px; font-weight: 800; color: var(--text-amber); margin-bottom: 8px;">
-            SCAN WITH IPHONE CAMERA:
+        <!-- Phone Link Box for Apple Universal Clipboard -->
+        <div class="phone-link-box">
+          <div style="font-size: 11px; font-weight: 800; color: var(--text-amber); margin-bottom: 6px; letter-spacing: 1px;">
+            CONTROLLER LINK (UNIVERSAL CLIPBOARD):
           </div>
-          <div class="qr-canvas-box">
-            <canvas id="qr-code-canvas"></canvas>
-          </div>
-          <div class="qr-url-text" id="controller-url-display">...</div>
-          <div style="display: flex; gap: 10px; width: 100%; margin-top: 10px;">
-            <button id="btn-copy-ctrl-link" style="flex: 1; font-size: 14px; padding: 10px;">
+          <div class="ctrl-url-text" id="controller-url-display">...</div>
+          <div style="display: flex; gap: 8px; width: 100%; margin-top: 8px;">
+            <button id="btn-copy-ctrl-link" class="btn-green" style="flex: 1; font-size: 11px; padding: 8px 10px;">
               COPY PHONE LINK
             </button>
-            <button id="btn-open-tab" style="font-size: 14px; padding: 10px;">
+            <button id="btn-open-tab" style="font-size: 11px; padding: 8px 10px;">
               OPEN TAB
             </button>
           </div>
@@ -852,11 +954,11 @@
         <div class="step-block">
           <div class="step-label">
             <span><span class="step-badge">STEP 1:</span> CREATE OFFER ON MAC</span>
-            <button id="btn-copy-offer" style="padding: 6px 12px; font-size: 13px;" disabled>
+            <button id="btn-copy-offer" style="padding: 4px 10px; font-size: 11px;" disabled>
               COPY OFFER
             </button>
           </div>
-          <button id="btn-create-offer" class="btn-accent" style="width: 100%; margin-bottom: 8px;">
+          <button id="btn-create-offer" class="btn-accent" style="width: 100%; margin-bottom: 6px; font-size: 12px; padding: 8px 12px;">
             CREATE OFFER
           </button>
           <textarea id="mac-offer-text" rows="3" placeholder="Click 'CREATE OFFER' to generate payload..." readonly></textarea>
@@ -866,12 +968,12 @@
         <div class="step-block">
           <div class="step-label">
             <span><span class="step-badge">STEP 2:</span> PASTE ANSWER FROM IPHONE</span>
-            <button id="btn-paste-answer" style="padding: 6px 12px; font-size: 13px;">
+            <button id="btn-paste-answer" style="padding: 4px 10px; font-size: 11px;">
               PASTE
             </button>
           </div>
           <textarea id="mac-answer-text" rows="3" placeholder="Paste Answer JSON from iPhone here..."></textarea>
-          <button id="btn-apply-answer" class="btn-green" style="width: 100%; margin-top: 8px;" disabled>
+          <button id="btn-apply-answer" class="btn-green" style="width: 100%; margin-top: 6px; font-size: 12px; padding: 8px 12px;" disabled>
             APPLY ANSWER
           </button>
         </div>
@@ -1051,307 +1153,6 @@
         </div>
       </div>
     </div>
-
-    <!-- ============================================================
-         LIGHTWEIGHT STANDALONE QR CODE GENERATOR (ZERO DEPENDENCIES)
-         ============================================================ -->
-    <script>
-      /**
-       * Pure self-contained QR Code Matrix Generator (Byte mode, Version 1-10)
-       * Produces a valid, standards-compliant QR code matrix runnable fully offline.
-       */
-      const QRCodeLib = (function () {
-        function QRBitBuffer() {
-          this.buffer = [];
-          this.length = 0;
-        }
-        QRBitBuffer.prototype = {
-          get: function (index) {
-            return ((this.buffer[Math.floor(index / 8)] >>> (7 - (index % 8))) & 1) == 1;
-          },
-          put: function (num, length) {
-            for (let i = 0; i < length; i++) {
-              this.putBit(((num >>> (length - i - 1)) & 1) == 1);
-            }
-          },
-          putBit: function (bit) {
-            if (this.length == this.buffer.length * 8) {
-              this.buffer.push(0);
-            }
-            if (bit) {
-              this.buffer[Math.floor(this.length / 8)] |= 0x80 >>> (this.length % 8);
-            }
-            this.length++;
-          }
-        };
-
-        const QRPolynomial = function (num, shift) {
-          let offset = 0;
-          while (offset < num.length && num[offset] == 0) offset++;
-          this.num = new Array(num.length - offset + shift);
-          for (let i = 0; i < num.length - offset; i++) this.num[i] = num[i + offset];
-        };
-        QRPolynomial.prototype = {
-          get: function (index) { return this.num[index]; },
-          getLength: function () { return this.num.length; },
-          multiply: function (e) {
-            const num = new Array(this.getLength() + e.getLength() - 1).fill(0);
-            for (let i = 0; i < this.getLength(); i++) {
-              for (let j = 0; j < e.getLength(); j++) {
-                num[i + j] ^= QRMath.gmult(this.get(i), e.get(j));
-              }
-            }
-            return new QRPolynomial(num, 0);
-          },
-          mod: function (e) {
-            if (this.getLength() - e.getLength() < 0) return this;
-            const ratio = QRMath.glog(this.get(0)) - QRMath.glog(e.get(0));
-            const num = new Array(this.getLength());
-            for (let i = 0; i < this.getLength(); i++) num[i] = this.get(i);
-            for (let i = 0; i < e.getLength(); i++) {
-              num[i] ^= QRMath.gexp(QRMath.glog(e.get(i)) + ratio);
-            }
-            return new QRPolynomial(num, 0).mod(e);
-          }
-        };
-
-        const QRMath = {
-          glog: function (n) { return QRMath.LOG_TABLE[n]; },
-          gexp: function (n) {
-            while (n < 0) n += 255;
-            while (n >= 256) n -= 255;
-            return QRMath.EXP_TABLE[n];
-          },
-          gmult: function (a, b) {
-            if (a == 0 || b == 0) return 0;
-            return QRMath.gexp(QRMath.glog(a) + QRMath.glog(b));
-          },
-          EXP_TABLE: new Array(256),
-          LOG_TABLE: new Array(256)
-        };
-        for (let i = 0; i < 8; i++) QRMath.EXP_TABLE[i] = 1 << i;
-        for (let i = 8; i < 256; i++) {
-          QRMath.EXP_TABLE[i] = QRMath.EXP_TABLE[i - 4] ^ QRMath.EXP_TABLE[i - 5] ^ QRMath.EXP_TABLE[i - 6] ^ QRMath.EXP_TABLE[i - 8];
-        }
-        for (let i = 0; i < 255; i++) QRMath.LOG_TABLE[QRMath.EXP_TABLE[i]] = i;
-
-        // RS Block definitions [L quality]
-        const RS_BLOCK_TABLE = [
-          [1, 26, 19], [1, 44, 34], [1, 70, 55], [1, 100, 80], [1, 134, 108],
-          [2, 86, 68], [2, 98, 78], [2, 121, 97], [2, 146, 116], [2, 86, 68]
-        ];
-
-        function getRsBlocks(typeNumber) {
-          const rsBlock = RS_BLOCK_TABLE[typeNumber - 1];
-          const count = rsBlock[0];
-          const totalCount = rsBlock[1];
-          const dataCount = rsBlock[2];
-          const list = [];
-          for (let i = 0; i < count; i++) list.push({ totalCount, dataCount });
-          return list;
-        }
-
-        function createData(typeNumber, data) {
-          const rsBlocks = getRsBlocks(typeNumber);
-          const buffer = new QRBitBuffer();
-          // Byte mode = 4
-          buffer.put(4, 4);
-          buffer.put(data.length, typeNumber < 10 ? 8 : 16);
-          for (let i = 0; i < data.length; i++) buffer.put(data.charCodeAt(i), 8);
-
-          // Total data bits
-          let totalDataCount = 0;
-          for (let i = 0; i < rsBlocks.length; i++) totalDataCount += rsBlocks[i].dataCount;
-
-          if (buffer.length + 4 <= totalDataCount * 8) buffer.put(0, 4);
-          while (buffer.length % 8 != 0) buffer.putBit(false);
-          while (true) {
-            if (buffer.length >= totalDataCount * 8) break;
-            buffer.put(0xec, 8);
-            if (buffer.length >= totalDataCount * 8) break;
-            buffer.put(0x11, 8);
-          }
-
-          // RS generator polynomial
-          const numDataBytes = buffer.length / 8;
-          const dataBytes = new Array(numDataBytes);
-          for (let i = 0; i < numDataBytes; i++) dataBytes[i] = buffer.buffer[i];
-
-          // Compute RS code per block
-          let offset = 0;
-          const dcdata = [];
-          const ecdata = [];
-          for (let r = 0; r < rsBlocks.length; r++) {
-            const dcCount = rsBlocks[r].dataCount;
-            const ecCount = rsBlocks[r].totalCount - dcCount;
-            const subData = dataBytes.slice(offset, offset + dcCount);
-            offset += dcCount;
-
-            // Generate error correction poly
-            let ecPoly = new QRPolynomial([1], 0);
-            for (let i = 0; i < ecCount; i++) {
-              ecPoly = ecPoly.multiply(new QRPolynomial([1, QRMath.gexp(i)], 0));
-            }
-            const rawPoly = new QRPolynomial(subData, ecPoly.getLength() - 1);
-            const modPoly = rawPoly.mod(ecPoly);
-
-            const ecBytes = new Array(ecPoly.getLength() - 1);
-            for (let i = 0; i < ecBytes.length; i++) {
-              const modIndex = i + modPoly.getLength() - ecBytes.length;
-              ecBytes[i] = modIndex >= 0 ? modPoly.get(modIndex) : 0;
-            }
-            dcdata.push(subData);
-            ecdata.push(ecBytes);
-          }
-
-          // Interleave bytes
-          const finalBytes = [];
-          let maxDc = 0, maxEc = 0;
-          for (let r = 0; r < rsBlocks.length; r++) {
-            if (rsBlocks[r].dataCount > maxDc) maxDc = rsBlocks[r].dataCount;
-            const ecCount = rsBlocks[r].totalCount - rsBlocks[r].dataCount;
-            if (ecCount > maxEc) maxEc = ecCount;
-          }
-          for (let i = 0; i < maxDc; i++) {
-            for (let r = 0; r < rsBlocks.length; r++) {
-              if (i < dcdata[r].length) finalBytes.push(dcdata[r][i]);
-            }
-          }
-          for (let i = 0; i < maxEc; i++) {
-            for (let r = 0; r < rsBlocks.length; r++) {
-              if (i < ecdata[r].length) finalBytes.push(ecdata[r][i]);
-            }
-          }
-          return finalBytes;
-        }
-
-        // Full QRCode Builder
-        function QRCode(typeNumber) {
-          this.typeNumber = typeNumber;
-          this.moduleCount = typeNumber * 4 + 17;
-          this.modules = null;
-        }
-
-        QRCode.prototype = {
-          make: function (text) {
-            this.modules = Array.from({ length: this.moduleCount }, () => new Array(this.moduleCount).fill(null));
-            this.setupPositionProbePattern(0, 0);
-            this.setupPositionProbePattern(this.moduleCount - 7, 0);
-            this.setupPositionProbePattern(0, this.moduleCount - 7);
-            this.setupTimingPattern();
-            this.setupTypeInfo();
-            const data = createData(this.typeNumber, text);
-            this.mapData(data);
-          },
-          setupPositionProbePattern: function (row, col) {
-            for (let r = -1; r <= 7; r++) {
-              if (row + r < 0 || this.moduleCount <= row + r) continue;
-              for (let c = -1; c <= 7; c++) {
-                if (col + c < 0 || this.moduleCount <= col + c) continue;
-                if ((0 <= r && r <= 6 && (c == 0 || c == 6)) ||
-                    (0 <= c && c <= 6 && (r == 0 || r == 6)) ||
-                    (2 <= r && r <= 4 && 2 <= c && c <= 4)) {
-                  this.modules[row + r][col + c] = true;
-                } else {
-                  this.modules[row + r][col + c] = false;
-                }
-              }
-            }
-          },
-          setupTimingPattern: function () {
-            for (let i = 8; i < this.moduleCount - 8; i++) {
-              if (this.modules[i][6] === null) this.modules[i][6] = (i % 2 == 0);
-              if (this.modules[6][i] === null) this.modules[6][i] = (i % 2 == 0);
-            }
-          },
-          setupTypeInfo: function () {
-            // Mask pattern 0, Error Correction L = 0b01
-            const bits = 0x77c4; // Pre-calculated BCH code for L + Mask 0
-            for (let i = 0; i < 15; i++) {
-              const mod = ((bits >> i) & 1) == 1;
-              if (i < 6) this.modules[i][8] = mod;
-              else if (i < 8) this.modules[i + 1][8] = mod;
-              else this.modules[this.moduleCount - 15 + i][8] = mod;
-
-              if (i < 8) this.modules[8][this.moduleCount - i - 1] = mod;
-              else if (i < 9) this.modules[8][15 - i - 1 + 1] = mod;
-              else this.modules[8][15 - i - 1] = mod;
-            }
-            this.modules[this.moduleCount - 8][8] = true;
-          },
-          mapData: function (data) {
-            let inc = -1;
-            let row = this.moduleCount - 1;
-            let bitIndex = 7;
-            let byteIndex = 0;
-
-            for (let col = this.moduleCount - 1; col > 0; col -= 2) {
-              if (col == 6) col--;
-              while (true) {
-                for (let c = 0; c < 2; c++) {
-                  if (this.modules[row][col - c] === null) {
-                    let dark = false;
-                    if (byteIndex < data.length) {
-                      dark = ((data[byteIndex] >>> bitIndex) & 1) == 1;
-                    }
-                    // Mask 0: (row + col) % 2 == 0
-                    if ((row + (col - c)) % 2 == 0) dark = !dark;
-                    this.modules[row][col - c] = dark;
-                    bitIndex--;
-                    if (bitIndex == -1) {
-                      byteIndex++;
-                      bitIndex = 7;
-                    }
-                  }
-                }
-                row += inc;
-                if (row < 0 || this.moduleCount <= row) {
-                  row -= inc;
-                  inc = -inc;
-                  break;
-                }
-              }
-            }
-          }
-        };
-
-        return {
-          renderToCanvas: function (canvas, text) {
-            // Select appropriate QR version based on length
-            let typeNumber = 4;
-            if (text.length > 78) typeNumber = 7;
-            if (text.length > 154) typeNumber = 10;
-
-            const qr = new QRCode(typeNumber);
-            qr.make(text);
-
-            const count = qr.moduleCount;
-            const quietZone = 4;
-            const totalModules = count + quietZone * 2;
-            const targetSize = 220; // 220x220 as requested
-            const scale = Math.floor(targetSize / totalModules);
-            const actualSize = totalModules * scale;
-
-            canvas.width = actualSize;
-            canvas.height = actualSize;
-            const ctx = canvas.getContext('2d');
-
-            // High-contrast clean black-on-white (NO CRT or blur on QR)
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, actualSize, actualSize);
-            ctx.fillStyle = '#000000';
-
-            for (let r = 0; r < count; r++) {
-              for (let c = 0; c < count; c++) {
-                if (qr.modules[r][c]) {
-                  ctx.fillRect((c + quietZone) * scale, (r + quietZone) * scale, scale, scale);
-                }
-              }
-            }
-          }
-        };
-      })();
-    </script>
 
     <!-- ============================================================
          CORE APPLICATION JAVASCRIPT
@@ -1914,11 +1715,13 @@
           this.shakeTime = 0;
 
           this.isControllerConnected = false;
+          this.lastPauseToggleTime = 0;
           this.resize();
           window.addEventListener('resize', () => this.resize());
 
           this.initBricks();
           this.resetBallToPaddle();
+          this.notifyState();
         }
 
         resize() {
@@ -2036,6 +1839,12 @@
         }
 
         togglePause() {
+          const now = performance.now();
+          if (now - this.lastPauseToggleTime < 1600) {
+            return;
+          }
+          this.lastPauseToggleTime = now;
+
           if (this.state === 'PLAYING') {
             this.state = 'PAUSED';
             audio.playPause();
@@ -2358,18 +2167,6 @@
             ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
             ctx.restore();
           }
-
-          // Top Score & Lives Display (Large chunky font)
-          ctx.save();
-          ctx.font = '900 24px var(--font-mono)';
-          ctx.fillStyle = '#f0f7ff';
-          ctx.fillText(`SCORE: ${this.score}`, 26, 92);
-
-          const livesText = `LIVES: ${'♥ '.repeat(Math.max(0, this.lives))}`;
-          const livesMetrics = ctx.measureText(livesText);
-          ctx.fillStyle = '#ff007f';
-          ctx.fillText(livesText, this.width - livesMetrics.width - 26, 92);
-          ctx.restore();
         }
 
         drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -2404,6 +2201,11 @@
 
       // Game Mode Elements
       const gameCanvas = document.getElementById('game-canvas');
+      const hudScoreVal = document.getElementById('hud-score-val');
+      const hudLivesVal = document.getElementById('hud-lives-val');
+      const pauseOverlay = document.getElementById('pause-overlay');
+      const btnManualStart = document.getElementById('btn-manual-start');
+      const btnManualPause = document.getElementById('btn-manual-pause');
       const btnTogglePair = document.getElementById('btn-toggle-pair');
       const btnClosePair = document.getElementById('btn-close-pair');
       const gamePairDrawer = document.getElementById('game-pair-drawer');
@@ -2413,7 +2215,6 @@
       const macAnswerText = document.getElementById('mac-answer-text');
       const btnPasteAnswer = document.getElementById('btn-paste-answer');
       const btnApplyAnswer = document.getElementById('btn-apply-answer');
-      const qrCanvas = document.getElementById('qr-code-canvas');
       const ctrlUrlDisplay = document.getElementById('controller-url-display');
       const btnCopyCtrlLink = document.getElementById('btn-copy-ctrl-link');
       const btnOpenTab = document.getElementById('btn-open-tab');
@@ -2492,13 +2293,6 @@
         const ctrlUrl = `${window.location.origin}${window.location.pathname}?mode=controller`;
         ctrlUrlDisplay.textContent = ctrlUrl;
 
-        // Render REAL scannable QR Code on high-contrast canvas
-        try {
-          QRCodeLib.renderToCanvas(qrCanvas, ctrlUrl);
-        } catch (err) {
-          console.warn('QR render error:', err);
-        }
-
         // Initialize Game Canvas
         game = new BreakoutGame(gameCanvas, (info) => updateGameBanner(info));
 
@@ -2527,29 +2321,44 @@
       }
 
       function updateGameBanner(info) {
-        if (info.state === 'READY') {
-          bannerMain.textContent = 'READY';
-          bannerSub.textContent = 'TAP PHONE 3× TO START';
-          bannerMain.style.color = '#ffffff';
-          bannerTapProgress.style.display = 'flex';
+        if (hudScoreVal) {
+          hudScoreVal.textContent = String(info.score || 0).padStart(4, '0');
+        }
+        if (hudLivesVal) {
+          const l = Math.max(0, info.lives);
+          let dots = '';
+          for (let i = 0; i < 3; i++) {
+            dots += (i < l ? '● ' : '○ ');
+          }
+          hudLivesVal.textContent = dots.trim();
+        }
 
-          dot1.className = info.tapCount >= 1 ? 'tap-dot active' : 'tap-dot';
-          dot2.className = info.tapCount >= 2 ? 'tap-dot active' : 'tap-dot';
-          dot3.className = info.tapCount >= 3 ? 'tap-dot active' : 'tap-dot';
-        } else if (info.state === 'PLAYING') {
+        if (info.state === 'PAUSED') {
+          if (pauseOverlay) pauseOverlay.classList.add('active');
           bannerMain.textContent = '';
           bannerSub.textContent = '';
           bannerTapProgress.style.display = 'none';
-        } else if (info.state === 'PAUSED') {
-          bannerMain.textContent = 'PAUSED';
-          bannerSub.textContent = 'SHAKE PHONE TO RESUME';
-          bannerMain.style.color = 'var(--text-amber)';
-          bannerTapProgress.style.display = 'none';
-        } else if (info.state === 'GAME_OVER') {
-          bannerMain.textContent = 'GAME OVER';
-          bannerSub.textContent = 'TAP 3× OR SPACE TO RESTART';
-          bannerMain.style.color = 'var(--text-pink)';
-          bannerTapProgress.style.display = 'none';
+        } else {
+          if (pauseOverlay) pauseOverlay.classList.remove('active');
+          if (info.state === 'READY') {
+            bannerMain.textContent = 'READY';
+            bannerSub.textContent = 'TAP PHONE 3× TO START';
+            bannerMain.style.color = '#ffffff';
+            bannerTapProgress.style.display = 'flex';
+
+            dot1.className = info.tapCount >= 1 ? 'tap-dot active' : 'tap-dot';
+            dot2.className = info.tapCount >= 2 ? 'tap-dot active' : 'tap-dot';
+            dot3.className = info.tapCount >= 3 ? 'tap-dot active' : 'tap-dot';
+          } else if (info.state === 'PLAYING') {
+            bannerMain.textContent = '';
+            bannerSub.textContent = '';
+            bannerTapProgress.style.display = 'none';
+          } else if (info.state === 'GAME_OVER') {
+            bannerMain.textContent = 'GAME OVER';
+            bannerSub.textContent = 'TAP 3× OR SPACE TO RESTART';
+            bannerMain.style.color = 'var(--text-pink)';
+            bannerTapProgress.style.display = 'none';
+          }
         }
       }
 
@@ -2569,6 +2378,13 @@
         }
       }
 
+      // Authoritative Top-Level Pause/Resume Function
+      function togglePause() {
+        if (game) {
+          game.togglePause();
+        }
+      }
+
       // Unified Gesture Dispatcher
       function handleGesture(gestureName, data = {}) {
         if (gestureName === 'tripleTap') {
@@ -2578,7 +2394,7 @@
           if (game) game.setTapProgress(data.count || 1);
         } else if (gestureName === 'shake') {
           debugLogEvent('SHAKE RECEIVED');
-          if (game) game.togglePause();
+          togglePause();
         }
       }
 
@@ -2711,6 +2527,16 @@
             startGame();
           };
         }
+        if (btnManualPause) {
+          btnManualPause.onclick = () => {
+            togglePause();
+          };
+        }
+        if (pauseOverlay) {
+          pauseOverlay.onclick = () => {
+            togglePause();
+          };
+        }
         const btnWidgetStart = document.getElementById('btn-widget-start');
         if (btnWidgetStart) {
           btnWidgetStart.onclick = () => {
@@ -2794,7 +2620,7 @@
             // SPACEBAR calls the SAME authoritative startGame via handleGesture
             handleGesture('tripleTap');
           } else if (e.code === 'KeyP') {
-            handleGesture('shake');
+            togglePause();
           } else if (e.code === 'KeyD') {
             isDebug = !isDebug;
             debugOverlay.classList.toggle('active', isDebug);
