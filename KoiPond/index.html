@@ -1,0 +1,2696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Summer Koi Pond · 夏の錦鯉池</title>
+  <meta name="description" content="A tranquil overhead Japanese garden pond in ink and watercolor. Interactive water surface with webcam hand tracking and pinch feeding." />
+  <meta property="og:title" content="Summer Koi Pond · 夏の錦鯉池" />
+  <meta property="og:description" content="A tranquil overhead Japanese garden pond in ink and watercolor. Interactive water surface with webcam hand tracking and pinch feeding." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Typography: Japanese calligraphy & refined serif -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&family=Noto+Serif+JP:wght@200;300;400;600&family=Plus+Jakarta+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <!-- p5.js for generative watercolor rendering -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+
+  <style>
+    :root {
+      --font-serif: 'Cormorant Garamond', 'Noto Serif JP', Georgia, serif;
+      --font-jp: 'Noto Serif JP', serif;
+      --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      --water-deep: #183344;
+      --water-mid: #2b546a;
+      --water-pale: #d8e5ea;
+      --water-ink: #10212d;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--water-ink);
+      font-family: var(--font-sans);
+      color: #e5f0f5;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Hidden video element for MediaPipe analysis */
+    #webcam-video {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* UI Layer */
+    #ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 28px;
+    }
+
+    /* Top Bar */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      pointer-events: auto;
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .top-bar.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-family: var(--font-serif);
+      font-size: 21px;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+      color: rgba(235, 245, 250, 0.92);
+      text-shadow: 0 1px 12px rgba(10, 24, 34, 0.7);
+    }
+
+    .brand-kanji {
+      font-family: var(--font-jp);
+      font-size: 13.5px;
+      font-weight: 200;
+      color: rgba(160, 200, 218, 0.65);
+      letter-spacing: 0.16em;
+    }
+
+    .controls-group {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .camera-select-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      cursor: pointer;
+    }
+
+    .camera-icon {
+      font-size: 13px;
+      opacity: 0.85;
+      line-height: 1;
+    }
+
+    .camera-label {
+      font-size: 11.5px;
+      color: rgba(180, 220, 238, 0.75);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .glass-select {
+      background: transparent;
+      color: #e5f6fd;
+      border: none;
+      outline: none;
+      font-size: 11.5px;
+      font-family: inherit;
+      cursor: pointer;
+      max-width: 155px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      padding-right: 2px;
+    }
+
+    .glass-select option {
+      background: #0f2433;
+      color: #e2f0f7;
+    }
+
+    .glass-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 13px;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: rgba(220, 238, 246, 0.85);
+      background: rgba(14, 33, 46, 0.45);
+      border: 1px solid rgba(210, 235, 248, 0.15);
+      border-radius: 7px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .glass-btn:hover {
+      background: rgba(22, 48, 66, 0.65);
+      border-color: rgba(210, 235, 248, 0.3);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .glass-btn:active {
+      transform: translateY(0);
+    }
+
+    .glass-btn.active {
+      background: rgba(35, 75, 98, 0.55);
+      border-color: rgba(140, 205, 228, 0.4);
+      color: #e5f6fd;
+    }
+
+    .status-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #5eead4;
+      display: inline-block;
+      box-shadow: 0 0 8px rgba(94, 234, 212, 0.65);
+    }
+
+    .status-dot.off {
+      background: rgba(255, 255, 255, 0.3);
+      box-shadow: none;
+    }
+
+    /* Bottom Status Toast & Hint */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    .status-toast {
+      pointer-events: auto;
+      font-size: 11.5px;
+      letter-spacing: 0.02em;
+      color: rgba(185, 220, 234, 0.7);
+      background: rgba(10, 28, 40, 0.52);
+      padding: 5px 12px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: opacity 0.5s ease;
+    }
+
+    .interaction-hint {
+      font-family: var(--font-serif);
+      font-size: 13.5px;
+      font-style: italic;
+      letter-spacing: 0.03em;
+      color: rgba(170, 210, 225, 0.62);
+      text-shadow: 0 1px 8px rgba(5, 18, 26, 0.8);
+    }
+
+    /* Startup Overlay Screen */
+    #startup-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, rgba(16, 36, 48, 0.85) 0%, rgba(6, 18, 26, 0.96) 100%);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: opacity 1.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 1.3s;
+    }
+
+    #startup-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .startup-card {
+      max-width: 490px;
+      width: 90%;
+      text-align: center;
+      padding: 44px 36px;
+      background: rgba(14, 35, 48, 0.6);
+      border: 1px solid rgba(220, 240, 250, 0.14);
+      border-radius: 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .startup-card h1 {
+      font-family: var(--font-serif);
+      font-size: 38px;
+      font-weight: 300;
+      letter-spacing: 0.07em;
+      color: #ffffff;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 20px rgba(120, 185, 210, 0.25);
+    }
+
+    .startup-card .kanji-sub {
+      font-family: var(--font-jp);
+      font-size: 14.5px;
+      font-weight: 200;
+      letter-spacing: 0.38em;
+      color: rgba(150, 205, 222, 0.8);
+      margin-bottom: 22px;
+    }
+
+    .startup-divider {
+      width: 40px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(160, 215, 235, 0.45), transparent);
+      margin: 0 auto 22px auto;
+    }
+
+    .startup-desc {
+      font-size: 14px;
+      line-height: 1.75;
+      color: rgba(215, 235, 245, 0.85);
+      margin-bottom: 28px;
+      font-weight: 300;
+      text-wrap: balance;
+    }
+
+    .startup-gestures {
+      display: flex;
+      justify-content: center;
+      gap: 22px;
+      margin-bottom: 32px;
+      font-size: 12px;
+      color: rgba(175, 215, 230, 0.75);
+    }
+
+    .gesture-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .gesture-icon {
+      font-size: 18px;
+      opacity: 0.85;
+    }
+
+    .enter-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 34px;
+      font-family: var(--font-serif);
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: 0.09em;
+      color: #ffffff;
+      background: linear-gradient(135deg, #24566f 0%, #15384c 100%);
+      border: 1px solid rgba(160, 220, 242, 0.35);
+      border-radius: 28px;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(6, 22, 32, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .enter-btn:hover {
+      background: linear-gradient(135deg, #2f6985 0%, #1a445c 100%);
+      border-color: rgba(190, 235, 255, 0.55);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(8, 28, 42, 0.7), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    }
+
+    .enter-btn:active {
+      transform: translateY(0);
+    }
+
+    .camera-note {
+      margin-top: 18px;
+      font-size: 11px;
+      color: rgba(145, 190, 205, 0.55);
+    }
+
+    /* Help Modal */
+    #help-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(4, 14, 20, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    #help-modal.open {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .help-card {
+      max-width: 440px;
+      width: 90%;
+      background: rgba(12, 30, 42, 0.9);
+      border: 1px solid rgba(220, 240, 250, 0.16);
+      border-radius: 14px;
+      padding: 30px 26px;
+      color: #e2f0f7;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+    }
+
+    .help-title {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+      color: #ffffff;
+    }
+
+    .help-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: rgba(205, 230, 242, 0.85);
+    }
+
+    .help-bullet {
+      font-family: var(--font-serif);
+      font-size: 16px;
+      color: #7dd3fc;
+      line-height: 1.2;
+    }
+
+    .help-close-btn {
+      margin-top: 14px;
+      width: 100%;
+      padding: 9px;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 7px;
+      color: #e2f0f7;
+      font-size: 12.5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .help-close-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    /* Debug HUD */
+    #debug-hud {
+      position: absolute;
+      bottom: 60px;
+      left: 28px;
+      z-index: 15;
+      font-family: monospace;
+      font-size: 11px;
+      line-height: 1.5;
+      color: #bae6fd;
+      background: rgba(6, 18, 26, 0.8);
+      padding: 10px 14px;
+      border: 1px solid rgba(186, 230, 253, 0.2);
+      border-radius: 6px;
+      pointer-events: none;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- WebGL / 2D Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- Hidden Video for MediaPipe HandLandmarker -->
+  <video id="webcam-video" playsinline autoplay muted></video>
+
+  <!-- Minimal Poetic UI -->
+  <div id="ui-layer">
+    <div class="top-bar" id="top-bar">
+      <div class="brand-group">
+        <span class="brand-title">Summer Koi Pond</span>
+        <span class="brand-kanji">夏の錦鯉池</span>
+      </div>
+
+      <div class="controls-group">
+        <div class="camera-select-container glass-btn" id="camera-select-wrapper" title="Select camera device">
+          <span class="camera-icon">📷</span>
+          <label for="camera-select" class="camera-label">Camera:</label>
+          <select id="camera-select" class="glass-select" aria-label="Select camera device">
+            <option value="">Default Camera</option>
+          </select>
+        </div>
+
+        <button class="glass-btn active" id="btn-reflection" title="Toggle underwater camera view opacity">
+          <span class="status-dot" id="dot-reflection"></span>
+          <span>Camera: 50%</span>
+        </button>
+
+        <button class="glass-btn" id="btn-sound" title="Toggle tranquil ambient audio">
+          <span class="status-dot off" id="dot-sound"></span>
+          <span>Sound: Off</span>
+        </button>
+
+        <button class="glass-btn" id="btn-fullscreen" title="Toggle full screen">
+          <span id="icon-fullscreen">⛶</span>
+          <span id="text-fullscreen">Fullscreen</span>
+        </button>
+
+        <button class="glass-btn" id="btn-help" title="Experience instructions">
+          <span>Guide</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="status-toast" id="status-toast">
+        Awaiting entrance...
+      </div>
+      <div class="interaction-hint">
+        Brush fingers to disturb water · Pinch thumb & index to feed
+      </div>
+    </div>
+  </div>
+
+  <!-- Startup Screen -->
+  <div id="startup-screen">
+    <div class="startup-card">
+      <h1>Summer Koi Pond</h1>
+      <div class="kanji-sub">夏の錦鯉池 · Ink & Watercolor</div>
+      <div class="startup-divider"></div>
+
+      <p class="startup-desc">
+        A quiet overhead Japanese garden pond rendered with an ink-and-watercolor sensibility.
+        Move your hands above the water to brush its surface, and pinch your fingers to feed the koi.
+      </p>
+
+      <div class="startup-gestures">
+        <div class="gesture-item">
+          <span class="gesture-icon">🌊</span>
+          <span>Touch & brush water</span>
+        </div>
+        <div class="gesture-item">
+          <span class="gesture-icon">🤏</span>
+          <span>Pinch to feed</span>
+        </div>
+        <div class="gesture-item">
+          <span class="gesture-icon">🍃</span>
+          <span>Or click/drag mouse</span>
+        </div>
+      </div>
+
+      <button class="enter-btn" id="btn-enter">
+        Enter the Pond
+      </button>
+
+      <div class="camera-note">
+        Hand tracking runs 100% client-side in your browser. Video is never transmitted or saved.
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="help-modal">
+    <div class="help-card">
+      <h3 class="help-title">Pond Interaction</h3>
+      <div class="help-item">
+        <span class="help-bullet">·</span>
+        <div><strong>Water surface deformation:</strong> Move your fingertips across the pond to displace the watercolor surface, leaving tapered fluid wakes and organic broken ripples.</div>
+      </div>
+      <div class="help-item">
+        <span class="help-bullet">·</span>
+        <div><strong>Pinch to feed:</strong> Pinch your thumb and index fingertip together to drop small food pellets. Slender watercolor koi will swim over to eat.</div>
+      </div>
+      <div class="help-item">
+        <span class="help-bullet">·</span>
+        <div><strong>Subtle reflection:</strong> Your hands appear as an elusive silhouette reflection on the water. Toggle it with the top button.</div>
+      </div>
+      <div class="help-item">
+        <span class="help-bullet">·</span>
+        <div><strong>Camera selection:</strong> Switch between your MacBook built-in camera, external cameras, or iPhone through Continuity Camera in the top-bar dropdown.</div>
+      </div>
+      <div class="help-item">
+        <span class="help-bullet">·</span>
+        <div><strong>Fullscreen & mouse:</strong> Tap Fullscreen for an immersive view. If webcam is unavailable or denied, click and drag anywhere to brush the water and feed.</div>
+      </div>
+      <button class="help-close-btn" id="btn-close-help">Return to Pond</button>
+    </div>
+  </div>
+
+  <!-- Debug HUD -->
+  <div id="debug-hud"></div>
+
+  <!-- Main Application Logic (p5.js + MediaPipe Tasks Vision) -->
+  <script type="module">
+    // ==========================================
+    // Configuration & Debug Flag
+    // ==========================================
+    const DEBUG = false;
+
+    // Simulation Constants
+    const CONFIG = {
+      koiCount: 5,
+      // Ink & watercolor desaturated palette inspired by reference image
+      water: {
+        paperBase: [218, 230, 236],      // Pale luminous water center
+        indigoWash: [42, 78, 102],       // Deep desaturated indigo blue
+        slateWash: [28, 56, 76],         // Dark slate blue
+        mossWash: [46, 88, 86],          // Subtle jade/moss green
+        deepInk: [18, 38, 52],           // Deep sediment/subsurface shadow
+      },
+      hand: {
+        smoothing: 0.62,           // Exponential coordinate smoothing
+        wakeMaxHistory: 16,        // History points per fingertip for tapered wake
+        wakeDecayTime: 1100,       // Wake dissipation duration in ms (~1.1s)
+        rippleSpeedThreshold: 3.8, // Speed threshold for secondary broken ripple arcs
+        rippleCooldownMs: 240,     // Cooldown per fingertip for secondary ripple
+        pinchStartThreshold: 0.38, // Normalized distance (thumb to index / hand scale)
+        pinchReleaseThreshold: 0.52,
+        reflectionOpacity: 0.50,  // Clear underwater camera view at ~50%
+      },
+      maxPellets: 20,
+      maxBubbles: 35,
+      maxRipples: 40,
+    };
+
+    // ==========================================
+    // Delicate Spatial Water Sound Synthesizer (Web Audio API)
+    // ==========================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = false;
+        this.noiseBuffer = null;
+
+        // Continuous brushing water flow nodes
+        this.brushNode = null;
+        this.brushFilter = null;
+        this.brushGain = null;
+        this.brushPan = null;
+
+        // Ambient pond bed nodes
+        this.ambientGain = null;
+
+        // Splash aggregation
+        this.lastSplashTime = 0;
+        this.splashCooldown = 220;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) {
+            this.ctx = new AudioContext();
+            this.buildPinkNoiseBuffer();
+            this.setupContinuousBrush();
+            this.setupAmbience();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggle() {
+        this.init();
+        this.enabled = !this.enabled;
+
+        if (this.ctx) {
+          const t = this.ctx.currentTime;
+          if (this.enabled) {
+            if (this.ambientGain) {
+              this.ambientGain.gain.cancelScheduledValues(t);
+              this.ambientGain.gain.setValueAtTime(this.ambientGain.gain.value, t);
+              this.ambientGain.gain.linearRampToValueAtTime(0.007, t + 1.2);
+            }
+          } else {
+            if (this.ambientGain) {
+              this.ambientGain.gain.cancelScheduledValues(t);
+              this.ambientGain.gain.setValueAtTime(this.ambientGain.gain.value, t);
+              this.ambientGain.gain.linearRampToValueAtTime(0.00001, t + 0.5);
+            }
+            if (this.brushGain) {
+              this.brushGain.gain.cancelScheduledValues(t);
+              this.brushGain.gain.linearRampToValueAtTime(0.00001, t + 0.2);
+            }
+          }
+        }
+        return this.enabled;
+      }
+
+      // 2-second looping pink noise buffer for soft organic water friction
+      buildPinkNoiseBuffer() {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * 2;
+        this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = this.noiseBuffer.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < bufferSize; i++) {
+          const white = Math.random() * 2 - 1;
+          b0 = 0.99 * b0 + white * 0.05;
+          b1 = 0.95 * b1 + white * 0.1;
+          b2 = 0.85 * b2 + white * 0.2;
+          data[i] = (b0 + b1 + b2) * 0.35;
+        }
+      }
+
+      // Continuous gentle water motion texture (fingers brushing water)
+      setupContinuousBrush() {
+        if (!this.ctx || !this.noiseBuffer) return;
+        const ctx = this.ctx;
+
+        const src = ctx.createBufferSource();
+        src.buffer = this.noiseBuffer;
+        src.loop = true;
+
+        this.brushFilter = ctx.createBiquadFilter();
+        this.brushFilter.type = 'bandpass';
+        this.brushFilter.frequency.value = 1600;
+        this.brushFilter.Q.value = 1.8;
+
+        this.brushGain = ctx.createGain();
+        this.brushGain.gain.value = 0.00001;
+
+        if (ctx.createStereoPanner) {
+          this.brushPan = ctx.createStereoPanner();
+          this.brushPan.pan.value = 0;
+          src.connect(this.brushFilter);
+          this.brushFilter.connect(this.brushGain);
+          this.brushGain.connect(this.brushPan);
+          this.brushPan.connect(ctx.destination);
+        } else {
+          src.connect(this.brushFilter);
+          this.brushFilter.connect(this.brushGain);
+          this.brushGain.connect(ctx.destination);
+        }
+
+        src.start(0);
+      }
+
+      // Very quiet ambient pond sound bed
+      setupAmbience() {
+        if (!this.ctx || !this.noiseBuffer) return;
+        const ctx = this.ctx;
+
+        const ambSrc = ctx.createBufferSource();
+        ambSrc.buffer = this.noiseBuffer;
+        ambSrc.loop = true;
+
+        const ambFilter = ctx.createBiquadFilter();
+        ambFilter.type = 'lowpass';
+        ambFilter.frequency.value = 240;
+
+        this.ambientGain = ctx.createGain();
+        this.ambientGain.gain.value = 0.00001;
+
+        ambSrc.connect(ambFilter);
+        ambFilter.connect(this.ambientGain);
+        this.ambientGain.connect(ctx.destination);
+
+        ambSrc.start(0);
+      }
+
+      // Called every frame to modulate water movement noise smoothly
+      updateMovementAudio(normX, totalEnergy) {
+        if (!this.enabled || !this.ctx || !this.brushGain) return;
+        const t = this.ctx.currentTime;
+
+        // Map movement energy to subtle brushing volume
+        const targetGain = Math.min(totalEnergy * 0.0016, 0.038);
+        this.brushGain.gain.cancelScheduledValues(t);
+        this.brushGain.gain.setValueAtTime(this.brushGain.gain.value, t);
+        this.brushGain.gain.linearRampToValueAtTime(targetGain, t + 0.08);
+
+        // Modulate bandpass center frequency slightly with velocity
+        if (this.brushFilter) {
+          const targetFreq = 1350 + Math.min(totalEnergy * 18, 1200);
+          this.brushFilter.frequency.cancelScheduledValues(t);
+          this.brushFilter.frequency.linearRampToValueAtTime(targetFreq, t + 0.1);
+        }
+
+        // Spatial stereo panning (left side -> left speaker, right side -> right speaker)
+        if (this.brushPan && normX !== undefined) {
+          const panVal = Math.max(-0.95, Math.min(0.95, (normX - 0.5) * 1.9));
+          this.brushPan.pan.cancelScheduledValues(t);
+          this.brushPan.pan.linearRampToValueAtTime(panVal, t + 0.1);
+        }
+      }
+
+      // Delicate transient water droplet / splash (with aggregation & cooldown)
+      triggerWaterSplash(normX = 0.5, intensity = 1.0) {
+        if (!this.enabled || !this.ctx) return;
+        const now = performance.now();
+        if (now - this.lastSplashTime < this.splashCooldown) return;
+
+        this.lastSplashTime = now;
+        this.splashCooldown = 180 + Math.random() * 180; // randomized natural spacing
+
+        try {
+          const ctx = this.ctx;
+          const t = ctx.currentTime;
+          const clampedIntensity = Math.min(intensity, 2.2);
+
+          // 1. Subtle filtered water friction burst
+          const burstSrc = ctx.createBufferSource();
+          burstSrc.buffer = this.noiseBuffer;
+          const burstFilter = ctx.createBiquadFilter();
+          burstFilter.type = 'bandpass';
+          burstFilter.frequency.value = 1100 + Math.random() * 900;
+          burstFilter.Q.value = 2.4;
+
+          const burstGain = ctx.createGain();
+          const gainAmt = 0.012 * clampedIntensity;
+          burstGain.gain.setValueAtTime(gainAmt, t);
+          burstGain.gain.exponentialRampToValueAtTime(0.00001, t + 0.09 + Math.random() * 0.05);
+
+          // 2. Faint microscopic water drop tone
+          const osc = ctx.createOscillator();
+          const oscGain = ctx.createGain();
+          const baseFreq = 540 + Math.random() * 260;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(baseFreq * 1.3, t);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq, t + 0.06);
+
+          oscGain.gain.setValueAtTime(0.015 * clampedIntensity, t);
+          oscGain.gain.exponentialRampToValueAtTime(0.00001, t + 0.14);
+
+          // Spatial routing
+          let panner = null;
+          if (ctx.createStereoPanner) {
+            panner = ctx.createStereoPanner();
+            panner.pan.value = Math.max(-0.95, Math.min(0.95, (normX - 0.5) * 1.9));
+          }
+
+          burstSrc.connect(burstFilter);
+          burstFilter.connect(burstGain);
+          osc.connect(oscGain);
+
+          if (panner) {
+            burstGain.connect(panner);
+            oscGain.connect(panner);
+            panner.connect(ctx.destination);
+          } else {
+            burstGain.connect(ctx.destination);
+            oscGain.connect(ctx.destination);
+          }
+
+          burstSrc.start(t);
+          burstSrc.stop(t + 0.16);
+          osc.start(t);
+          osc.stop(t + 0.16);
+        } catch (e) {}
+      }
+
+      // Delicate nibble sound when small koi eats pellet
+      playNibbleSound(normX = 0.5) {
+        if (!this.enabled || !this.ctx) return;
+        try {
+          const ctx = this.ctx;
+          const t = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(360, t);
+          osc.frequency.exponentialRampToValueAtTime(540, t + 0.05);
+
+          gain.gain.setValueAtTime(0.025, t);
+          gain.gain.exponentialRampToValueAtTime(0.00001, t + 0.12);
+
+          if (ctx.createStereoPanner) {
+            const panner = ctx.createStereoPanner();
+            panner.pan.value = (normX - 0.5) * 1.8;
+            osc.connect(gain);
+            gain.connect(panner);
+            panner.connect(ctx.destination);
+          } else {
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+          }
+
+          osc.start(t);
+          osc.stop(t + 0.13);
+        } catch (e) {}
+      }
+    }
+
+    const soundEngine = new SoundEngine();
+
+    // ==========================================
+    // Tiny Food Pellet Class (Rescaled to delicate koi)
+    // ==========================================
+    class FoodPellet {
+      constructor(p, x, y) {
+        this.p = p;
+        this.pos = p.createVector(x, y);
+        this.vel = p5.Vector.random2D().mult(p.random(0.2, 0.6));
+        // Small organic crumb scaled to 30% koi size
+        this.size = p.random(2.4, 3.4);
+        this.age = 0;
+        this.lifespan = 1000;
+        this.eaten = false;
+        this.opacity = 255;
+        this.wobblePhase = p.random(p.TWO_PI);
+      }
+
+      update() {
+        this.age++;
+        this.pos.add(this.vel);
+        this.vel.mult(0.96);
+        this.wobblePhase += 0.035;
+
+        if (this.age > this.lifespan - 100) {
+          this.opacity = this.p.map(this.age, this.lifespan - 100, this.lifespan, 255, 0);
+        }
+      }
+
+      draw() {
+        if (this.eaten) return;
+        const p = this.p;
+        const bob = Math.sin(this.wobblePhase) * 0.5;
+        const drawY = this.pos.y + bob;
+
+        p.push();
+        p.noStroke();
+
+        // Subtle water shadow
+        p.fill(16, 36, 48, this.opacity * 0.35);
+        p.ellipse(this.pos.x + 1, drawY + 1.5, this.size * 1.1, this.size * 0.7);
+
+        // Pellet core: toasted grain / warm earth
+        p.fill(188, 138, 86, this.opacity);
+        p.ellipse(this.pos.x, drawY, this.size, this.size);
+
+        // Highlight glint
+        p.fill(235, 205, 165, this.opacity * 0.8);
+        p.ellipse(this.pos.x - this.size * 0.2, drawY - this.size * 0.2, this.size * 0.35, this.size * 0.35);
+
+        p.pop();
+      }
+
+      isDead() {
+        return this.eaten || this.age >= this.lifespan;
+      }
+    }
+
+    // ==========================================
+    // Micro Bubble Class
+    // ==========================================
+    class Bubble {
+      constructor(p, x, y) {
+        this.p = p;
+        this.pos = p.createVector(x, y);
+        this.vel = p.createVector(p.random(-0.25, 0.25), p.random(-0.7, -1.5));
+        this.size = p.random(1.8, 3.8); // Tiny translucent bubbles
+        this.life = 1.0;
+        this.wobblePhase = p.random(p.TWO_PI);
+      }
+
+      update() {
+        this.pos.add(this.vel);
+        this.pos.x += Math.sin(this.wobblePhase) * 0.3;
+        this.wobblePhase += 0.09;
+        this.life -= 0.015;
+      }
+
+      draw() {
+        if (this.life <= 0) return;
+        const p = this.p;
+        p.push();
+        p.noFill();
+
+        // Watercolor translucent bubble rim
+        p.stroke(215, 238, 248, this.life * 150);
+        p.strokeWeight(0.65);
+        p.ellipse(this.pos.x, this.pos.y, this.size, this.size);
+
+        // Specular glint
+        p.fill(255, 255, 255, this.life * 180);
+        p.noStroke();
+        p.ellipse(this.pos.x - this.size * 0.2, this.pos.y - this.size * 0.2, this.size * 0.3, this.size * 0.3);
+
+        p.pop();
+      }
+
+      isDead() {
+        return this.life <= 0;
+      }
+    }
+
+    // ==========================================
+    // Organic Broken Ripple (Secondary, Imperfect Watercolor Arcs)
+    // ==========================================
+    class OrganicRipple {
+      constructor(p, x, y, intensity = 1.0) {
+        this.p = p;
+        this.x = x;
+        this.y = y;
+        this.radius = 4;
+        this.maxRadius = p.constrain(32 * intensity, 22, 85);
+        this.growthRate = p.random(1.1, 1.7) * (0.8 + intensity * 0.25);
+        this.life = 1.0;
+        this.decay = p.random(0.014, 0.022);
+        this.seed = p.random(1000);
+        // Broken arc angles (incomplete organic circle like brushwork in reference painting)
+        this.startAngle = p.random(p.TWO_PI);
+        this.arcSpan = p.random(p.PI * 0.8, p.PI * 1.4); // Incomplete 140°–250° arc
+      }
+
+      update() {
+        this.radius += this.growthRate;
+        this.life -= this.decay;
+      }
+
+      draw() {
+        if (this.life <= 0) return;
+        const p = this.p;
+        p.push();
+        p.noFill();
+
+        const alpha = Math.pow(this.life, 1.3) * 125;
+        p.stroke(215, 238, 248, alpha);
+        p.strokeWeight(0.85);
+
+        // Draw perturbed organic arc with noise
+        p.beginShape();
+        const steps = 18;
+        const angleStep = this.arcSpan / steps;
+
+        for (let i = 0; i <= steps; i++) {
+          const theta = this.startAngle + i * angleStep;
+          // Noise radius variation gives hand-drawn watercolor brush feel
+          const rOffset = (p.noise(Math.cos(theta) * 1.5 + this.seed, Math.sin(theta) * 1.5, this.radius * 0.04) - 0.5) * 6;
+          const r = this.radius + rOffset;
+          const px = this.x + Math.cos(theta) * r;
+          const py = this.y + Math.sin(theta) * r * 0.96;
+          p.curveVertex(px, py);
+        }
+        p.endShape();
+
+        // Delicate inner second arc
+        if (this.radius > 16) {
+          p.stroke(230, 245, 255, alpha * 0.6);
+          p.strokeWeight(0.6);
+          p.beginShape();
+          const innerR = this.radius - 10;
+          for (let i = 2; i <= steps - 2; i++) {
+            const theta = this.startAngle + i * angleStep;
+            const px = this.x + Math.cos(theta) * innerR;
+            const py = this.y + Math.sin(theta) * innerR * 0.96;
+            p.curveVertex(px, py);
+          }
+          p.endShape();
+        }
+
+        p.pop();
+      }
+
+      isDead() {
+        return this.life <= 0 || this.radius >= this.maxRadius;
+      }
+    }
+
+    // ==========================================
+    // Water Surface Deformation System (Wakes & Refraction)
+    // ==========================================
+    class WaterDeformation {
+      constructor(p) {
+        this.p = p;
+        // Wakes from moving fingertips / pointers
+        this.wakes = [];
+        this.ripples = [];
+      }
+
+      // Add a displacement node along a moving finger's trajectory
+      addWakeNode(x, y, vx, vy, speed) {
+        const now = performance.now();
+        this.wakes.push({
+          x: x,
+          y: y,
+          vx: vx,
+          vy: vy,
+          speed: speed,
+          spawnTime: now,
+          life: 1.0,
+          seed: this.p.random(100),
+          width: this.p.map(this.p.constrain(speed, 2, 16), 2, 16, 7, 24),
+        });
+
+        // Limit memory footprint
+        if (this.wakes.length > 180) {
+          this.wakes.shift();
+        }
+      }
+
+      addBrokenRipple(x, y, intensity = 1.0) {
+        if (this.ripples.length >= CONFIG.maxRipples) {
+          this.ripples.shift();
+        }
+        this.ripples.push(new OrganicRipple(this.p, x, y, intensity));
+      }
+
+      update() {
+        const now = performance.now();
+        for (let i = this.wakes.length - 1; i >= 0; i--) {
+          const w = this.wakes[i];
+          const elapsed = now - w.spawnTime;
+          w.life = 1.0 - (elapsed / CONFIG.hand.wakeDecayTime);
+          if (w.life <= 0) {
+            this.wakes.splice(i, 1);
+          }
+        }
+
+        for (let i = this.ripples.length - 1; i >= 0; i--) {
+          const r = this.ripples[i];
+          r.update();
+          if (r.isDead()) {
+            this.ripples.splice(i, 1);
+          }
+        }
+      }
+
+      // Draw local water deformation: wakes, pigment displacement, and organic ripples
+      draw(time) {
+        const p = this.p;
+
+        // -----------------------------------------------------------------
+        // 1. Directional Tapered Wakes (Water displacement ribbons)
+        // -----------------------------------------------------------------
+        p.push();
+        p.noStroke();
+
+        for (const w of this.wakes) {
+          const alpha = Math.pow(w.life, 1.2);
+          const mag = Math.hypot(w.vx, w.vy) || 1;
+          // Normal vector perpendicular to trajectory
+          const nx = -w.vy / mag;
+          const ny = w.vx / mag;
+
+          // As wake ages, it diffuses outward
+          const expand = (1.0 - w.life) * 14;
+          const halfW = (w.width + expand) * 0.5;
+
+          // Wave crest (compression highlight on water surface)
+          p.fill(235, 248, 255, alpha * 65);
+          p.ellipse(w.x + nx * halfW * 0.6, w.y + ny * halfW * 0.6, halfW * 1.5, halfW * 0.9);
+
+          // Wave trough (subsurface pigment shadow dragged by finger)
+          p.fill(16, 42, 60, alpha * 70);
+          p.ellipse(w.x - nx * halfW * 0.6, w.y - ny * halfW * 0.6, halfW * 1.5, halfW * 0.9);
+        }
+        p.pop();
+
+        // -----------------------------------------------------------------
+        // 2. Secondary Organic Broken Ripples
+        // -----------------------------------------------------------------
+        for (const r of this.ripples) {
+          r.draw();
+        }
+      }
+
+      // Render local refraction lens directly under active fingertip
+      drawFingertipLens(x, y, vx, vy, speed) {
+        const p = this.p;
+        p.push();
+        p.translate(x, y);
+
+        if (speed > 2.0) {
+          // Moving: directional bow wave distortion
+          const heading = Math.atan2(vy, vx);
+          p.rotate(heading);
+
+          const stretch = p.constrain(speed * 1.4, 6, 26);
+          p.noStroke();
+
+          // Forward compression highlight
+          p.fill(238, 250, 255, 80);
+          p.ellipse(stretch * 0.5, 0, stretch * 1.2, 9);
+
+          // Trailing water trough
+          p.fill(18, 44, 64, 75);
+          p.ellipse(-stretch * 0.4, 0, stretch * 1.0, 8);
+        } else {
+          // Stationary / gentle: soft breathing circular refraction lens
+          const breathe = Math.sin(p.millis() * 0.003) * 1.5;
+          const r = 9 + breathe;
+
+          p.noFill();
+          // Luminous edge
+          p.stroke(225, 245, 252, 65);
+          p.strokeWeight(0.9);
+          p.ellipse(0, 0, r * 2, r * 1.9);
+
+          // Subsurface water shadow
+          p.stroke(18, 45, 62, 55);
+          p.strokeWeight(1.2);
+          p.ellipse(0.6, 1.2, r * 1.8, r * 1.7);
+        }
+
+        p.pop();
+      }
+    }
+
+    // ==========================================
+    // Slender Watercolor Koi (Rescaled to ~30% size)
+    // ==========================================
+    class Koi {
+      constructor(p, x, y, typeIndex = 0) {
+        this.p = p;
+        this.pos = p.createVector(x, y);
+        this.vel = p5.Vector.random2D().mult(0.9);
+        this.acc = p.createVector(0, 0);
+        this.heading = this.vel.heading();
+
+        // Variety Types (Inspired directly by the reference watercolor painting):
+        // 0: Muted Persimmon/Vermilion (soft watercolor orange-red)
+        // 1: Kohaku (pearly white with soft bleeding vermilion markings)
+        // 2: Taisho Sanke (white with vermilion & tiny sumi charcoal ink flecks)
+        // 3: Warm Apricot / Amber (translucent sunlit orange koi)
+        // 4: Silver-White (pale translucent fish with soft celadon shadow)
+        this.type = typeIndex % 5;
+
+        // REDUCED TO ~30% OF CURRENT SIZE (length ~34–45px instead of 110–145px!)
+        this.bodyLength = p.random(34, 45);
+        this.maxBodyWidth = this.bodyLength * p.random(0.19, 0.23); // ~7.5 to 9.5px
+        this.spineJoints = 9;
+
+        // Graceful, calm swimming speeds scaled to size
+        this.maxSpeed = p.random(1.25, 1.75);
+        this.cruiseSpeed = p.random(0.7, 1.05);
+        this.wanderAngle = p.random(p.TWO_PI);
+
+        // Spine & fin wave phases
+        this.tailPhase = p.random(p.TWO_PI);
+        this.finPhase = p.random(p.TWO_PI);
+
+        // Feeding state
+        this.targetPellet = null;
+        this.nibbleTimer = 0;
+        this.mouthPos = p.createVector(x, y);
+
+        // Deterministic watercolor pigment markings generated once
+        this.markings = this.generateMarkings();
+      }
+
+      generateMarkings() {
+        const p = this.p;
+        const marks = [];
+
+        if (this.type === 0 || this.type === 3) {
+          // Persimmon / Amber koi: subtle deeper pigment pool along upper spine
+          marks.push({
+            u: 0.28,
+            side: 0,
+            rx: this.maxBodyWidth * 0.7,
+            ry: this.bodyLength * 0.18,
+            color: [185, 62, 32, 190], // Deeper madder-red wash
+          });
+        } else if (this.type === 1) {
+          // Kohaku: 2 irregular vermilion watercolor pigment deposits
+          marks.push({
+            u: 0.2,
+            side: p.random(-0.15, 0.15),
+            rx: this.maxBodyWidth * 0.8,
+            ry: this.bodyLength * 0.16,
+            color: [215, 64, 38, 220],
+          });
+          marks.push({
+            u: 0.52,
+            side: p.random(-0.2, 0.2),
+            rx: this.maxBodyWidth * 0.75,
+            ry: this.bodyLength * 0.18,
+            color: [215, 64, 38, 210],
+          });
+        } else if (this.type === 2) {
+          // Taisho Sanke: vermilion patches + tiny sumi ink spots
+          marks.push({
+            u: 0.22,
+            side: 0,
+            rx: this.maxBodyWidth * 0.8,
+            ry: this.bodyLength * 0.15,
+            color: [218, 62, 36, 220],
+          });
+          marks.push({
+            u: 0.54,
+            side: p.random(-0.2, 0.2),
+            rx: this.maxBodyWidth * 0.7,
+            ry: this.bodyLength * 0.14,
+            color: [218, 62, 36, 210],
+          });
+          // Micro sumi ink flecks
+          marks.push({
+            u: 0.38,
+            side: 0.25,
+            rx: 2.2,
+            ry: 2.5,
+            color: [32, 36, 40, 220],
+          });
+          marks.push({
+            u: 0.65,
+            side: -0.22,
+            rx: 1.8,
+            ry: 2.2,
+            color: [32, 36, 40, 210],
+          });
+        }
+        return marks;
+      }
+
+      update(bounds, pellets, allKoi, onEat) {
+        const p = this.p;
+
+        // Nibble pause when eating food
+        if (this.nibbleTimer > 0) {
+          this.nibbleTimer--;
+          this.vel.mult(0.92);
+          this.pos.add(this.vel);
+          this.tailPhase += 0.025;
+          this.finPhase += 0.04;
+          return;
+        }
+
+        // 1. Feeding Steering: Look for nearby food pellets
+        let foodForce = null;
+        let closestDist = 240;
+        let chosenPellet = null;
+
+        for (const pellet of pellets) {
+          if (pellet.isDead()) continue;
+          const d = p5.Vector.dist(this.pos, pellet.pos);
+          if (d < closestDist) {
+            closestDist = d;
+            chosenPellet = pellet;
+          }
+        }
+
+        if (chosenPellet) {
+          this.targetPellet = chosenPellet;
+          const desired = p5.Vector.sub(chosenPellet.pos, this.pos);
+          const d = desired.mag();
+
+          let speed = this.maxSpeed;
+          if (d < 35) {
+            speed = p.map(d, 8, 35, this.cruiseSpeed * 0.4, this.maxSpeed);
+          }
+          desired.setMag(speed);
+          foodForce = p5.Vector.sub(desired, this.vel).limit(0.12);
+
+          // Eat pellet when mouth reaches it
+          if (d < 9) {
+            chosenPellet.eaten = true;
+            this.nibbleTimer = 38; // serene nibble pause
+            soundEngine.playNibbleSound(this.pos.x / bounds.width);
+            if (onEat) {
+              onEat(this.mouthPos.x, this.mouthPos.y);
+            }
+            return;
+          }
+        } else {
+          this.targetPellet = null;
+        }
+
+        // 2. Normal Autonomous Wandering
+        if (!foodForce) {
+          this.wanderAngle += p.random(-0.14, 0.14);
+          const wanderPoint = p5.Vector.fromAngle(this.heading + this.wanderAngle).mult(25);
+          const desired = p5.Vector.fromAngle(this.heading).mult(this.cruiseSpeed).add(wanderPoint.mult(0.08));
+          desired.setMag(this.cruiseSpeed);
+          foodForce = p5.Vector.sub(desired, this.vel).limit(0.04);
+        }
+
+        this.acc.add(foodForce);
+
+        // 3. Gentle Pond Boundary Avoidance (Soft turns away from edges)
+        const margin = 80;
+        const avoidForce = p.createVector(0, 0);
+        if (this.pos.x < margin) avoidForce.x += (margin - this.pos.x) * 0.012;
+        if (this.pos.x > bounds.width - margin) avoidForce.x -= (this.pos.x - (bounds.width - margin)) * 0.012;
+        if (this.pos.y < margin) avoidForce.y += (margin - this.pos.y) * 0.012;
+        if (this.pos.y > bounds.height - margin) avoidForce.y -= (this.pos.y - (bounds.height - margin)) * 0.012;
+        this.acc.add(avoidForce.limit(0.16));
+
+        // 4. Gentle Separation between koi
+        const sepForce = p.createVector(0, 0);
+        let neighborCount = 0;
+        for (const other of allKoi) {
+          if (other === this) continue;
+          const d = p5.Vector.dist(this.pos, other.pos);
+          if (d > 0 && d < 45) {
+            const diff = p5.Vector.sub(this.pos, other.pos).normalize().div(d);
+            sepForce.add(diff);
+            neighborCount++;
+          }
+        }
+        if (neighborCount > 0) {
+          sepForce.div(neighborCount).setMag(0.06);
+          this.acc.add(sepForce);
+        }
+
+        // Apply physics
+        this.vel.add(this.acc);
+        this.vel.limit(this.targetPellet ? this.maxSpeed : this.cruiseSpeed * 1.25);
+        this.pos.add(this.vel);
+        this.acc.mult(0);
+
+        // Smooth gradual heading turn (never snap)
+        const targetHeading = this.vel.heading();
+        let angleDiff = targetHeading - this.heading;
+        while (angleDiff < -p.PI) angleDiff += p.TWO_PI;
+        while (angleDiff > p.PI) angleDiff -= p.TWO_PI;
+        this.heading += angleDiff * 0.07;
+
+        // Tail and fin undulation cadence linked to speed
+        const currentSpeed = this.vel.mag();
+        this.tailPhase += currentSpeed * 0.11 + 0.03;
+        this.finPhase += currentSpeed * 0.09 + 0.03;
+      }
+
+      getSpineJoints() {
+        const p = this.p;
+        const joints = [];
+        const segLen = this.bodyLength / (this.spineJoints - 1);
+
+        for (let i = 0; i < this.spineJoints; i++) {
+          const t = i / (this.spineJoints - 1);
+          // Traveling undulation wave: head stays still, tail whips softly
+          const waveAmp = Math.pow(t, 1.3) * 0.32;
+          const waveAngle = Math.sin(this.tailPhase - i * 0.52) * waveAmp;
+          const jointHeading = this.heading + waveAngle;
+
+          if (i === 0) {
+            joints.push({
+              pos: this.pos.copy(),
+              heading: jointHeading,
+              t: 0
+            });
+            this.mouthPos = this.pos.copy();
+          } else {
+            const prev = joints[i - 1];
+            const backPos = p5.Vector.fromAngle(jointHeading + p.PI).mult(segLen).add(prev.pos);
+            joints.push({
+              pos: backPos,
+              heading: jointHeading,
+              t: t
+            });
+          }
+        }
+        return joints;
+      }
+
+      getWidthAtT(t) {
+        if (t < 0.16) {
+          return this.p.map(t, 0, 0.16, 0.45 * this.maxBodyWidth, 0.9 * this.maxBodyWidth);
+        } else if (t < 0.38) {
+          return this.p.map(t, 0.16, 0.38, 0.9 * this.maxBodyWidth, this.maxBodyWidth);
+        } else if (t < 0.76) {
+          return this.p.map(t, 0.38, 0.76, this.maxBodyWidth, 0.5 * this.maxBodyWidth);
+        } else {
+          return this.p.map(t, 0.76, 1.0, 0.5 * this.maxBodyWidth, 0.18 * this.maxBodyWidth);
+        }
+      }
+
+      draw() {
+        const p = this.p;
+        const spine = this.getSpineJoints();
+        if (spine.length < 2) return;
+
+        p.push();
+
+        // ----------------------------------------------------
+        // 1. Soft underwater shadow (watercolor wash depth)
+        // ----------------------------------------------------
+        p.noStroke();
+        p.fill(12, 32, 46, 55);
+        p.beginShape();
+        const shadowOffset = p.createVector(5, 7);
+        for (let i = 0; i < spine.length; i++) {
+          const j = spine[i];
+          const w = this.getWidthAtT(j.t) * 1.15;
+          const norm = p5.Vector.fromAngle(j.heading + p.HALF_PI).mult(w);
+          const pt = p5.Vector.add(j.pos, shadowOffset).add(norm);
+          p.curveVertex(pt.x, pt.y);
+        }
+        for (let i = spine.length - 1; i >= 0; i--) {
+          const j = spine[i];
+          const w = this.getWidthAtT(j.t) * 1.15;
+          const norm = p5.Vector.fromAngle(j.heading - p.HALF_PI).mult(w);
+          const pt = p5.Vector.add(j.pos, shadowOffset).add(norm);
+          p.curveVertex(pt.x, pt.y);
+        }
+        p.endShape(p.CLOSE);
+
+        // ----------------------------------------------------
+        // 2. Translucent Pectoral Fins (beneath body)
+        // ----------------------------------------------------
+        this.drawFins(spine);
+
+        // ----------------------------------------------------
+        // 3. Koi Watercolor Body Skin Contour
+        // ----------------------------------------------------
+        const leftPoints = [];
+        const rightPoints = [];
+
+        for (let i = 0; i < spine.length; i++) {
+          const j = spine[i];
+          const w = this.getWidthAtT(j.t);
+          const leftNorm = p5.Vector.fromAngle(j.heading + p.HALF_PI).mult(w);
+          const rightNorm = p5.Vector.fromAngle(j.heading - p.HALF_PI).mult(w);
+          leftPoints.push(p5.Vector.add(j.pos, leftNorm));
+          rightPoints.push(p5.Vector.add(j.pos, rightNorm));
+        }
+
+        // Base Watercolor Pigment Washes (No hard lines!)
+        if (this.type === 0) {
+          // Persimmon/Vermilion watercolor body (like reference image)
+          p.fill(224, 94, 52, 225);
+        } else if (this.type === 3) {
+          // Warm Apricot/Amber wash
+          p.fill(235, 130, 68, 220);
+        } else {
+          // Pearlescent soft paper white with subtle blue-gray undertone
+          p.fill(238, 244, 246, 230);
+        }
+
+        p.noStroke();
+        p.beginShape();
+        p.curveVertex(spine[0].pos.x, spine[0].pos.y);
+        for (const pt of leftPoints) {
+          p.curveVertex(pt.x, pt.y);
+        }
+        const lastSpine = spine[spine.length - 1];
+        p.curveVertex(lastSpine.pos.x, lastSpine.pos.y);
+        for (let i = rightPoints.length - 1; i >= 0; i--) {
+          const pt = rightPoints[i];
+          p.curveVertex(pt.x, pt.y);
+        }
+        p.curveVertex(spine[0].pos.x, spine[0].pos.y);
+        p.endShape(p.CLOSE);
+
+        // ----------------------------------------------------
+        // 4. Watercolor Pigment Markings
+        // ----------------------------------------------------
+        for (const m of this.markings) {
+          const idx = Math.floor(m.u * (spine.length - 1));
+          const frac = (m.u * (spine.length - 1)) - idx;
+          const nextIdx = Math.min(idx + 1, spine.length - 1);
+          const basePos = p5.Vector.lerp(spine[idx].pos, spine[nextIdx].pos, frac);
+          const heading = p.lerp(spine[idx].heading, spine[nextIdx].heading, frac);
+
+          const lateral = p5.Vector.fromAngle(heading + p.HALF_PI).mult(m.side * this.maxBodyWidth);
+          const markPos = p5.Vector.add(basePos, lateral);
+
+          p.push();
+          p.translate(markPos.x, markPos.y);
+          p.rotate(heading);
+          p.fill(m.color);
+          p.ellipse(0, 0, m.ry, m.rx);
+          p.pop();
+        }
+
+        // ----------------------------------------------------
+        // 5. Delicate Watercolor Tail (Caudal Fin)
+        // ----------------------------------------------------
+        const tailJoint = spine[spine.length - 1];
+        const tailWave = Math.sin(this.tailPhase) * 4.5;
+
+        p.push();
+        p.translate(tailJoint.pos.x, tailJoint.pos.y);
+        p.rotate(tailJoint.heading);
+
+        // Soft tapered brushstroke tail
+        if (this.type === 0 || this.type === 3) {
+          p.fill(238, 120, 78, 150);
+        } else {
+          p.fill(245, 250, 252, 160);
+        }
+        p.beginShape();
+        p.vertex(0, 0);
+        p.bezierVertex(-4, 3, -12, 7 + tailWave * 0.6, -18, 5 + tailWave);
+        p.bezierVertex(-15, 1 + tailWave * 0.4, -13, 0, -18, -5 + tailWave);
+        p.bezierVertex(-12, -7 + tailWave * 0.6, -4, -3, 0, 0);
+        p.endShape(p.CLOSE);
+        p.pop();
+
+        // ----------------------------------------------------
+        // 6. Microscopic Eye Details (Soft Watercolor Bleeds)
+        // ----------------------------------------------------
+        const headJoint = spine[0];
+        const eyeW = this.getWidthAtT(headJoint.t) * 0.8;
+
+        p.push();
+        p.translate(headJoint.pos.x, headJoint.pos.y);
+        p.rotate(headJoint.heading);
+        p.fill(24, 36, 44, 190);
+        p.ellipse(2.5, eyeW, 1.8, 1.4);
+        p.ellipse(2.5, -eyeW, 1.8, 1.4);
+        p.pop();
+
+        p.pop();
+      }
+
+      drawFins(spine) {
+        const p = this.p;
+        const pecJoint = spine[1];
+        const pecWidth = this.getWidthAtT(pecJoint.t);
+        const finWave = Math.sin(this.finPhase) * 0.12;
+
+        p.push();
+        p.translate(pecJoint.pos.x, pecJoint.pos.y);
+        p.rotate(pecJoint.heading);
+
+        if (this.type === 0 || this.type === 3) {
+          p.fill(240, 140, 95, 120);
+        } else {
+          p.fill(245, 250, 252, 130);
+        }
+
+        // Left tiny fin
+        p.beginShape();
+        p.vertex(0, pecWidth * 0.85);
+        p.bezierVertex(-2, pecWidth + 4, -6, pecWidth + 9 + finWave * 3, -10, pecWidth + 8);
+        p.bezierVertex(-8, pecWidth + 4, -4, pecWidth + 1, 0, pecWidth * 0.85);
+        p.endShape(p.CLOSE);
+
+        // Right tiny fin
+        p.beginShape();
+        p.vertex(0, -pecWidth * 0.85);
+        p.bezierVertex(-2, -pecWidth - 4, -6, -pecWidth - 9 - finWave * 3, -10, -pecWidth - 8);
+        p.bezierVertex(-8, -pecWidth - 4, -4, -pecWidth - 1, 0, -pecWidth * 0.85);
+        p.endShape(p.CLOSE);
+
+        p.pop();
+      }
+    }
+
+    // ==========================================
+    // MediaPipe Hand Tracker (Client-Side, Multi-Finger, Stable Identity)
+    // ==========================================
+    class HandTracker {
+      constructor() {
+        this.video = document.getElementById('webcam-video');
+        this.handLandmarker = null;
+        this.isLoaded = false;
+        this.cameraActive = false;
+        this.lastVideoTime = -1;
+
+        // Active stream & camera device ID
+        this.currentStream = null;
+        this.selectedDeviceId = null;
+        this.availableDevices = [];
+
+        // Up to 2 hands tracked simultaneously
+        this.hands = [
+          {
+            active: false,
+            landmarks: [],
+            smoothedTips: {},
+            prevTips: {},
+            tipVelocities: {},
+            lastRippleTimes: {},
+            isPinching: false,
+            pinchDistNorm: 1.0,
+            pinchCenter: { x: 0, y: 0 }
+          },
+          {
+            active: false,
+            landmarks: [],
+            smoothedTips: {},
+            prevTips: {},
+            tipVelocities: {},
+            lastRippleTimes: {},
+            isPinching: false,
+            pinchDistNorm: 1.0,
+            pinchCenter: { x: 0, y: 0 }
+          }
+        ];
+
+        this.tipIndices = {
+          thumb: 4,
+          index: 8,
+          middle: 12,
+          ring: 16,
+          pinky: 20
+        };
+      }
+
+      async init(statusCallback) {
+        try {
+          statusCallback('Initializing MediaPipe vision engine...');
+
+          const vision = await import(
+            /* @vite-ignore */ "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs"
+          );
+          const { HandLandmarker, FilesetResolver } = vision;
+
+          const fileset = await FilesetResolver.forVisionTasks(
+            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
+          );
+
+          statusCallback('Loading hand tracking neural network...');
+
+          try {
+            this.handLandmarker = await HandLandmarker.createFromOptions(fileset, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                delegate: "GPU"
+              },
+              runningMode: "VIDEO",
+              numHands: 2
+            });
+          } catch (gpuError) {
+            console.warn("GPU delegate unsupported, falling back to CPU:", gpuError);
+            this.handLandmarker = await HandLandmarker.createFromOptions(fileset, {
+              baseOptions: {
+                modelAssetPath: "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+                delegate: "CPU"
+              },
+              runningMode: "VIDEO",
+              numHands: 2
+            });
+          }
+
+          this.isLoaded = true;
+          statusCallback('Vision ready. Starting webcam...');
+          return true;
+        } catch (err) {
+          console.error("MediaPipe initialization failed:", err);
+          statusCallback('Webcam AI unavailable. Mouse & touch enabled.');
+          return false;
+        }
+      }
+
+      async getAvailableCameras() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+          return [];
+        }
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const videoDevices = devices.filter((d) => d.kind === "videoinput");
+          this.availableDevices = videoDevices;
+          return videoDevices;
+        } catch (err) {
+          console.warn("Could not enumerate camera devices:", err);
+          return [];
+        }
+      }
+
+      async startWebcam(statusCallback, targetDeviceId = null) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          if (statusCallback) statusCallback('Webcam not supported in this browser.');
+          return false;
+        }
+
+        try {
+          const videoConstraints = {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          };
+
+          if (targetDeviceId) {
+            videoConstraints.deviceId = { exact: targetDeviceId };
+          } else {
+            videoConstraints.facingMode = "user";
+          }
+
+          if (this.currentStream) {
+            this.currentStream.getTracks().forEach((track) => track.stop());
+            this.currentStream = null;
+          }
+
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: false
+          });
+
+          this.currentStream = stream;
+
+          const videoTrack = stream.getVideoTracks()[0];
+          if (videoTrack && videoTrack.getSettings) {
+            const settings = videoTrack.getSettings();
+            if (settings && settings.deviceId) {
+              this.selectedDeviceId = settings.deviceId;
+            }
+          }
+          if (!this.selectedDeviceId && targetDeviceId) {
+            this.selectedDeviceId = targetDeviceId;
+          }
+
+          this.video.srcObject = stream;
+          await new Promise((resolve) => {
+            this.video.onloadedmetadata = () => {
+              this.video.play().then(resolve).catch(resolve);
+            };
+          });
+
+          this.lastVideoTime = -1;
+          this.cameraActive = true;
+          if (statusCallback) statusCallback('Pond serene · Move hands above water');
+          return true;
+        } catch (err) {
+          console.warn("Webcam permission denied or camera unavailable:", err);
+          if (statusCallback) statusCallback('Webcam offline · Touch or mouse active');
+          return false;
+        }
+      }
+
+      async switchCamera(selectedDeviceId, statusCallback) {
+        if (!selectedDeviceId) return false;
+        try {
+          if (statusCallback) statusCallback('Switching camera...');
+          this.selectedDeviceId = selectedDeviceId;
+
+          // 1. Stop ONLY the tracks belonging to the current camera MediaStream
+          if (this.currentStream) {
+            this.currentStream.getTracks().forEach((track) => track.stop());
+            this.currentStream = null;
+          }
+
+          // 2. Request newly selected camera using exact deviceId
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: selectedDeviceId }
+            },
+            audio: false
+          });
+
+          this.currentStream = stream;
+
+          // 3. Assign new MediaStream to the EXISTING video element
+          this.video.srcObject = stream;
+
+          // 4. Wait until the video metadata/data is ready
+          await new Promise((resolve) => {
+            if (this.video.readyState >= 1 && this.video.videoWidth > 0) {
+              this.video.play().then(resolve).catch(resolve);
+            } else {
+              this.video.onloadedmetadata = () => {
+                this.video.play().then(resolve).catch(resolve);
+              };
+            }
+          });
+
+          // 5. Reset timing so MediaPipe picks up new stream immediately
+          this.lastVideoTime = -1;
+          this.cameraActive = true;
+
+          // Reset hand filter states to avoid sudden jumps between camera views
+          for (const h of this.hands) {
+            h.smoothedTips = {};
+            h.prevTips = {};
+            h.tipVelocities = {};
+          }
+
+          if (statusCallback) statusCallback('Camera switched · Move hands above water');
+          return true;
+        } catch (err) {
+          console.warn("Camera switch failed:", err);
+          if (statusCallback) statusCallback('Camera switch failed. Check connection.');
+          return false;
+        }
+      }
+
+      update(canvasWidth, canvasHeight, onPinchFeed, onWakeDisturbance, onBrokenRipple) {
+        if (!this.cameraActive || !this.isLoaded || !this.handLandmarker) return;
+
+        if (this.video.currentTime !== this.lastVideoTime && this.video.readyState >= 2) {
+          this.lastVideoTime = this.video.currentTime;
+          const startTimeMs = performance.now();
+          const results = this.handLandmarker.detectForVideo(this.video, startTimeMs);
+
+          let detectedHands = results.landmarks || [];
+
+          // Preserve stable hand identity between frames for 2 hands
+          if (detectedHands.length === 2 && this.hands[0].active && this.hands[1].active) {
+            const h0Wrist = this.hands[0].landmarks[0];
+            const h1Wrist = this.hands[1].landmarks[0];
+            if (h0Wrist && h1Wrist && detectedHands[0][0] && detectedHands[1][0]) {
+              const d00 = Math.hypot(detectedHands[0][0].x - h0Wrist.x, detectedHands[0][0].y - h0Wrist.y);
+              const d11 = Math.hypot(detectedHands[1][0].x - h1Wrist.x, detectedHands[1][0].y - h1Wrist.y);
+              const d01 = Math.hypot(detectedHands[0][0].x - h1Wrist.x, detectedHands[0][0].y - h1Wrist.y);
+              const d10 = Math.hypot(detectedHands[1][0].x - h0Wrist.x, detectedHands[1][0].y - h0Wrist.y);
+              if (d01 + d10 < d00 + d11) {
+                detectedHands = [detectedHands[1], detectedHands[0]];
+              }
+            }
+          }
+
+          let activeHandCount = 0;
+          let aggregateMovementEnergy = 0;
+          let sumTipX = 0;
+          let tipCount = 0;
+
+          // Preserve coordinate mapping synchronized with drawWebcamReflection
+          const v = this.video;
+          const videoWidth = (v && v.videoWidth > 0) ? v.videoWidth : 1280;
+          const videoHeight = (v && v.videoHeight > 0) ? v.videoHeight : 720;
+          const videoRatio = videoWidth / videoHeight;
+          const canvasRatio = canvasWidth / canvasHeight;
+
+          let dw, dh, dx, dy;
+          if (canvasRatio > videoRatio) {
+            dw = canvasWidth;
+            dh = canvasWidth / videoRatio;
+            dx = 0;
+            dy = (canvasHeight - dh) * 0.5;
+          } else {
+            dh = canvasHeight;
+            dw = canvasHeight * videoRatio;
+            dx = (canvasWidth - dw) * 0.5;
+            dy = 0;
+          }
+
+          // Process up to 2 detected hands
+          for (let h = 0; h < 2; h++) {
+            const handState = this.hands[h];
+            if (h < detectedHands.length) {
+              handState.active = true;
+              activeHandCount++;
+              const rawLandmarks = detectedHands[h];
+              handState.landmarks = rawLandmarks;
+
+              // Hand reference scale (wrist #0 to middle finger knuckle #9)
+              const wrist = rawLandmarks[0];
+              const midKnuckle = rawLandmarks[9] || rawLandmarks[5];
+              const handScale = Math.hypot(wrist.x - midKnuckle.x, wrist.y - midKnuckle.y) || 0.15;
+
+              // Track & smooth each fingertip
+              const now = performance.now();
+              for (const [fingerName, idx] of Object.entries(this.tipIndices)) {
+                const rawTip = rawLandmarks[idx];
+
+                // Coordinate conversion: HORIZONTALLY MIRRORED & aspect-ratio synchronized
+                const targetX = dx + (1 - rawTip.x) * dw;
+                const targetY = dy + rawTip.y * dh;
+
+                if (!handState.smoothedTips[fingerName]) {
+                  handState.smoothedTips[fingerName] = { x: targetX, y: targetY };
+                  handState.prevTips[fingerName] = { x: targetX, y: targetY };
+                  handState.tipVelocities[fingerName] = { vx: 0, vy: 0, speed: 0 };
+                  handState.lastRippleTimes[fingerName] = 0;
+                } else {
+                  // Exponential smoothing
+                  const alpha = CONFIG.hand.smoothing;
+                  const prev = handState.smoothedTips[fingerName];
+                  const smoothX = prev.x * alpha + targetX * (1 - alpha);
+                  const smoothY = prev.y * alpha + targetY * (1 - alpha);
+
+                  const vx = smoothX - prev.x;
+                  const vy = smoothY - prev.y;
+                  const speed = Math.hypot(vx, vy);
+
+                  handState.tipVelocities[fingerName] = { vx, vy, speed };
+                  aggregateMovementEnergy += speed;
+                  sumTipX += smoothX;
+                  tipCount++;
+
+                  // Emit water surface displacement wake if moving
+                  if (speed > 1.2) {
+                    onWakeDisturbance(smoothX, smoothY, vx, vy, speed);
+                  }
+
+                  // Secondary broken ripple arcs when movement crosses velocity threshold
+                  if (
+                    speed > CONFIG.hand.rippleSpeedThreshold &&
+                    now - (handState.lastRippleTimes[fingerName] || 0) > CONFIG.hand.rippleCooldownMs
+                  ) {
+                    handState.lastRippleTimes[fingerName] = now;
+                    const intensity = Math.min(speed / 4.5, 2.0);
+                    onBrokenRipple(smoothX, smoothY, intensity);
+                    soundEngine.triggerWaterSplash(smoothX / canvasWidth, intensity);
+                  }
+
+                  handState.prevTips[fingerName] = { x: prev.x, y: prev.y };
+                  handState.smoothedTips[fingerName] = { x: smoothX, y: smoothY };
+                }
+              }
+
+              // ---------------------------------------------------------
+              // Pinch Gesture Detection (Thumb Tip #4 to Index Tip #8)
+              // ---------------------------------------------------------
+              const thumb = rawLandmarks[4];
+              const index = rawLandmarks[8];
+              const rawPinchDist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+              const normPinchDist = rawPinchDist / handScale;
+              handState.pinchDistNorm = normPinchDist;
+
+              const midRawX = (thumb.x + index.x) * 0.5;
+              const midRawY = (thumb.y + index.y) * 0.5;
+              const pinchCanvasX = dx + (1 - midRawX) * dw;
+              const pinchCanvasY = dy + midRawY * dh;
+              handState.pinchCenter = { x: pinchCanvasX, y: pinchCanvasY };
+
+              // Gesture Hysteresis: Trigger ONCE on transition (not pinching -> pinching)
+              if (handState.isPinching) {
+                if (normPinchDist > CONFIG.hand.pinchReleaseThreshold) {
+                  handState.isPinching = false;
+                }
+              } else {
+                if (normPinchDist < CONFIG.hand.pinchStartThreshold) {
+                  handState.isPinching = true;
+                  onPinchFeed(pinchCanvasX, pinchCanvasY);
+                }
+              }
+            } else {
+              handState.active = false;
+              handState.isPinching = false;
+            }
+          }
+
+          // Modulate continuous gentle water brushing sound
+          if (tipCount > 0) {
+            const avgNormX = (sumTipX / tipCount) / canvasWidth;
+            soundEngine.updateMovementAudio(avgNormX, aggregateMovementEnergy);
+          } else {
+            soundEngine.updateMovementAudio(0.5, 0);
+          }
+        }
+      }
+    }
+
+    // ==========================================
+    // Pond Manager (Generative p5 Orchestration)
+    // ==========================================
+    class Pond {
+      constructor() {
+        this.p = null;
+        this.tracker = new HandTracker();
+        this.waterDeform = null;
+        this.koi = [];
+        this.pellets = [];
+        this.bubbles = [];
+
+        // Procedural watercolor lily pads / leaves & submerged stones
+        this.lilyPads = [];
+        this.stones = [];
+
+        this.reflectionEnabled = true;
+        this.soundEnabled = false;
+
+        // Mouse tracking for desktop fallback
+        this.prevMouse = { x: 0, y: 0 };
+        this.mouseSpeed = 0;
+      }
+
+      initP5() {
+        const sketch = (p) => {
+          this.p = p;
+          this.waterDeform = new WaterDeformation(p);
+
+          p.setup = () => {
+            const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
+            canvas.parent('canvas-container');
+            p.frameRate(60);
+
+            this.createPondScene();
+
+            // Bind mouse & touch fallback
+            canvas.mouseMoved = () => {
+              const vx = p.mouseX - this.prevMouse.x;
+              const vy = p.mouseY - this.prevMouse.y;
+              this.mouseSpeed = Math.hypot(vx, vy);
+
+              if (this.mouseSpeed > 1.2) {
+                this.waterDeform.addWakeNode(p.mouseX, p.mouseY, vx, vy, this.mouseSpeed);
+                soundEngine.updateMovementAudio(p.mouseX / p.width, this.mouseSpeed);
+              }
+              if (this.mouseSpeed > 5.0 && p.random() < 0.25) {
+                this.waterDeform.addBrokenRipple(p.mouseX, p.mouseY, 1.2);
+                soundEngine.triggerWaterSplash(p.mouseX / p.width, 1.2);
+              }
+
+              this.prevMouse = { x: p.mouseX, y: p.mouseY };
+            };
+
+            canvas.mousePressed = () => {
+              this.waterDeform.addBrokenRipple(p.mouseX, p.mouseY, 1.5);
+              soundEngine.triggerWaterSplash(p.mouseX / p.width, 1.5);
+              this.feed(p.mouseX, p.mouseY);
+            };
+          };
+
+          p.windowResized = () => {
+            p.resizeCanvas(p.windowWidth, p.windowHeight);
+            this.createPondScene();
+          };
+
+          p.draw = () => {
+            const now = p.millis();
+
+            // 1. Update Hand Tracking & Feed Triggers
+            this.tracker.update(
+              p.width,
+              p.height,
+              (x, y) => this.feed(x, y),
+              (x, y, vx, vy, speed) => this.waterDeform.addWakeNode(x, y, vx, vy, speed),
+              (x, y, intensity) => this.waterDeform.addBrokenRipple(x, y, intensity)
+            );
+
+            this.waterDeform.update();
+
+            // ==========================================
+            // LAYER 1: Deep Ink-and-Watercolor Background
+            // ==========================================
+            this.drawWatercolorPondBackground(p);
+
+            // ==========================================
+            // LAYER 2: Submerged Stones & Sediment
+            // ==========================================
+            this.drawSubmergedStones(p);
+
+            // ==========================================
+            // LAYER 3: Clear Camera View Under the Water (~50%)
+            // ==========================================
+            if (this.reflectionEnabled && this.tracker.cameraActive) {
+              this.drawWebcamReflection(p);
+            }
+
+            // ==========================================
+            // LAYER 4: Watercolor Floating Leaves / Lily Pads (Edges)
+            // ==========================================
+            this.drawLilyPads(p, now);
+
+            // ==========================================
+            // LAYER 5: Slender Watercolor Koi (Rescaled to 30%)
+            // ==========================================
+            const bounds = { width: p.width, height: p.height };
+            for (const fish of this.koi) {
+              fish.update(bounds, this.pellets, this.koi, (x, y) => this.onFishEat(x, y));
+              fish.draw();
+            }
+
+            // ==========================================
+            // LAYER 6: Food Pellets
+            // ==========================================
+            for (let i = this.pellets.length - 1; i >= 0; i--) {
+              const pellet = this.pellets[i];
+              pellet.update();
+              pellet.draw();
+              if (pellet.isDead()) {
+                this.pellets.splice(i, 1);
+              }
+            }
+
+            // ==========================================
+            // LAYER 7: Microscopic Rising Bubbles
+            // ==========================================
+            if (p.random() < 0.03 && this.bubbles.length < CONFIG.maxBubbles) {
+              this.bubbles.push(new Bubble(p, p.random(p.width), p.random(p.height)));
+            }
+
+            for (let i = this.bubbles.length - 1; i >= 0; i--) {
+              const b = this.bubbles[i];
+              b.update();
+              b.draw();
+              if (b.isDead()) {
+                this.bubbles.splice(i, 1);
+              }
+            }
+
+            // ==========================================
+            // LAYER 8: Water Surface Deformation & Organic Ripples
+            // ==========================================
+            this.waterDeform.draw(now);
+
+            // Fingertip Refraction Lenses at active fingertips
+            for (let h = 0; h < 2; h++) {
+              const hand = this.tracker.hands[h];
+              if (hand.active) {
+                for (const [finger, pt] of Object.entries(hand.smoothedTips)) {
+                  const vel = hand.tipVelocities[finger] || { vx: 0, vy: 0, speed: 0 };
+                  this.waterDeform.drawFingertipLens(pt.x, pt.y, vel.vx, vel.vy, vel.speed);
+                }
+              }
+            }
+
+            // Mouse fallback fingertip lens
+            if (!this.tracker.cameraActive && p.mouseX > 0 && p.mouseY > 0) {
+              const vx = p.mouseX - this.prevMouse.x;
+              const vy = p.mouseY - this.prevMouse.y;
+              this.waterDeform.drawFingertipLens(p.mouseX, p.mouseY, vx, vy, this.mouseSpeed);
+            }
+
+            // ==========================================
+            // LAYER 9: Debug Visualization (when DEBUG = true)
+            // ==========================================
+            if (DEBUG) {
+              this.drawDebug(p);
+            }
+          };
+        };
+
+        new p5(sketch);
+      }
+
+      createPondScene() {
+        const p = this.p;
+        // 1. Initialize 5 delicate small koi with spacious open water
+        this.koi = [];
+        for (let i = 0; i < CONFIG.koiCount; i++) {
+          this.koi.push(
+            new Koi(
+              p,
+              p.random(p.width * 0.22, p.width * 0.78),
+              p.random(p.height * 0.22, p.height * 0.78),
+              i
+            )
+          );
+        }
+
+        // 2. Submerged smooth stones (placed around borders, leaving spacious center)
+        this.stones = [];
+        const stoneAnchors = [
+          { x: p.width * 0.1, y: p.height * 0.88, r: p.random(35, 55) },
+          { x: p.width * 0.22, y: p.height * 0.94, r: p.random(40, 65) },
+          { x: p.width * 0.88, y: p.height * 0.18, r: p.random(35, 50) },
+          { x: p.width * 0.94, y: p.height * 0.32, r: p.random(45, 70) },
+          { x: p.width * 0.82, y: p.height * 0.84, r: p.random(40, 60) },
+          { x: p.width * 0.06, y: p.height * 0.25, r: p.random(30, 48) },
+        ];
+
+        for (const s of stoneAnchors) {
+          this.stones.push({
+            x: s.x,
+            y: s.y,
+            rx: s.r,
+            ry: s.r * p.random(0.65, 0.85),
+            angle: p.random(p.TWO_PI),
+            color: [24, 52, 68, p.random(60, 95)],
+          });
+        }
+
+        // 3. Floating watercolor lily pads (inspired by reference image, grouped on right & bottom)
+        this.lilyPads = [];
+        const padClusters = [
+          // Upper-right foliage cluster (as in reference painting)
+          { cx: p.width * 0.88, cy: p.height * 0.16, count: 6, spread: 80 },
+          // Right-middle edge
+          { cx: p.width * 0.93, cy: p.height * 0.52, count: 5, spread: 75 },
+          // Bottom-right cluster
+          { cx: p.width * 0.86, cy: p.height * 0.88, count: 7, spread: 90 },
+          // Bottom-left edge
+          { cx: p.width * 0.14, cy: p.height * 0.92, count: 4, spread: 60 }
+        ];
+
+        for (const cluster of padClusters) {
+          for (let i = 0; i < cluster.count; i++) {
+            const angle = p.random(p.TWO_PI);
+            const dist = p.random(0.2, 1.0) * cluster.spread;
+            const px = cluster.cx + Math.cos(angle) * dist;
+            const py = cluster.cy + Math.sin(angle) * dist;
+
+            this.lilyPads.push({
+              x: px,
+              y: py,
+              radius: p.random(18, 36),
+              rot: p.random(p.TWO_PI),
+              notchAngle: p.random(p.TWO_PI),
+              // Watercolor pigment tones: muted Prussian blue, slate, and moss jade
+              baseColor: (i % 2 === 0)
+                ? [38, 76, 92, p.random(150, 195)]
+                : [46, 92, 88, p.random(140, 185)],
+              phase: p.random(p.TWO_PI),
+            });
+          }
+        }
+      }
+
+      // Draw the overhead East Asian watercolor pond ground
+      drawWatercolorPondBackground(p) {
+        const ctx = p.drawingContext;
+
+        // Base soft paper & clear water gradient (lighter in center, deeper at edges)
+        const grad = ctx.createRadialGradient(
+          p.width * 0.46, p.height * 0.42, p.width * 0.08,
+          p.width * 0.5, p.height * 0.5, p.width * 0.82
+        );
+        // Soft watercolor transitions inspired by reference image
+        grad.addColorStop(0, 'rgba(215, 230, 236, 1)');      // Luminous clear center wash
+        grad.addColorStop(0.38, 'rgba(178, 204, 216, 1)');   // Pale blue-gray
+        grad.addColorStop(0.68, 'rgba(78, 122, 144, 1)');    // Muted indigo wash
+        grad.addColorStop(0.88, 'rgba(38, 74, 94, 1)');      // Deep indigo
+        grad.addColorStop(1, 'rgba(22, 48, 64, 1)');         // Edge slate depth
+
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, p.width, p.height);
+
+        // Layered watercolor pigment blooms along top-right and bottom edges
+        p.push();
+        p.noStroke();
+        // Upper-right deep watercolor wash
+        p.fill(32, 68, 86, 75);
+        p.ellipse(p.width * 0.9, p.height * 0.15, p.width * 0.45, p.height * 0.5);
+
+        // Bottom deep indigo sediment wash
+        p.fill(26, 56, 74, 85);
+        p.ellipse(p.width * 0.5, p.height * 0.96, p.width * 0.85, p.height * 0.35);
+
+        // Subtle paper grain texture
+        p.fill(255, 255, 255, 12);
+        for (let i = 0; i < 14; i++) {
+          const gx = ((i * 197.3) % p.width);
+          const gy = ((i * 311.7) % p.height);
+          p.ellipse(gx, gy, 80 + (i % 4) * 20, 60 + (i % 3) * 15);
+        }
+        p.pop();
+      }
+
+      // Subsurface smooth stones suggested through layers of pigment
+      drawSubmergedStones(p) {
+        p.push();
+        p.noStroke();
+        for (const s of this.stones) {
+          p.push();
+          p.translate(s.x, s.y);
+          p.rotate(s.angle);
+          p.fill(s.color);
+          // Organic curved stone shape with soft bleeding edge
+          p.beginShape();
+          const pts = 8;
+          for (let a = 0; a < pts; a++) {
+            const angle = (a / pts) * p.TWO_PI;
+            const rOffset = 1.0 + Math.sin(a * 2.5) * 0.14;
+            const px = Math.cos(angle) * s.rx * rOffset;
+            const py = Math.sin(angle) * s.ry * rOffset;
+            p.curveVertex(px, py);
+          }
+          p.endShape(p.CLOSE);
+          p.pop();
+        }
+        p.pop();
+      }
+
+      // Watercolor floating leaves / lily pads (grouped near edges, quiet center)
+      drawLilyPads(p, time) {
+        p.push();
+        p.noStroke();
+
+        for (const pad of this.lilyPads) {
+          // Microscopic gentle water sway
+          const sway = Math.sin(time * 0.001 + pad.phase) * 1.8;
+          const px = pad.x + sway;
+          const py = pad.y + Math.cos(time * 0.0012 + pad.phase) * 1.4;
+
+          p.push();
+          p.translate(px, py);
+          p.rotate(pad.rot);
+
+          // 1. Soft underwater shadow
+          p.fill(16, 38, 50, 60);
+          p.ellipse(2, 3, pad.radius * 2.05, pad.radius * 1.85);
+
+          // 2. Watercolor Leaf Body with organic bleeding pigment edge
+          p.fill(pad.baseColor);
+          p.beginShape();
+          const steps = 14;
+          for (let i = 0; i <= steps; i++) {
+            const theta = (i / steps) * (p.TWO_PI - 0.4) + 0.2;
+            const r = pad.radius * (1.0 + Math.sin(i * 1.8) * 0.08);
+            const x = Math.cos(theta) * r;
+            const y = Math.sin(theta) * r * 0.92;
+            p.curveVertex(x, y);
+          }
+          // Inward notch/cleft characteristic of lily pads
+          p.vertex(0, 0);
+          p.endShape(p.CLOSE);
+
+          // 3. Very subtle central leaf vein
+          p.stroke(215, 238, 245, 45);
+          p.strokeWeight(0.6);
+          p.line(0, 0, Math.cos(p.PI) * pad.radius * 0.65, Math.sin(p.PI) * pad.radius * 0.6);
+
+          p.pop();
+        }
+
+        p.pop();
+      }
+
+      // Clear underwater camera view (semi-translucent at ~50% under the pond surface)
+      drawWebcamReflection(p) {
+        const v = this.tracker.video;
+        if (!v || v.readyState < 2) return;
+
+        p.push();
+        // Mirror horizontally
+        p.translate(p.width, 0);
+        p.scale(-1, 1);
+
+        const ctx = p.drawingContext;
+        ctx.save();
+        // Semi-translucent opacity under the water (~50%)
+        ctx.globalAlpha = CONFIG.hand.reflectionOpacity;
+        // Crisp, clear camera view with subtle aquatic softening
+        ctx.filter = 'blur(0.8px) contrast(1.05) brightness(0.97) saturate(0.96)';
+
+        const videoRatio = v.videoWidth / v.videoHeight || (16 / 9);
+        const canvasRatio = p.width / p.height;
+        let dw, dh, dx, dy;
+
+        if (canvasRatio > videoRatio) {
+          dw = p.width;
+          dh = p.width / videoRatio;
+          dx = 0;
+          dy = (p.height - dh) * 0.5;
+        } else {
+          dh = p.height;
+          dw = p.height * videoRatio;
+          dx = (p.width - dw) * 0.5;
+          dy = 0;
+        }
+
+        ctx.drawImage(v, dx, dy, dw, dh);
+        ctx.restore();
+        p.pop();
+      }
+
+      // Spawn fish food pellets on pinch gesture
+      feed(x, y) {
+        const p = this.p;
+        const pelletCount = Math.floor(p.random(3, 6));
+
+        for (let i = 0; i < pelletCount; i++) {
+          if (this.pellets.length >= CONFIG.maxPellets) {
+            this.pellets.shift();
+          }
+          const scatter = p5.Vector.random2D().mult(p.random(3, 15));
+          this.pellets.push(new FoodPellet(p, x + scatter.x, y + scatter.y));
+        }
+
+        // Localized water deformation wake & broken ripple at drop point
+        this.waterDeform.addWakeNode(x, y, p.random(-1, 1), p.random(-1, 1), 3.0);
+        this.waterDeform.addBrokenRipple(x, y, 1.3);
+
+        // Quiet spatial water droplet sound
+        soundEngine.triggerWaterSplash(x / p.width, 1.2);
+      }
+
+      // Handler when a koi eats a pellet
+      onFishEat(x, y) {
+        const p = this.p;
+        // Spawn 2–3 micro bubbles
+        const count = Math.floor(p.random(2, 4));
+        for (let b = 0; b < count; b++) {
+          if (this.bubbles.length < CONFIG.maxBubbles) {
+            this.bubbles.push(new Bubble(p, x + p.random(-4, 4), y + p.random(-4, 4)));
+          }
+        }
+        // Subtle delicate broken ripple at mouth
+        this.waterDeform.addBrokenRipple(x, y, 0.45);
+      }
+
+      drawDebug(p) {
+        const hud = document.getElementById('debug-hud');
+        if (!hud) return;
+        hud.style.display = 'block';
+
+        let handInfo = '';
+        for (let h = 0; h < 2; h++) {
+          const hand = this.tracker.hands[h];
+          if (hand.active) {
+            handInfo += `<br>Hand ${h + 1}: Pinch=${hand.isPinching ? 'YES' : 'no'} (dist=${hand.pinchDistNorm.toFixed(2)})`;
+            p.push();
+            for (const [finger, pt] of Object.entries(hand.smoothedTips)) {
+              p.fill(finger === 'thumb' || finger === 'index' ? '#f43f5e' : '#38bdf8');
+              p.noStroke();
+              p.ellipse(pt.x, pt.y, 6, 6);
+            }
+            if (hand.smoothedTips.thumb && hand.smoothedTips.index) {
+              p.stroke(hand.isPinching ? '#22c55e' : '#f59e0b');
+              p.strokeWeight(1.5);
+              p.line(
+                hand.smoothedTips.thumb.x, hand.smoothedTips.thumb.y,
+                hand.smoothedTips.index.x, hand.smoothedTips.index.y
+              );
+            }
+            p.pop();
+          }
+        }
+
+        hud.innerHTML = `
+          <strong>DEBUG HUD</strong><br>
+          FPS: ${Math.round(p.frameRate())}<br>
+          Wakes: ${this.waterDeform.wakes.length}<br>
+          Ripples: ${this.waterDeform.ripples.length}/${CONFIG.maxRipples}<br>
+          Food: ${this.pellets.length}/${CONFIG.maxPellets}<br>
+          Koi: ${this.koi.length}<br>
+          Camera: ${this.tracker.cameraActive ? 'Active (' + (this.tracker.selectedDeviceId ? this.tracker.selectedDeviceId.slice(0, 8) + '...' : 'default') + ')' : 'Offline'}<br>
+          Devices: ${this.tracker.availableDevices.length} found
+          ${handInfo}
+        `;
+      }
+    }
+
+    // ==========================================
+    // Application Lifecycle & UI Handlers
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+      const pond = new Pond();
+      pond.initP5();
+
+      const startupScreen = document.getElementById('startup-screen');
+      const topBar = document.getElementById('top-bar');
+      const statusToast = document.getElementById('status-toast');
+      const btnEnter = document.getElementById('btn-enter');
+      const cameraSelect = document.getElementById('camera-select');
+      const btnReflection = document.getElementById('btn-reflection');
+      const dotReflection = document.getElementById('dot-reflection');
+      const btnSound = document.getElementById('btn-sound');
+      const dotSound = document.getElementById('dot-sound');
+      const btnFullscreen = document.getElementById('btn-fullscreen');
+      const textFullscreen = document.getElementById('text-fullscreen');
+      const iconFullscreen = document.getElementById('icon-fullscreen');
+      const btnHelp = document.getElementById('btn-help');
+      const helpModal = document.getElementById('help-modal');
+      const btnCloseHelp = document.getElementById('btn-close-help');
+
+      const updateToast = (msg) => {
+        if (statusToast) {
+          statusToast.textContent = msg;
+        }
+      };
+
+      // Populate camera dropdown with actual device labels returned by the browser
+      const populateCameraDropdown = async () => {
+        if (!cameraSelect) return;
+        const devices = await pond.tracker.getAvailableCameras();
+        cameraSelect.innerHTML = '';
+
+        if (devices.length === 0) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No camera found';
+          cameraSelect.appendChild(opt);
+          return;
+        }
+
+        devices.forEach((dev, idx) => {
+          const opt = document.createElement('option');
+          opt.value = dev.deviceId;
+          // Actual device label returned by browser (e.g. "FaceTime HD Camera", "iPhone Camera")
+          opt.textContent = dev.label || `Camera ${idx + 1}`;
+          if (dev.deviceId === pond.tracker.selectedDeviceId) {
+            opt.selected = true;
+          }
+          cameraSelect.appendChild(opt);
+        });
+
+        if (!pond.tracker.selectedDeviceId && devices[0]) {
+          pond.tracker.selectedDeviceId = devices[0].deviceId;
+          cameraSelect.value = devices[0].deviceId;
+        } else if (pond.tracker.selectedDeviceId) {
+          cameraSelect.value = pond.tracker.selectedDeviceId;
+        }
+      };
+
+      // Enter the Pond Button Handler
+      btnEnter.addEventListener('click', async () => {
+        btnEnter.disabled = true;
+        btnEnter.textContent = 'Entering...';
+
+        // 1. Fade startup overlay smoothly
+        startupScreen.classList.add('hidden');
+        topBar.classList.add('visible');
+
+        // 2. Initialize Web Audio API on user gesture
+        soundEngine.init();
+
+        // 3. Initialize MediaPipe & Webcam on user interaction
+        updateToast('Requesting camera for hand tracking...');
+        const visionLoaded = await pond.tracker.init(updateToast);
+        if (visionLoaded) {
+          const camReady = await pond.tracker.startWebcam(updateToast);
+          if (camReady) {
+            await populateCameraDropdown();
+          }
+        } else {
+          updateToast('Pond serene · Touch, drag, or click water');
+        }
+      });
+
+      // Camera Selection Change Handler
+      if (cameraSelect) {
+        cameraSelect.addEventListener('change', async (e) => {
+          const selectedDeviceId = e.target.value;
+          if (!selectedDeviceId) return;
+          const success = await pond.tracker.switchCamera(selectedDeviceId, updateToast);
+          if (success) {
+            await populateCameraDropdown();
+          }
+        });
+      }
+
+      // Listen for connected/disconnected devices (Continuity Camera hotplugging)
+      if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+        navigator.mediaDevices.addEventListener('devicechange', async () => {
+          if (pond.tracker.cameraActive) {
+            await populateCameraDropdown();
+          }
+        });
+      }
+
+      // Underwater Camera View Opacity Cycle (50% -> 75% -> 25% -> Off -> 50%)
+      const opacityOptions = [0.50, 0.75, 0.25, 0];
+      let currentOpacityIdx = 0; // Starts at 0.50 (50%)
+
+      btnReflection.addEventListener('click', () => {
+        currentOpacityIdx = (currentOpacityIdx + 1) % opacityOptions.length;
+        const newOpacity = opacityOptions[currentOpacityIdx];
+        CONFIG.hand.reflectionOpacity = newOpacity;
+        pond.reflectionEnabled = newOpacity > 0;
+
+        if (newOpacity > 0) {
+          btnReflection.classList.add('active');
+          dotReflection.classList.remove('off');
+          btnReflection.querySelector('span:last-child').textContent = `Camera: ${Math.round(newOpacity * 100)}%`;
+          updateToast(`Underwater camera set to ${Math.round(newOpacity * 100)}%`);
+        } else {
+          btnReflection.classList.remove('active');
+          dotReflection.classList.add('off');
+          btnReflection.querySelector('span:last-child').textContent = 'Camera: Off';
+          updateToast('Underwater camera hidden');
+        }
+      });
+
+      // Sound Toggle Handler
+      btnSound.addEventListener('click', () => {
+        const soundOn = soundEngine.toggle();
+        if (soundOn) {
+          btnSound.classList.add('active');
+          dotSound.classList.remove('off');
+          btnSound.querySelector('span:last-child').textContent = 'Sound: On';
+          soundEngine.triggerWaterSplash(0.5, 1.0);
+        } else {
+          btnSound.classList.remove('active');
+          dotSound.classList.add('off');
+          btnSound.querySelector('span:last-child').textContent = 'Sound: Off';
+        }
+      });
+
+      // Fullscreen Toggle Handler
+      if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch((err) => {
+              console.warn("Fullscreen request error:", err);
+            });
+          } else {
+            document.exitFullscreen().catch((err) => {
+              console.warn("Fullscreen exit error:", err);
+            });
+          }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+          const isFull = !!document.fullscreenElement;
+          btnFullscreen.classList.toggle('active', isFull);
+          if (textFullscreen) {
+            textFullscreen.textContent = isFull ? 'Exit Full' : 'Fullscreen';
+          }
+          if (iconFullscreen) {
+            iconFullscreen.textContent = isFull ? '🗗' : '⛶';
+          }
+          updateToast(isFull ? 'Fullscreen active' : 'Windowed mode');
+        });
+      }
+
+      // Help Modal Handlers
+      btnHelp.addEventListener('click', () => {
+        helpModal.classList.add('open');
+      });
+
+      btnCloseHelp.addEventListener('click', () => {
+        helpModal.classList.remove('open');
+      });
+
+      helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) {
+          helpModal.classList.remove('open');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
