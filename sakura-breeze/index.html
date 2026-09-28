@@ -30,16 +30,112 @@
           <p class="subtitle">"Let the breeze begin with your voice."</p>
         </header>
 
-        <!-- Main Status -->
+        <!-- Main Status Panel -->
         <section class="status-panel">
-          <div class="status-badge">
-            <span class="pulsing-dot"></span>
-            <span id="connection-status" class="status-text">WAITING FOR IPHONE</span>
+          <div id="status-badge" class="status-badge status-disconnected">
+            <span id="status-dot" class="pulsing-dot"></span>
+            <span id="connection-status" class="status-text">DISCONNECTED</span>
           </div>
           <div id="ar-status" class="ar-status-text">AR Renderer Ready</div>
         </section>
 
-        <!-- Connection Environment & Diagnostics -->
+        <!-- WebRTC Connection Section (Phase 3) -->
+        <section class="webrtc-card">
+          <div class="webrtc-header">
+            <h2 class="webrtc-title">
+              <span>WebRTC Connection</span>
+            </h2>
+            <span class="webrtc-badge">RTCDataChannel (sakura)</span>
+          </div>
+
+          <div class="webrtc-sections">
+            <!-- Step 1: Offer -->
+            <div class="webrtc-step">
+              <div class="step-header">
+                <span class="step-label">1. Offer (Local Description)</span>
+                <span class="step-badge">MacBook &rarr; iPhone</span>
+              </div>
+              <textarea
+                id="offer-sdp"
+                class="sdp-textarea"
+                placeholder="Click 'Create Offer' to generate local Offer SDP..."
+                readonly
+              ></textarea>
+              <div class="btn-group">
+                <button id="btn-create-offer" class="btn-primary" type="button">Create Offer</button>
+                <button id="btn-copy-offer" class="btn-secondary" type="button">Copy Offer</button>
+                <button id="btn-clear-offer" class="btn-clear" type="button">Clear</button>
+              </div>
+            </div>
+
+            <!-- Step 2: Paste Answer & Connect -->
+            <div class="webrtc-step">
+              <div class="step-header">
+                <span class="step-label">2. Paste Answer</span>
+                <span class="step-badge">From iPhone</span>
+              </div>
+              <textarea
+                id="answer-sdp"
+                class="sdp-textarea"
+                placeholder="Paste the Answer SDP from iPhone here..."
+              ></textarea>
+              <div class="btn-group">
+                <button id="btn-connect" class="btn-primary" type="button">Connect</button>
+                <button id="btn-clear-answer" class="btn-clear" type="button">Clear</button>
+              </div>
+            </div>
+
+            <!-- DataChannel Test & Log -->
+            <div class="datachannel-panel">
+              <div class="step-header">
+                <span class="step-label">DataChannel Test & Activity</span>
+                <span id="dc-state-badge" class="step-badge">channel: sakura</span>
+              </div>
+              <div id="datachannel-log" class="log-box">
+                <div class="log-entry log-system">
+                  <span class="log-time">[System]</span> Ready to establish DataChannel.
+                </div>
+              </div>
+              <div class="custom-msg-row">
+                <input
+                  id="custom-msg-input"
+                  class="custom-msg-input"
+                  type="text"
+                  placeholder="Send a test message over DataChannel..."
+                  disabled
+                />
+                <button id="btn-send-msg" class="btn-secondary" type="button" disabled>Send</button>
+              </div>
+            </div>
+
+            <!-- Developer Mode / Debug Information -->
+            <div class="debug-panel">
+              <div class="debug-header">
+                <span class="debug-title">Developer Mode &mdash; WebRTC Diagnostics</span>
+              </div>
+              <div class="debug-grid">
+                <div class="debug-item">
+                  <span class="debug-label">connectionState</span>
+                  <span id="debug-conn-state" class="debug-value">new</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">iceConnectionState</span>
+                  <span id="debug-ice-conn-state" class="debug-value">new</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">iceGatheringState</span>
+                  <span id="debug-ice-gather-state" class="debug-value">new</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">signalingState</span>
+                  <span id="debug-signal-state" class="debug-value">stable</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Connection Environment & Diagnostics (Preserved from Phase 2) -->
         <section class="diagnostics-card">
           <div class="diagnostics-header">
             <h2 class="diagnostics-title">Connection Environment</h2>

@@ -10,6 +10,12 @@ Sakura Breeze AR is a cross-device interactive installation built with pure Web 
 
 This project adheres strictly to Web Native standards and zero-dependency guidelines:
 
+- **WebRTC Native DataChannel (Phase 3)**:
+  - Establishes a bidirectional, low-latency `RTCDataChannel` named `"sakura"`.
+  - Pure native browser APIs: `RTCPeerConnection`, `RTCDataChannel`, `RTCSessionDescription`, `ICE`.
+  - Zero wrappers: No PeerJS, Socket.io, simple-peer, or external signaling servers.
+  - Zero STUN/TURN servers required (`iceServers: []`) because MacBook and iPhone communicate across local USB network tethering.
+  - Zero Camera, Microphone, Motion, or AR Canvas dependencies at this stage.
 - **Full English UI & Messages**: Designed for international and production deployment.
 - **Zero Build Step & Framework-Free**: No React, Vue, Angular, Vite, or TypeScript compilation required in production.
 - **Direct GitHub Pages Deployment**: Fully static native HTML5, CSS3, and modern Vanilla ES6+ JavaScript.
@@ -19,8 +25,6 @@ This project adheres strictly to Web Native standards and zero-dependency guidel
 - **Secure Context (HTTPS) Requirement**:
   Web standards strictly require HTTPS (or localhost during development) for sensor APIs and WebRTC. If accessed over insecure HTTP, the app displays:
   `"Please open this website via HTTPS."` without crashing.
-- **Privacy & User Intent**:
-  Camera, Microphone, and Device Motion permissions are never requested before the user explicitly taps "Start" on the iPhone controller.
 
 ---
 
@@ -28,16 +32,44 @@ This project adheres strictly to Web Native standards and zero-dependency guidel
 
 ```text
 /
-├── index.html       # MacBook Main Display (#app container & environment diagnostics)
-├── phone.html       # iPhone Controller (touch interface & environment diagnostics)
-├── app.js           # MacApp class (diagnostics integration & AR renderer lifecycle)
-├── phone.js         # PhoneApp class (safe start trigger & diagnostics integration)
+├── index.html       # MacBook Main Display (#app container, WebRTC Offer, Diagnostics)
+├── phone.html       # iPhone Controller (WebRTC Answer, Diagnostics)
+├── app.js           # MacApp class (Offer generation, ICE complete wait, DataChannel 'sakura')
+├── phone.js         # PhoneApp class (Answer generation, ondatachannel, handshake test)
 ├── diagnostics.js   # NetworkDiagnostics class (userAgent, protocol, online checking)
 ├── ar.js            # ARRenderer stub class (ready for Canvas blossom engine)
-├── style.css        # MacBook styling (dark zen Japanese aesthetics)
-├── phone.css        # iPhone mobile styling (touch & viewport-fit optimized)
+├── style.css        # MacBook styling (dark zen Japanese aesthetics & WebRTC UI)
+├── phone.css        # iPhone mobile styling (touch-optimized WebRTC controller)
 └── README.md        # Comprehensive documentation & deployment instructions
 ```
+
+---
+
+## 🔄 Phase 3 WebRTC RTCDataChannel Connection Flow
+
+1. **MacBook (`index.html`)**:
+   - Click **Create Offer**.
+   - `RTCPeerConnection({ iceServers: [] })` creates local DataChannel `"sakura"`.
+   - Waits for `iceGatheringState === "complete"` before displaying full `pc.localDescription.sdp` in the Offer box.
+   - Click **Copy Offer**.
+
+2. **iPhone (`phone.html`)**:
+   - Paste the copied Offer into **1. Paste Offer**.
+   - Click **Create Answer**.
+   - `setRemoteDescription(offer)` and `createAnswer()` are invoked.
+   - Waits for `iceGatheringState === "complete"` before displaying full Answer SDP in **2. Answer**.
+   - Click **Copy Answer**.
+
+3. **MacBook (`index.html`)**:
+   - Paste the iPhone's Answer into **2. Paste Answer**.
+   - Click **Connect**.
+   - `setRemoteDescription(answer)` establishes peer connection.
+
+4. **Automated Handshake Test**:
+   - When iPhone DataChannel opens &rarr; sends `HELLO_FROM_IPHONE`.
+   - MacBook receives `HELLO_FROM_IPHONE` &rarr; displays `Received: HELLO_FROM_IPHONE` and sends `HELLO_FROM_MAC`.
+   - iPhone receives `HELLO_FROM_MAC` &rarr; displays `Received: HELLO_FROM_MAC`.
+   - Connection status updates to `CONNECTED` on both screens.
 
 ---
 
@@ -63,7 +95,7 @@ If `location.protocol !== 'https:'` on a remote host:
    ```bash
    git init
    git add .
-   git commit -m "feat: Sakura Breeze AR USB network diagnostics in full English"
+   git commit -m "feat: Sakura Breeze AR Phase 3 native WebRTC RTCDataChannel"
    git branch -M main
    git remote add origin https://github.com/<your-username>/<your-repo-name>.git
    git push -u origin main

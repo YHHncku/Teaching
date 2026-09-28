@@ -26,14 +26,85 @@
         <p class="phone-subtitle">"Connect to the Sakura World"</p>
       </header>
 
-      <section class="action-section">
-        <button id="start-button" class="btn-start" type="button">
-          <span class="btn-text">Start</span>
-        </button>
-        <p id="action-hint" class="action-hint">Tap to prepare interaction</p>
+      <!-- Main Status Panel -->
+      <section class="status-panel">
+        <div id="status-badge" class="status-badge status-disconnected">
+          <span id="status-dot" class="pulsing-dot"></span>
+          <span id="connection-status" class="status-text">DISCONNECTED</span>
+        </div>
       </section>
 
-      <!-- Connection Environment & Diagnostics -->
+      <!-- WebRTC Connection Section (Phase 3) -->
+      <section class="webrtc-card">
+        <div class="webrtc-header">
+          <h2 class="webrtc-title">WebRTC Connection</h2>
+          <span class="webrtc-badge">iPhone Safari</span>
+        </div>
+
+        <!-- Step 1: Paste Offer -->
+        <div class="webrtc-step">
+          <label for="offer-sdp" class="step-label">1. Paste Offer</label>
+          <textarea
+            id="offer-sdp"
+            class="sdp-textarea"
+            placeholder="Paste Offer SDP from MacBook here..."
+          ></textarea>
+          <div class="btn-group">
+            <button id="btn-create-answer" class="btn-primary" type="button">Create Answer</button>
+            <button id="btn-clear-offer" class="btn-clear" type="button">Clear</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Answer -->
+        <div class="webrtc-step">
+          <label for="answer-sdp" class="step-label">2. Answer (Local Description)</label>
+          <textarea
+            id="answer-sdp"
+            class="sdp-textarea"
+            placeholder="Answer SDP will appear here after clicking 'Create Answer'..."
+            readonly
+          ></textarea>
+          <div class="btn-group">
+            <button id="btn-copy-answer" class="btn-secondary" type="button">Copy Answer</button>
+            <button id="btn-clear-answer" class="btn-clear" type="button">Clear</button>
+          </div>
+        </div>
+
+        <!-- DataChannel Test & Activity -->
+        <div class="datachannel-panel">
+          <div class="panel-title">DataChannel Test & Activity</div>
+          <div id="datachannel-log" class="log-box">
+            <div class="log-entry log-system">
+              <span class="log-time">[System]</span> Awaiting DataChannel "sakura"...
+            </div>
+          </div>
+        </div>
+
+        <!-- Developer Mode / Debug Information -->
+        <div class="debug-panel">
+          <div class="debug-title">Developer Mode &mdash; WebRTC Diagnostics</div>
+          <div class="debug-grid">
+            <div class="debug-item">
+              <span class="debug-label">connectionState</span>
+              <span id="debug-conn-state" class="debug-value">new</span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">iceConnectionState</span>
+              <span id="debug-ice-conn-state" class="debug-value">new</span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">iceGatheringState</span>
+              <span id="debug-ice-gather-state" class="debug-value">new</span>
+            </div>
+            <div class="debug-item">
+              <span class="debug-label">signalingState</span>
+              <span id="debug-signal-state" class="debug-value">stable</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Connection Environment & Diagnostics (Preserved from Phase 2) -->
       <section class="diagnostics-card">
         <h2 class="diagnostics-title">Connection Environment</h2>
 
@@ -61,7 +132,7 @@
       </section>
 
       <footer class="phone-footer">
-        <a href="index.html" class="back-link">← Return to Main Display (MacBook)</a>
+        <a href="index.html" class="back-link">&larr; Return to Main Display (MacBook)</a>
       </footer>
     </main>
   </div>
