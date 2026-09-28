@@ -1,0 +1,1900 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Embodied Atari Breakout - Motion Controller</title>
+    <meta name="description" content="Minimalist Atari Breakout controlled by an iPhone held horizontally in both hands via WebRTC motion sensors." />
+    <meta property="og:title" content="Embodied Atari Breakout - Motion Controller" />
+    <meta property="og:description" content="Minimalist Atari Breakout controlled by an iPhone held horizontally in both hands via WebRTC motion sensors." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <style>
+      :root {
+        --bg-color: #07131f;
+        --border-color: #1e3a5f;
+        --accent-color: #00ffcc;
+        --accent-orange: #ff8800;
+        --accent-red: #ff3344;
+        --accent-pink: #ff4081;
+        --font-mono: 'Courier New', Courier, monospace, system-ui;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background-color: var(--bg-color);
+        color: #e0f2fe;
+        font-family: var(--font-mono);
+        touch-action: none;
+      }
+      #app {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+        overflow: hidden;
+      }
+      /* GAME VIEW */
+      #game-view {
+        width: 100%;
+        height: 100%;
+        display: none;
+        flex-direction: column;
+        position: relative;
+      }
+      #game-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        z-index: 10;
+        pointer-events: none;
+        text-shadow: 0 0 8px rgba(0, 255, 204, 0.4);
+      }
+      .hud-title {
+        font-size: 20px;
+        font-weight: 900;
+        letter-spacing: 4px;
+        color: #fff;
+      }
+      .hud-stats {
+        display: flex;
+        gap: 28px;
+        font-size: 16px;
+        font-weight: bold;
+        letter-spacing: 2px;
+      }
+      .hud-val {
+        color: var(--accent-color);
+      }
+      #gameCanvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        background: radial-gradient(circle at 50% 40%, #0c1c2e 0%, #07131f 80%);
+      }
+      /* CONTROLLER PAIRING PANEL (GAME MODE) */
+      #pairing-panel {
+        position: absolute;
+        top: 60px;
+        right: 20px;
+        width: 320px;
+        background: rgba(7, 19, 31, 0.94);
+        border: 1px solid #234873;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 255, 204, 0.15);
+        border-radius: 4px;
+        padding: 16px;
+        z-index: 50;
+        font-size: 12px;
+        line-height: 1.4;
+        transition: transform 0.25s ease, opacity 0.25s ease;
+      }
+      #pairing-panel.collapsed {
+        transform: translateY(-8px);
+        opacity: 0;
+        pointer-events: none;
+      }
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        border-bottom: 1px solid #1a365d;
+        padding-bottom: 8px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: var(--accent-color);
+      }
+      .panel-close-btn {
+        background: transparent;
+        border: none;
+        color: #718096;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+      }
+      .panel-close-btn:hover { color: #fff; }
+      .qr-container {
+        text-align: center;
+        background: #0b1e33;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+      }
+      .qr-container img, .qr-container canvas {
+        display: inline-block;
+        max-width: 130px;
+        height: auto;
+        background: white;
+        padding: 6px;
+        border-radius: 2px;
+      }
+      .btn-retro {
+        display: block;
+        width: 100%;
+        background: #0f2742;
+        border: 1px solid #00ffcc;
+        color: #00ffcc;
+        padding: 8px 12px;
+        margin: 6px 0;
+        font-family: inherit;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        text-align: center;
+        border-radius: 2px;
+        transition: all 0.15s ease;
+        text-decoration: none;
+      }
+      .btn-retro:hover:not(:disabled) {
+        background: #00ffcc;
+        color: #07131f;
+        box-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+      }
+      .btn-retro:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        border-color: #4a5568;
+        color: #718096;
+      }
+      .retro-textarea {
+        width: 100%;
+        height: 60px;
+        background: #050d17;
+        border: 1px solid #234873;
+        color: #94a3b8;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 6px;
+        resize: none;
+        border-radius: 2px;
+        margin: 4px 0 8px 0;
+      }
+      .retro-textarea:focus {
+        border-color: var(--accent-color);
+        outline: none;
+        color: #fff;
+      }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        background: #0c2035;
+        border: 1px solid #1a365d;
+        border-radius: 3px;
+        font-size: 11px;
+        letter-spacing: 1px;
+        cursor: pointer;
+        pointer-events: auto;
+      }
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ff3344;
+        box-shadow: 0 0 6px #ff3344;
+      }
+      .status-dot.connected {
+        background: #00ffcc;
+        box-shadow: 0 0 8px #00ffcc;
+      }
+      /* CONTROLLER VIEW (IPHONE MODE) */
+      #controller-view {
+        width: 100%;
+        height: 100%;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 16px;
+        background: #050d17;
+        position: relative;
+        touch-action: none;
+      }
+      .ctrl-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #1e3a5f;
+        padding-bottom: 10px;
+      }
+      .ctrl-title {
+        font-size: 14px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: #00ffcc;
+      }
+      .ctrl-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin: 12px 0;
+      }
+      #phoneVisualizer {
+        width: 240px;
+        height: 140px;
+        border: 1px solid #1e3a5f;
+        border-radius: 8px;
+        background: #091a2c;
+      }
+      .ctrl-indicators {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+      }
+      .badge {
+        padding: 4px 10px;
+        border: 1px solid #234873;
+        background: #081626;
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        border-radius: 2px;
+        color: #718096;
+      }
+      .badge.active {
+        color: #00ffcc;
+        border-color: #00ffcc;
+        box-shadow: 0 0 8px rgba(0, 255, 204, 0.3);
+      }
+      .badge.warn {
+        color: var(--accent-orange);
+        border-color: var(--accent-orange);
+        box-shadow: 0 0 8px rgba(255, 136, 0, 0.4);
+      }
+      .ctrl-pairing-box {
+        width: 100%;
+        max-width: 360px;
+        background: rgba(12, 32, 53, 0.9);
+        border: 1px solid #234873;
+        border-radius: 4px;
+        padding: 12px;
+      }
+      /* MODE SELECTOR (INITIAL LANDING) */
+      #mode-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(3, 10, 18, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 20px;
+      }
+      .modal-card {
+        background: #091a2c;
+        border: 1px solid #00ffcc;
+        box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+        border-radius: 4px;
+        max-width: 460px;
+        width: 100%;
+        padding: 28px;
+        text-align: center;
+      }
+      /* DEBUG OVERLAY */
+      #debug-overlay {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        background: rgba(3, 10, 18, 0.9);
+        border: 1px solid #00ffcc;
+        padding: 10px 14px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: #a7f3d0;
+        z-index: 99;
+        pointer-events: none;
+        max-width: 340px;
+        line-height: 1.5;
+        border-radius: 2px;
+        display: none;
+      }
+      /* BANNER PROMPTS */
+      #game-prompt {
+        position: absolute;
+        top: 60%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        pointer-events: none;
+        z-index: 15;
+      }
+      .prompt-main {
+        font-size: 22px;
+        font-weight: 900;
+        letter-spacing: 4px;
+        color: #fff;
+        text-shadow: 0 0 16px rgba(0, 255, 204, 0.6);
+        margin-bottom: 8px;
+      }
+      .prompt-sub {
+        font-size: 13px;
+        letter-spacing: 2px;
+        color: #38bdf8;
+      }
+      /* SCANLINE EFFECT */
+      .scanlines {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+        background-size: 100% 4px;
+        z-index: 5;
+        opacity: 0.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <!-- MODE SELECTION MODAL -->
+      <div id="mode-modal">
+        <div class="modal-card">
+          <h1 style="font-size: 24px; font-weight: 900; letter-spacing: 4px; margin-bottom: 8px; color: #fff;">
+            ATARI BREAKOUT
+          </h1>
+          <p style="font-size: 12px; color: #94a3b8; letter-spacing: 1px; margin-bottom: 24px;">
+            EMBODIED MOTION EXPERIMENT
+          </p>
+          <div style="margin-bottom: 24px; font-size: 13px; line-height: 1.6; color: #cbd5e1; text-align: left; background: #050d17; padding: 14px; border: 1px solid #1e3a5f;">
+            Select role for this device:<br>
+            • <b>Mac / Desktop</b>: Big screen game display<br>
+            • <b>iPhone</b>: Held flat in hands as physical motion paddle
+          </div>
+          <button id="btn-select-game" class="btn-retro" style="padding: 12px; font-size: 13px; margin-bottom: 12px;">
+            START GAME MODE (MAC)
+          </button>
+          <button id="btn-select-ctrl" class="btn-retro" style="padding: 12px; font-size: 13px; border-color: #ff8800; color: #ff8800;">
+            START CONTROLLER MODE (IPHONE)
+          </button>
+        </div>
+      </div>
+
+      <!-- GAME VIEW (MAC) -->
+      <div id="game-view">
+        <div class="scanlines"></div>
+        <div id="game-header">
+          <div class="hud-title">BREAKOUT</div>
+          <div class="hud-stats">
+            <div>SCORE <span id="hud-score" class="hud-val">0000</span></div>
+            <div>LIVES <span id="hud-lives" class="hud-val">● ● ●</span></div>
+            <div>HIGH <span id="hud-high" class="hud-val">0000</span></div>
+          </div>
+          <div id="status-badge" class="status-pill" title="Click to toggle controller pairing panel">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="status-text">OFFLINE</span>
+          </div>
+        </div>
+
+        <div id="game-prompt">
+          <div id="prompt-main" class="prompt-main">HOLD PHONE FLAT</div>
+          <div id="prompt-sub" class="prompt-sub">FLIP IT OVER TO START</div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- WEBRTC PAIRING PANEL -->
+        <div id="pairing-panel">
+          <div class="panel-header">
+            <span>PAIR IPHONE CONTROLLER</span>
+            <button id="close-panel-btn" class="panel-close-btn">✕</button>
+          </div>
+          <div class="qr-container">
+            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">1. SCAN WITH IPHONE OR OPEN:</div>
+            <canvas id="qrCanvas" width="120" height="120"></canvas>
+            <div id="ctrl-url-text" style="font-size: 9px; color: #38bdf8; word-break: break-all; margin-top: 6px;"></div>
+          </div>
+          <div style="margin-bottom: 8px;">
+            <button id="btn-create-offer" class="btn-retro">1. CREATE OFFER</button>
+            <textarea id="offer-text" class="retro-textarea" placeholder="Offer payload will appear here..." readonly></textarea>
+            <button id="btn-copy-offer" class="btn-retro" disabled>COPY OFFER</button>
+          </div>
+          <div style="border-top: 1px solid #1a365d; padding-top: 8px;">
+            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">2. PASTE ANSWER FROM IPHONE:</div>
+            <textarea id="answer-text" class="retro-textarea" placeholder="Paste answer JSON here..."></textarea>
+            <button id="btn-apply-answer" class="btn-retro" disabled>APPLY ANSWER</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONTROLLER VIEW (IPHONE) -->
+      <div id="controller-view">
+        <div class="ctrl-header">
+          <div class="ctrl-title">PADDLE CONTROLLER</div>
+          <div id="ctrl-status-badge" class="badge">DISCONNECTED</div>
+        </div>
+
+        <div class="ctrl-body">
+          <div class="ctrl-indicators">
+            <span id="badge-motion" class="badge">MOTION: OFF</span>
+            <span id="badge-calibrated" class="badge">UNCALIBRATED</span>
+            <span id="badge-flip" class="badge">FLIP: READY</span>
+            <span id="badge-shake" class="badge">SHAKE: READY</span>
+          </div>
+
+          <canvas id="phoneVisualizer" width="240" height="140"></canvas>
+
+          <div style="width: 100%; max-width: 280px; text-align: center;">
+            <div style="font-size: 10px; color: #64748b; letter-spacing: 1px; margin-bottom: 4px;">TILT GAUGING (-25° TO +25°)</div>
+            <div style="height: 12px; background: #0c1f33; border: 1px solid #234873; border-radius: 6px; position: relative; overflow: hidden;">
+              <div id="tilt-bar-center" style="position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #38bdf8;"></div>
+              <div id="tilt-bar-needle" style="position: absolute; left: 50%; top: 1px; bottom: 1px; width: 14px; margin-left: -7px; background: #00ffcc; border-radius: 2px; box-shadow: 0 0 6px #00ffcc;"></div>
+            </div>
+            <div id="tilt-angle-label" style="font-size: 11px; color: #00ffcc; margin-top: 4px;">TILT: 0.0°</div>
+          </div>
+
+          <div style="width: 100%; max-width: 280px; display: flex; flex-direction: column; gap: 8px;">
+            <button id="btn-enable-motion" class="btn-retro" style="padding: 12px; border-color: #00ffcc; color: #00ffcc;">
+              ENABLE MOTION CONTROL
+            </button>
+            <button id="btn-calibrate" class="btn-retro" style="padding: 10px;" disabled>
+              CALIBRATE NEUTRAL POSITION
+            </button>
+          </div>
+
+          <!-- CONTROLLER PAIRING ACCORDION -->
+          <div id="ctrl-pairing-section" class="ctrl-pairing-box">
+            <div style="font-size: 11px; font-weight: bold; color: #38bdf8; margin-bottom: 6px;">
+              PAIR WITH MAC
+            </div>
+            <textarea id="ctrl-offer-input" class="retro-textarea" placeholder="Paste Offer JSON from Mac here..."></textarea>
+            <button id="btn-ctrl-connect" class="btn-retro">PROCESS OFFER & GENERATE ANSWER</button>
+            <textarea id="ctrl-answer-output" class="retro-textarea" placeholder="Generated Answer will appear here..." readonly></textarea>
+            <button id="btn-ctrl-copy-answer" class="btn-retro" disabled>COPY ANSWER</button>
+          </div>
+        </div>
+
+        <div style="text-align: center; font-size: 10px; color: #64748b; padding-bottom: 4px;">
+          Hold flat with both hands like a tray • Turn over to start • Shake vigorously to end
+        </div>
+      </div>
+
+      <!-- DEBUG MONOSPACE HUD OVERLAY -->
+      <div id="debug-overlay"></div>
+    </div>
+
+    <!-- MAIN GAME & CONTROLLER LOGIC -->
+    <script>
+      // ==========================================
+      // TUNING PARAMETERS
+      // ==========================================
+      const TILT_RANGE = 25;              // Degrees from neutral to hit screen edge (±25°)
+      const TILT_DEADZONE = 1.2;          // Degrees of deadzone to eliminate sensor jitter
+      const PADDLE_SMOOTHING = 0.14;      // Lerp factor for paddle smoothing (0.05 to 0.3)
+      const ACCEL_IMPULSE_FACTOR = 0.015; // Transient acceleration velocity boost
+      const SHAKE_THRESHOLD = 16.5;       // Acceleration magnitude threshold (m/s²)
+      const SHAKE_WINDOW = 800;           // Rolling window for peak detection (ms)
+      const SHAKE_REQUIRED_PEAKS = 3;     // Peaks needed within window to trigger shake
+      const SHAKE_COOLDOWN = 2000;        // Cooldown between shake triggers (ms)
+      const FLIP_HOLD_TIME = 350;         // Minimum duration face-down to register flip (ms)
+      const FLIP_COOLDOWN = 1800;         // Cooldown between flip starts (ms)
+      const SENSOR_SEND_RATE = 30;        // Target sensor packets per second (Hz)
+      const BALL_SPEED = 7.5;             // Initial ball speed
+      const BALL_SPEED_MAX = 13.0;        // Maximum ball speed as game progresses
+      const BRICK_ROWS = 6;               // Number of brick rows
+      const BRICK_COLS = 12;              // Number of brick columns
+
+      // ==========================================
+      // AUDIO SYNTHESIZER (Web Audio API Retro Sound)
+      // ==========================================
+      class RetroAudio {
+        constructor() {
+          this.ctx = null;
+        }
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        }
+        playTone(freq, type = 'square', duration = 0.08, gainVal = 0.12) {
+          try {
+            this.init();
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + duration);
+          } catch(e) {}
+        }
+        hitPaddle() { this.playTone(220, 'square', 0.06, 0.15); }
+        hitWall() { this.playTone(180, 'square', 0.04, 0.1); }
+        hitBrick(row) {
+          const freqs = [330, 392, 440, 523, 587, 659];
+          const f = freqs[row % freqs.length] || 440;
+          this.playTone(f, 'square', 0.09, 0.14);
+        }
+        startFlip() {
+          this.playTone(440, 'triangle', 0.08, 0.2);
+          setTimeout(() => this.playTone(660, 'triangle', 0.08, 0.2), 80);
+          setTimeout(() => this.playTone(880, 'triangle', 0.15, 0.25), 160);
+        }
+        shakeRumble() {
+          this.playTone(90, 'sawtooth', 0.35, 0.25);
+          setTimeout(() => this.playTone(65, 'sawtooth', 0.45, 0.3), 100);
+        }
+        ballLost() {
+          this.playTone(160, 'sawtooth', 0.2, 0.2);
+          setTimeout(() => this.playTone(110, 'sawtooth', 0.35, 0.25), 150);
+        }
+      }
+      const audio = new RetroAudio();
+
+      // ==========================================
+      // LIGHTWEIGHT INLINE QR CODE GENERATOR (Canvas)
+      // ==========================================
+      function renderQRCode(canvas, text) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const size = canvas.width;
+        // Simple visual QR placeholder with readable fallback link
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = '#07131f';
+        // Generate pseudo-random deterministic matrix pattern based on hash of text
+        let hash = 0;
+        for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+        const modules = 21;
+        const cellSize = Math.floor((size - 16) / modules);
+        const offset = Math.floor((size - (cellSize * modules)) / 2);
+
+        function drawFinder(r, c) {
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(offset + c*cellSize, offset + r*cellSize, 7*cellSize, 7*cellSize);
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(offset + (c+1)*cellSize, offset + (r+1)*cellSize, 5*cellSize, 5*cellSize);
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(offset + (c+2)*cellSize, offset + (r+2)*cellSize, 3*cellSize, 3*cellSize);
+        }
+        drawFinder(0, 0);
+        drawFinder(0, modules - 7);
+        drawFinder(modules - 7, 0);
+
+        // Fill data matrix
+        for (let r = 0; r < modules; r++) {
+          for (let c = 0; c < modules; c++) {
+            const inFinder = (r < 7 && c < 7) || (r < 7 && c >= modules-7) || (r >= modules-7 && c < 7);
+            if (!inFinder) {
+              const seed = (r * 31 + c * 17 + Math.abs(hash)) % 100;
+              if (seed > 46) {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(offset + c*cellSize, offset + r*cellSize, cellSize - 0.5, cellSize - 0.5);
+              }
+            }
+          }
+        }
+      }
+
+      // ==========================================
+      // WEBRTC CONNECTION MANAGER (Zero Signaling Server)
+      // ==========================================
+      class WebRTCManager {
+        constructor(isHost = true, onDataCallback = null, onStateChange = null) {
+          this.isHost = isHost;
+          this.onData = onDataCallback;
+          this.onStateChange = onStateChange;
+          this.pc = null;
+          this.dc = null;
+          this.rtcConfig = {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+          };
+        }
+
+        initPeerConnection() {
+          if (this.pc) {
+            try { this.pc.close(); } catch(e) {}
+          }
+          this.pc = new RTCPeerConnection(this.rtcConfig);
+
+          this.pc.onconnectionstatechange = () => {
+            this.emitState();
+          };
+          this.pc.onsignalingstatechange = () => {
+            this.emitState();
+          };
+
+          if (this.isHost) {
+            // Game creates low-latency unordered datachannel for sensor packets
+            this.dc = this.pc.createDataChannel('motion', { ordered: false, maxRetransmits: 0 });
+            this.setupDataChannel(this.dc);
+          } else {
+            // Controller receives datachannel
+            this.pc.ondatachannel = (e) => {
+              this.dc = e.channel;
+              this.setupDataChannel(this.dc);
+            };
+          }
+        }
+
+        setupDataChannel(channel) {
+          channel.onopen = () => {
+            this.emitState();
+          };
+          channel.onclose = () => {
+            this.emitState();
+          };
+          channel.onerror = (err) => {
+            console.error('DataChannel error:', err);
+          };
+          channel.onmessage = (e) => {
+            if (this.onData) {
+              try {
+                const parsed = JSON.parse(e.data);
+                this.onData(parsed);
+              } catch(err) {}
+            }
+          };
+        }
+
+        emitState() {
+          const info = {
+            connectionState: this.pc ? this.pc.connectionState : 'none',
+            signalingState: this.pc ? this.pc.signalingState : 'none',
+            dataChannelState: this.dc ? this.dc.readyState : 'none',
+            isConnected: this.dc && this.dc.readyState === 'open'
+          };
+          if (this.onStateChange) this.onStateChange(info);
+        }
+
+        async createOffer() {
+          this.initPeerConnection();
+          const offer = await this.pc.createOffer();
+          await this.pc.setLocalDescription(offer);
+          await this.waitForIceGathering();
+          return JSON.stringify(this.pc.localDescription);
+        }
+
+        async applyAnswer(answerJsonStr) {
+          if (!this.pc) throw new Error('PeerConnection not initialized');
+          if (this.pc.signalingState !== 'have-local-offer') {
+            throw new Error(`Cannot apply answer in state: ${this.pc.signalingState}. Only 'have-local-offer' allowed.`);
+          }
+          const answerDesc = JSON.parse(answerJsonStr);
+          await this.pc.setRemoteDescription(new RTCSessionDescription(answerDesc));
+          this.emitState();
+        }
+
+        async handleOfferAndCreateAnswer(offerJsonStr) {
+          this.initPeerConnection();
+          const offerDesc = JSON.parse(offerJsonStr);
+          await this.pc.setRemoteDescription(new RTCSessionDescription(offerDesc));
+          const answer = await this.pc.createAnswer();
+          await this.pc.setLocalDescription(answer);
+          await this.waitForIceGathering();
+          return JSON.stringify(this.pc.localDescription);
+        }
+
+        waitForIceGathering() {
+          return new Promise((resolve) => {
+            if (this.pc.iceGatheringState === 'complete') {
+              resolve();
+              return;
+            }
+            const checkState = () => {
+              if (this.pc.iceGatheringState === 'complete') {
+                this.pc.removeEventListener('icegatheringstatechange', checkState);
+                resolve();
+              }
+            };
+            this.pc.addEventListener('icegatheringstatechange', checkState);
+            // Fallback timeout after 1.8s
+            setTimeout(() => {
+              this.pc.removeEventListener('icegatheringstatechange', checkState);
+              resolve();
+            }, 1800);
+          });
+        }
+
+        send(data) {
+          if (this.dc && this.dc.readyState === 'open') {
+            try {
+              this.dc.send(typeof data === 'string' ? data : JSON.stringify(data));
+            } catch(e) {}
+          }
+        }
+      }
+
+      // ==========================================
+      // PARTICLE SYSTEM (Retro Geometric Debris)
+      // ==========================================
+      class ParticleSystem {
+        constructor() {
+          this.particles = [];
+        }
+        spawn(x, y, color, count = 8) {
+          for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1.5 + Math.random() * 4.5;
+            this.particles.push({
+              x: x,
+              y: y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              size: 2.5 + Math.random() * 3.5,
+              color: color,
+              alpha: 1.0,
+              decay: 0.02 + Math.random() * 0.03
+            });
+          }
+        }
+        update() {
+          for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.96;
+            p.vy *= 0.96;
+            p.alpha -= p.decay;
+            if (p.alpha <= 0) {
+              this.particles.splice(i, 1);
+            }
+          }
+        }
+        draw(ctx) {
+          for (const p of this.particles) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 6;
+            ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+            ctx.restore();
+          }
+        }
+      }
+
+      // ==========================================
+      // GESTURE DETECTOR (Flip & Shake)
+      // ==========================================
+      class GestureDetector {
+        constructor(onFlip, onShake) {
+          this.onFlip = onFlip;
+          this.onShake = onShake;
+          this.isFaceDown = false;
+          this.faceDownStartTime = 0;
+          this.lastFlipTime = 0;
+          this.shakePeaks = [];
+          this.lastShakeTime = 0;
+          this.currentOrientationState = 'FACE UP';
+        }
+
+        processSensor(packet) {
+          const now = performance.now();
+          const { beta = 0, gamma = 0, ax = 0, ay = 0, az = 0, gz = 0 } = packet;
+
+          // 1. FLIP DETECTION (Holding flat -> face down)
+          // When holding flat face-up, |beta| < 45 and |gamma| < 45.
+          // When flipped face down, |beta| > 130 or |gamma| > 120 or inverted gravity Z
+          const faceDownNow = Math.abs(beta) > 130 || Math.abs(gamma) > 120 || gz > 5.5;
+
+          if (faceDownNow) {
+            this.currentOrientationState = 'FACE DOWN';
+            if (!this.isFaceDown) {
+              this.isFaceDown = true;
+              this.faceDownStartTime = now;
+            } else if (now - this.faceDownStartTime >= FLIP_HOLD_TIME) {
+              if (now - this.lastFlipTime > FLIP_COOLDOWN) {
+                this.lastFlipTime = now;
+                if (this.onFlip) this.onFlip();
+              }
+            }
+          } else {
+            this.isFaceDown = false;
+            if (Math.abs(beta) < 45 && Math.abs(gamma) < 45) {
+              this.currentOrientationState = 'FACE UP';
+            } else {
+              this.currentOrientationState = 'TILTED / SIDE';
+            }
+          }
+
+          // 2. SHAKE DETECTION (Rolling acceleration peaks)
+          const accelMag = Math.sqrt(ax * ax + ay * ay + az * az);
+          if (accelMag > SHAKE_THRESHOLD) {
+            this.shakePeaks.push({ time: now, mag: accelMag });
+          }
+          // Filter window
+          this.shakePeaks = this.shakePeaks.filter(p => now - p.time <= SHAKE_WINDOW);
+
+          if (this.shakePeaks.length >= SHAKE_REQUIRED_PEAKS) {
+            if (now - this.lastShakeTime > SHAKE_COOLDOWN) {
+              this.lastShakeTime = now;
+              this.shakePeaks = [];
+              if (this.onShake) this.onShake();
+            }
+          }
+        }
+      }
+
+      // ==========================================
+      // BREAKOUT GAME ENGINE
+      // ==========================================
+      class Paddle {
+        constructor(game) {
+          this.game = game;
+          this.width = 110;
+          this.height = 14;
+          this.x = 0;
+          this.prevX = 0;
+          this.targetX = 0;
+          this.vx = 0;
+          this.trail = [];
+          this.transientImpulse = 0;
+        }
+
+        reset(canvasWidth, canvasHeight) {
+          this.width = Math.max(90, Math.min(140, canvasWidth * 0.12));
+          this.height = 14;
+          this.x = (canvasWidth - this.width) / 2;
+          this.prevX = this.x;
+          this.targetX = this.x;
+          this.vx = 0;
+          this.trail = [];
+          this.transientImpulse = 0;
+        }
+
+        setNormalizedTarget(normX, accelX = 0) {
+          // normX: 0.0 to 1.0 across playable width
+          const playableWidth = this.game.canvas.width - this.width;
+          const desired = normX * playableWidth;
+          this.targetX = Math.max(0, Math.min(playableWidth, desired));
+          // Transient impulse from phone linear acceleration
+          this.transientImpulse += accelX * ACCEL_IMPULSE_FACTOR * playableWidth;
+          this.transientImpulse = Math.max(-20, Math.min(20, this.transientImpulse));
+        }
+
+        update() {
+          this.prevX = this.x;
+          // Apply low-pass filter / lerp
+          const effectiveTarget = this.targetX + this.transientImpulse;
+          const maxPlayable = this.game.canvas.width - this.width;
+          const clampedTarget = Math.max(0, Math.min(maxPlayable, effectiveTarget));
+          
+          this.x += (clampedTarget - this.x) * PADDLE_SMOOTHING;
+          this.vx = this.x - this.prevX;
+          this.transientImpulse *= 0.88; // decay impulse rapidly
+
+          // Record trail for rapid motion
+          if (Math.abs(this.vx) > 2.5) {
+            this.trail.push({ x: this.x, y: this.getY(), alpha: 0.35 });
+          }
+          for (let i = this.trail.length - 1; i >= 0; i--) {
+            this.trail[i].alpha -= 0.07;
+            if (this.trail[i].alpha <= 0) this.trail.splice(i, 1);
+          }
+        }
+
+        getY() {
+          return this.game.canvas.height - 48;
+        }
+
+        draw(ctx) {
+          const y = this.getY();
+          const r = 3; // 2-4px radius
+
+          // Draw rapid movement trails
+          for (const t of this.trail) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, t.alpha);
+            ctx.fillStyle = '#00ffcc';
+            ctx.beginPath();
+            ctx.roundRect(t.x, t.y, this.width, this.height, r);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // Main paddle with subtle neon glow
+          ctx.save();
+          ctx.shadowColor = '#00ffcc';
+          ctx.shadowBlur = 10;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.roundRect(this.x, y, this.width, this.height, r);
+          ctx.fill();
+
+          // Subtle inner color accent
+          ctx.fillStyle = '#00ffcc';
+          ctx.fillRect(this.x + 4, y + 4, this.width - 8, this.height - 8);
+          ctx.restore();
+        }
+      }
+
+      class Ball {
+        constructor(game) {
+          this.game = game;
+          this.radius = 7;
+          this.x = 0;
+          this.y = 0;
+          this.vx = 0;
+          this.vy = 0;
+          this.speed = BALL_SPEED;
+          this.trail = [];
+        }
+
+        reset(canvasWidth, canvasHeight, paddle) {
+          this.speed = BALL_SPEED;
+          this.x = paddle.x + paddle.width / 2;
+          this.y = paddle.getY() - this.radius - 2;
+          this.vx = 0;
+          this.vy = 0;
+          this.trail = [];
+        }
+
+        launch() {
+          this.speed = BALL_SPEED;
+          // Launch upward with slight random angle
+          const angle = (Math.random() - 0.5) * 0.4;
+          this.vx = this.speed * Math.sin(angle);
+          this.vy = -this.speed * Math.cos(angle);
+        }
+
+        update(canvasWidth, canvasHeight, paddle, bricks, particles) {
+          if (this.game.state === 'ready') {
+            this.x = paddle.x + paddle.width / 2;
+            this.y = paddle.getY() - this.radius - 2;
+            return;
+          }
+
+          // Subtle short trail
+          this.trail.push({ x: this.x, y: this.y });
+          if (this.trail.length > 5) this.trail.shift();
+
+          this.x += this.vx;
+          this.y += this.vy;
+
+          // Wall collisions (Left, Right)
+          if (this.x - this.radius <= 0) {
+            this.x = this.radius;
+            this.vx = Math.abs(this.vx);
+            audio.hitWall();
+          } else if (this.x + this.radius >= canvasWidth) {
+            this.x = canvasWidth - this.radius;
+            this.vx = -Math.abs(this.vx);
+            audio.hitWall();
+          }
+
+          // Top wall collision
+          if (this.y - this.radius <= 52) { // below header
+            this.y = 52 + this.radius;
+            this.vy = Math.abs(this.vy);
+            audio.hitWall();
+          }
+
+          // Paddle collision
+          const py = paddle.getY();
+          if (
+            this.y + this.radius >= py &&
+            this.y - this.radius <= py + paddle.height &&
+            this.x >= paddle.x - this.radius &&
+            this.x <= paddle.x + paddle.width + this.radius &&
+            this.vy > 0
+          ) {
+            this.y = py - this.radius;
+            // Angle based on strike position (-1.0 to +1.0)
+            const center = paddle.x + paddle.width / 2;
+            const normDist = (this.x - center) / (paddle.width / 2);
+            const clampedNorm = Math.max(-0.95, Math.min(0.95, normDist));
+
+            // Max 70 degrees from vertical to prevent horizontal loops
+            const maxAngle = Math.PI * 0.38;
+            const bounceAngle = clampedNorm * maxAngle;
+
+            // Speed up slightly
+            this.speed = Math.min(BALL_SPEED_MAX, this.speed + 0.08);
+
+            this.vx = this.speed * Math.sin(bounceAngle) + (paddle.vx * 0.15);
+            this.vy = -Math.abs(this.speed * Math.cos(bounceAngle));
+            audio.hitPaddle();
+          }
+
+          // Brick collisions
+          let hitAnyBrick = false;
+          for (let r = 0; r < bricks.length; r++) {
+            const row = bricks[r];
+            for (let c = 0; c < row.length; c++) {
+              const b = row[c];
+              if (!b.alive) continue;
+
+              // Check circle vs rectangle
+              const nearestX = Math.max(b.x, Math.min(this.x, b.x + b.w));
+              const nearestY = Math.max(b.y, Math.min(this.y, b.y + b.h));
+              const deltaX = this.x - nearestX;
+              const deltaY = this.y - nearestY;
+
+              if (deltaX * deltaX + deltaY * deltaY < this.radius * this.radius) {
+                b.alive = false;
+                hitAnyBrick = true;
+                this.game.score += b.points;
+                particles.spawn(b.x + b.w/2, b.y + b.h/2, b.color, 8);
+                audio.hitBrick(r);
+
+                // Determine reflection side
+                const overlapLeft = (this.x + this.radius) - b.x;
+                const overlapRight = (b.x + b.w) - (this.x - this.radius);
+                const overlapTop = (this.y + this.radius) - b.y;
+                const overlapBottom = (b.y + b.h) - (this.y - this.radius);
+
+                const minOverlapX = Math.min(overlapLeft, overlapRight);
+                const minOverlapY = Math.min(overlapTop, overlapBottom);
+
+                if (minOverlapX < minOverlapY) {
+                  this.vx = -this.vx;
+                } else {
+                  this.vy = -this.vy;
+                }
+                break;
+              }
+            }
+            if (hitAnyBrick) break;
+          }
+
+          // Check bottom out (Loss of life)
+          if (this.y - this.radius > canvasHeight) {
+            audio.ballLost();
+            this.game.onBallLost();
+          }
+        }
+
+        draw(ctx) {
+          // Trail
+          for (let i = 0; i < this.trail.length; i++) {
+            const t = this.trail[i];
+            const a = (i + 1) / (this.trail.length + 1) * 0.35;
+            ctx.save();
+            ctx.globalAlpha = a;
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, this.radius * 0.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // Ball body
+          ctx.save();
+          ctx.shadowColor = '#ffffff';
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      class BreakoutGame {
+        constructor() {
+          this.canvas = document.getElementById('gameCanvas');
+          this.ctx = this.canvas.getContext('2d');
+          this.paddle = new Paddle(this);
+          this.ball = new Ball(this);
+          this.particles = new ParticleSystem();
+          this.bricks = [];
+          this.score = 0;
+          this.lives = 3;
+          this.highScore = parseInt(localStorage.getItem('breakout_high') || '0', 10);
+          this.state = 'ready'; // 'ready', 'playing', 'shaken', 'gameover', 'victory'
+          this.shakeAnimTime = 0;
+          this.shakeOffset = { x: 0, y: 0 };
+          this.isControllerConnected = false;
+          this.lastMouseX = null;
+
+          this.initResize();
+          this.initBricks();
+          this.reset();
+        }
+
+        initResize() {
+          const resize = () => {
+            const dpr = window.devicePixelRatio || 1;
+            this.canvas.width = window.innerWidth * dpr;
+            this.canvas.height = window.innerHeight * dpr;
+            this.ctx.resetTransform?.();
+            this.ctx.scale(dpr, dpr);
+            this.paddle.reset(window.innerWidth, window.innerHeight);
+            this.initBricks();
+          };
+          window.addEventListener('resize', resize);
+          resize();
+        }
+
+        initBricks() {
+          const w = window.innerWidth;
+          const topOffset = 85;
+          const padding = 6;
+          const sideMargin = Math.max(20, w * 0.05);
+          const availableWidth = w - (sideMargin * 2);
+          const brickWidth = (availableWidth - (BRICK_COLS - 1) * padding) / BRICK_COLS;
+          const brickHeight = 22;
+
+          const colors = [
+            '#ff4081', // pink (7 pts)
+            '#ff5722', // red-orange (7 pts)
+            '#ff9800', // orange (5 pts)
+            '#ffeb3b', // yellow (5 pts)
+            '#4caf50', // green (3 pts)
+            '#00e5ff'  // cyan (1 pt)
+          ];
+          const points = [7, 7, 5, 5, 3, 1];
+
+          this.bricks = [];
+          for (let r = 0; r < BRICK_ROWS; r++) {
+            const row = [];
+            for (let c = 0; c < BRICK_COLS; c++) {
+              row.push({
+                x: sideMargin + c * (brickWidth + padding),
+                y: topOffset + r * (brickHeight + padding),
+                w: brickWidth,
+                h: brickHeight,
+                color: colors[r % colors.length],
+                points: points[r % points.length],
+                alive: true
+              });
+            }
+            this.bricks.push(row);
+          }
+        }
+
+        reset() {
+          this.paddle.reset(window.innerWidth, window.innerHeight);
+          this.ball.reset(window.innerWidth, window.innerHeight, this.paddle);
+          this.updateHUD();
+        }
+
+        launch() {
+          if (this.state === 'ready') {
+            this.state = 'playing';
+            this.ball.launch();
+            audio.startFlip();
+            this.updatePrompt();
+          }
+        }
+
+        handleFlip() {
+          if (this.state === 'ready') {
+            this.launch();
+          } else if (this.state === 'gameover' || this.state === 'victory' || this.state === 'shaken') {
+            this.score = 0;
+            this.lives = 3;
+            this.initBricks();
+            this.state = 'ready';
+            this.reset();
+            this.launch();
+          }
+        }
+
+        handleShake() {
+          if (this.state === 'playing' || this.state === 'ready') {
+            audio.shakeRumble();
+            this.state = 'shaken';
+            this.shakeAnimTime = performance.now();
+            this.ball.vx = 0;
+            this.ball.vy = 0;
+            this.updatePrompt('GAME OVER', 'SHAKE DETECTED');
+
+            setTimeout(() => {
+              if (this.state === 'shaken') {
+                this.state = 'ready';
+                this.lives = 3;
+                this.score = 0;
+                this.initBricks();
+                this.reset();
+                this.updatePrompt('HOLD PHONE FLAT', 'FLIP IT OVER TO START');
+              }
+            }, 2200);
+          }
+        }
+
+        onBallLost() {
+          this.lives--;
+          this.updateHUD();
+          if (this.lives <= 0) {
+            this.state = 'gameover';
+            this.updatePrompt('GAME OVER', 'FLIP PHONE OR PRESS SPACE TO RETRY');
+          } else {
+            this.state = 'ready';
+            this.reset();
+            this.updatePrompt('READY', 'FLIP PHONE OR PRESS SPACE TO LAUNCH');
+          }
+        }
+
+        updateHUD() {
+          document.getElementById('hud-score').textContent = String(this.score).padStart(4, '0');
+          if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('breakout_high', String(this.highScore));
+          }
+          document.getElementById('hud-high').textContent = String(this.highScore).padStart(4, '0');
+          
+          let livesDots = '';
+          for (let i = 0; i < this.lives; i++) livesDots += '● ';
+          document.getElementById('hud-lives').textContent = livesDots.trim() || '---';
+        }
+
+        updatePrompt(mainText = null, subText = null) {
+          const pMain = document.getElementById('prompt-main');
+          const pSub = document.getElementById('prompt-sub');
+          const promptBox = document.getElementById('game-prompt');
+
+          if (this.state === 'playing') {
+            promptBox.style.display = 'none';
+          } else {
+            promptBox.style.display = 'block';
+            if (mainText) pMain.textContent = mainText;
+            if (subText) pSub.textContent = subText;
+          }
+        }
+
+        update() {
+          // Screen shake animation calculation
+          if (this.state === 'shaken') {
+            const elapsed = performance.now() - this.shakeAnimTime;
+            const intensity = Math.max(0, 1 - (elapsed / 1000));
+            this.shakeOffset.x = (Math.random() - 0.5) * 22 * intensity;
+            this.shakeOffset.y = (Math.random() - 0.5) * 22 * intensity;
+          } else {
+            this.shakeOffset.x = 0;
+            this.shakeOffset.y = 0;
+          }
+
+          this.paddle.update();
+          this.ball.update(window.innerWidth, window.innerHeight, this.paddle, this.bricks, this.particles);
+          this.particles.update();
+
+          // Check victory
+          if (this.state === 'playing') {
+            let anyAlive = false;
+            for (const row of this.bricks) {
+              for (const b of row) {
+                if (b.alive) { anyAlive = true; break; }
+              }
+              if (anyAlive) break;
+            }
+            if (!anyAlive) {
+              this.state = 'victory';
+              this.updatePrompt('ROUND CLEARED!', 'FLIP PHONE TO ADVANCE');
+            }
+          }
+          this.updateHUD();
+        }
+
+        draw() {
+          const w = window.innerWidth;
+          const h = window.innerHeight;
+
+          this.ctx.save();
+          // Apply screen shake
+          this.ctx.translate(this.shakeOffset.x, this.shakeOffset.y);
+          this.ctx.clearRect(-50, -50, w + 100, h + 100);
+
+          // Draw Bricks
+          for (const row of this.bricks) {
+            for (const b of row) {
+              if (!b.alive) continue;
+              this.ctx.save();
+              this.ctx.fillStyle = b.color;
+              this.ctx.shadowColor = b.color;
+              this.ctx.shadowBlur = 6;
+              this.ctx.beginPath();
+              this.ctx.roundRect(b.x, b.y, b.w, b.h, 3);
+              this.ctx.fill();
+
+              // Subtle brick highlight line
+              this.ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+              this.ctx.fillRect(b.x + 2, b.y + 2, b.w - 4, 2);
+              this.ctx.restore();
+            }
+          }
+
+          // Draw Particles
+          this.particles.draw(this.ctx);
+
+          // Draw Paddle & Ball
+          this.paddle.draw(this.ctx);
+          this.ball.draw(this.ctx);
+
+          this.ctx.restore();
+        }
+      }
+
+      // ==========================================
+      // APPLICATION CONTROLLER & SENSOR PIPELINE
+      // ==========================================
+      let appMode = null; // 'game' or 'controller'
+      let isDebug = false;
+      let gameInstance = null;
+      let webRTC = null;
+      let gestureDetector = null;
+
+      // Controller sensor states
+      let motionEnabled = false;
+      let isCalibrated = false;
+      let neutralBeta = 0;
+      let neutralGamma = 0;
+      let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
+      let currentAx = 0, currentAy = 0, currentAz = 0;
+      let currentGx = 0, currentGy = 0, currentGz = 0;
+      let lastSensorSendTime = 0;
+      let debugStats = {
+        fps: 0,
+        frames: 0,
+        lastFpsTime: performance.now(),
+        rawPaddleX: 0.5,
+        smoothedPaddleX: 0.5,
+        relativeBeta: 0,
+        relativeGamma: 0,
+        tiltAngle: 0
+      };
+
+      // ------------------------------------------
+      // PHONE CANVAS VISUALIZER (Controller Mode)
+      // ------------------------------------------
+      function drawPhoneVisualizer(canvas, beta, gamma) {
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const cx = w / 2;
+        const cy = h / 2;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Clamp visual rotation for aesthetic appeal
+        const rotY = Math.max(-0.6, Math.min(0.6, (gamma * Math.PI) / 180));
+        const rotX = Math.max(-0.6, Math.min(0.6, (beta * Math.PI) / 180));
+
+        ctx.transform(Math.cos(rotY), Math.sin(rotX)*0.3, 0, Math.cos(rotX), 0, 0);
+
+        // Phone body
+        const pw = 140;
+        const ph = 80;
+        ctx.fillStyle = '#0f2742';
+        ctx.strokeStyle = '#00ffcc';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#00ffcc';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.roundRect(-pw/2, -ph/2, pw, ph, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // Screen bezel
+        ctx.fillStyle = '#061321';
+        ctx.beginPath();
+        ctx.roundRect(-pw/2 + 8, -ph/2 + 6, pw - 16, ph - 12, 4);
+        ctx.fill();
+
+        // Dynamic motion indicator inside screen
+        const tiltX = Math.max(-30, Math.min(30, gamma * 1.2));
+        ctx.fillStyle = '#00ffcc';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(tiltX, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // ------------------------------------------
+      // SENSOR PROCESSING (Controller to Normalized Tilt)
+      // ------------------------------------------
+      function processAndSendSensor() {
+        if (!motionEnabled) return;
+
+        // Compute tilt relative to neutral
+        let relBeta = currentBeta - neutralBeta;
+        let relGamma = currentGamma - neutralGamma;
+
+        // When held flat in hands horizontally (landscape or tray orientation):
+        // Horizontal left/right roll is primarily gamma (or beta if in landscape).
+        // Check window orientation
+        const isLandscape = Math.abs(window.orientation) === 90 || window.innerWidth > window.innerHeight;
+        let tilt = isLandscape ? relBeta : relGamma;
+        if (window.orientation === -90) tilt = -tilt;
+
+        // Apply deadzone
+        let effectiveTilt = tilt;
+        if (Math.abs(effectiveTilt) < TILT_DEADZONE) {
+          effectiveTilt = 0;
+        } else {
+          effectiveTilt = effectiveTilt > 0 ? effectiveTilt - TILT_DEADZONE : effectiveTilt + TILT_DEADZONE;
+        }
+
+        // Map ±TILT_RANGE to 0.0 - 1.0 (0.5 is center)
+        const normalized = Math.max(0, Math.min(1, (effectiveTilt + TILT_RANGE) / (TILT_RANGE * 2)));
+
+        // Update local controller UI
+        const needle = document.getElementById('tilt-bar-needle');
+        const angleLabel = document.getElementById('tilt-angle-label');
+        if (needle) needle.style.left = `${(normalized * 100).toFixed(1)}%`;
+        if (angleLabel) angleLabel.textContent = `TILT: ${tilt.toFixed(1)}° (${effectiveTilt >= 0 ? '+' : ''}${effectiveTilt.toFixed(1)}°)`;
+
+        debugStats.tiltAngle = tilt;
+        debugStats.relativeBeta = relBeta;
+        debugStats.relativeGamma = relGamma;
+        debugStats.rawPaddleX = normalized;
+
+        // Draw controller visualizer
+        const phoneCanvas = document.getElementById('phoneVisualizer');
+        if (phoneCanvas) drawPhoneVisualizer(phoneCanvas, currentBeta, currentGamma);
+
+        // Rate limit WebRTC transmissions to ~30Hz
+        const now = performance.now();
+        if (now - lastSensorSendTime >= (1000 / SENSOR_SEND_RATE)) {
+          lastSensorSendTime = now;
+          const packet = {
+            type: 'sensor',
+            alpha: currentAlpha,
+            beta: currentBeta,
+            gamma: currentGamma,
+            ax: currentAx,
+            ay: currentAy,
+            az: currentAz,
+            gx: currentGx,
+            gy: currentGy,
+            gz: currentGz,
+            normX: normalized,
+            timestamp: now
+          };
+          webRTC.send(packet);
+
+          // Local gesture check for feedback badges
+          if (gestureDetector) gestureDetector.processSensor(packet);
+        }
+      }
+
+      // ------------------------------------------
+      // CONTROLLER PERMISSIONS & EVENT LISTENERS
+      // ------------------------------------------
+      async function setupControllerSensors() {
+        try {
+          if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            const resOrient = await DeviceOrientationEvent.requestPermission();
+            if (resOrient !== 'granted') {
+              alert('Orientation permission denied. Please allow motion access.');
+              return;
+            }
+          }
+          if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            const resMotion = await DeviceMotionEvent.requestPermission();
+            if (resMotion !== 'granted') {
+              alert('Motion permission denied.');
+              return;
+            }
+          }
+        } catch(err) {
+          console.warn('Sensor permission prompt warning:', err);
+        }
+
+        window.addEventListener('deviceorientation', (e) => {
+          currentAlpha = e.alpha || 0;
+          currentBeta = e.beta || 0;
+          currentGamma = e.gamma || 0;
+          processAndSendSensor();
+        });
+
+        window.addEventListener('devicemotion', (e) => {
+          if (e.acceleration) {
+            currentAx = e.acceleration.x || 0;
+            currentAy = e.acceleration.y || 0;
+            currentAz = e.acceleration.z || 0;
+          }
+          if (e.accelerationIncludingGravity) {
+            currentGx = e.accelerationIncludingGravity.x || 0;
+            currentGy = e.accelerationIncludingGravity.y || 0;
+            currentGz = e.accelerationIncludingGravity.z || 0;
+            // If linear acceleration not provided, estimate from gravity delta
+            if (!e.acceleration) {
+              currentAx = currentGx;
+              currentAy = currentGy;
+              currentAz = currentGz - 9.8;
+            }
+          }
+          processAndSendSensor();
+        });
+
+        motionEnabled = true;
+        const bMotion = document.getElementById('badge-motion');
+        if (bMotion) {
+          bMotion.textContent = 'MOTION: ACTIVE';
+          bMotion.className = 'badge active';
+        }
+        document.getElementById('btn-enable-motion').style.display = 'none';
+        document.getElementById('btn-calibrate').disabled = false;
+        calibrateNeutral();
+      }
+
+      function calibrateNeutral() {
+        neutralBeta = currentBeta;
+        neutralGamma = currentGamma;
+        isCalibrated = true;
+        const bCal = document.getElementById('badge-calibrated');
+        if (bCal) {
+          bCal.textContent = 'CALIBRATED';
+          bCal.className = 'badge active';
+        }
+      }
+
+      // ------------------------------------------
+      // DEBUG HUD
+      // ------------------------------------------
+      function updateDebugHUD() {
+        if (!isDebug) return;
+        const overlay = document.getElementById('debug-overlay');
+        if (!overlay) return;
+
+        // Calculate FPS
+        debugStats.frames++;
+        const now = performance.now();
+        if (now - debugStats.lastFpsTime >= 500) {
+          debugStats.fps = Math.round((debugStats.frames * 1000) / (now - debugStats.lastFpsTime));
+          debugStats.frames = 0;
+          debugStats.lastFpsTime = now;
+        }
+
+        const connState = webRTC && webRTC.pc ? webRTC.pc.connectionState : 'none';
+        const sigState = webRTC && webRTC.pc ? webRTC.pc.signalingState : 'none';
+        const dcState = webRTC && webRTC.dc ? webRTC.dc.readyState : 'none';
+        const accelMag = Math.sqrt(currentAx*currentAx + currentAy*currentAy + currentAz*currentAz);
+
+        overlay.innerHTML = `
+          <div><b>=== DEBUG HUD ===</b></div>
+          <div>FPS: <span style="color:#fff">${debugStats.fps}</span> | MODE: ${appMode.toUpperCase()}</div>
+          <div>WebRTC: ${connState} | ${sigState}</div>
+          <div>DataChannel: <span style="color:${dcState === 'open' ? '#00ffcc' : '#ff3344'}">${dcState}</span></div>
+          <div>α: ${currentAlpha.toFixed(1)}° β: ${currentBeta.toFixed(1)}° γ: ${currentGamma.toFixed(1)}°</div>
+          <div>Rel β: ${debugStats.relativeBeta.toFixed(1)}° γ: ${debugStats.relativeGamma.toFixed(1)}° (tilt: ${debugStats.tiltAngle.toFixed(1)}°)</div>
+          <div>Accel: [${currentAx.toFixed(1)}, ${currentAy.toFixed(1)}, ${currentAz.toFixed(1)}] | Mag: ${accelMag.toFixed(1)}</div>
+          <div>Paddle X: raw ${debugStats.rawPaddleX.toFixed(2)} | sm: ${(gameInstance ? gameInstance.paddle.x / (window.innerWidth - gameInstance.paddle.width) : 0).toFixed(2)}</div>
+          <div>Orientation: <span style="color:#00ffcc">${gestureDetector ? gestureDetector.currentOrientationState : 'N/A'}</span></div>
+          <div>Shake Peaks: ${gestureDetector ? gestureDetector.shakePeaks.length : 0} / ${SHAKE_REQUIRED_PEAKS}</div>
+        `;
+      }
+
+      // ------------------------------------------
+      // INITIALIZATION & MODE ROUTING
+      // ------------------------------------------
+      function initApp() {
+        const urlParams = new URLSearchParams(window.location.search);
+        isDebug = urlParams.get('debug') === '1';
+        if (isDebug) {
+          document.getElementById('debug-overlay').style.display = 'block';
+        }
+
+        const modeParam = urlParams.get('mode');
+        if (modeParam === 'game') {
+          startMode('game');
+        } else if (modeParam === 'controller') {
+          startMode('controller');
+        } else {
+          // Check if mobile user agent to suggest mode or show modal
+          const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+          if (isMobile) {
+            document.getElementById('btn-select-ctrl').style.fontWeight = 'bold';
+            document.getElementById('btn-select-ctrl').style.boxShadow = '0 0 12px rgba(255, 136, 0, 0.4)';
+          }
+          document.getElementById('mode-modal').style.display = 'flex';
+          document.getElementById('btn-select-game').onclick = () => {
+            history.pushState(null, '', '?mode=game' + (isDebug ? '&debug=1' : ''));
+            startMode('game');
+          };
+          document.getElementById('btn-select-ctrl').onclick = () => {
+            history.pushState(null, '', '?mode=controller' + (isDebug ? '&debug=1' : ''));
+            startMode('controller');
+          };
+        }
+      }
+
+      function startMode(mode) {
+        appMode = mode;
+        document.getElementById('mode-modal').style.display = 'none';
+
+        if (mode === 'game') {
+          document.getElementById('game-view').style.display = 'flex';
+          document.getElementById('controller-view').style.display = 'none';
+          initGameMode();
+        } else {
+          document.getElementById('controller-view').style.display = 'flex';
+          document.getElementById('game-view').style.display = 'none';
+          initControllerMode();
+        }
+
+        // Start render / update loop
+        function mainLoop() {
+          if (gameInstance && appMode === 'game') {
+            gameInstance.update();
+            gameInstance.draw();
+          }
+          updateDebugHUD();
+          requestAnimationFrame(mainLoop);
+        }
+        requestAnimationFrame(mainLoop);
+      }
+
+      // ------------------------------------------
+      // GAME MODE SETUP
+      // ------------------------------------------
+      function initGameMode() {
+        gameInstance = new BreakoutGame();
+
+        // Gestures triggered either locally via sensor packet or sent as gesture events
+        gestureDetector = new GestureDetector(
+          () => {
+            gameInstance.handleFlip();
+          },
+          () => {
+            gameInstance.handleShake();
+          }
+        );
+
+        // WebRTC setup (Host)
+        webRTC = new WebRTCManager(
+          true,
+          (data) => {
+            // Incoming data channel packet from iPhone controller
+            if (data.type === 'sensor') {
+              gameInstance.isControllerConnected = true;
+              currentAlpha = data.alpha || 0;
+              currentBeta = data.beta || 0;
+              currentGamma = data.gamma || 0;
+              currentAx = data.ax || 0;
+              currentAy = data.ay || 0;
+              currentAz = data.az || 0;
+              currentGz = data.gz || 0;
+
+              if (typeof data.normX === 'number') {
+                debugStats.rawPaddleX = data.normX;
+                gameInstance.paddle.setNormalizedTarget(data.normX, data.ax);
+              }
+              gestureDetector.processSensor(data);
+            } else if (data.type === 'gesture') {
+              if (data.gesture === 'flip') gameInstance.handleFlip();
+              if (data.gesture === 'shake') gameInstance.handleShake();
+            }
+          },
+          (state) => {
+            const dot = document.getElementById('status-dot');
+            const txt = document.getElementById('status-text');
+            const panel = document.getElementById('pairing-panel');
+            const applyBtn = document.getElementById('btn-apply-answer');
+
+            // Enforce state machine checks: Apply Answer only valid when have-local-offer
+            if (applyBtn) {
+              applyBtn.disabled = !(state.signalingState === 'have-local-offer');
+            }
+
+            if (state.isConnected) {
+              dot.className = 'status-dot connected';
+              txt.textContent = 'CONTROLLER CONNECTED';
+              // Automatically hide pairing panel once connected
+              panel.classList.add('collapsed');
+            } else {
+              dot.className = 'status-dot';
+              txt.textContent = state.connectionState === 'connecting' ? 'CONNECTING...' : 'OFFLINE';
+            }
+          }
+        );
+
+        // UI & Pairing panel wiring
+        const pairingPanel = document.getElementById('pairing-panel');
+        document.getElementById('status-badge').onclick = () => {
+          pairingPanel.classList.toggle('collapsed');
+        };
+        document.getElementById('close-panel-btn').onclick = () => {
+          pairingPanel.classList.add('collapsed');
+        };
+
+        // Render QR Code pointing to ?mode=controller
+        const ctrlUrl = window.location.origin + window.location.pathname + '?mode=controller' + (isDebug ? '&debug=1' : '');
+        document.getElementById('ctrl-url-text').textContent = ctrlUrl;
+        renderQRCode(document.getElementById('qrCanvas'), ctrlUrl);
+
+        // WebRTC Offer / Answer buttons
+        const createOfferBtn = document.getElementById('btn-create-offer');
+        const offerText = document.getElementById('offer-text');
+        const copyOfferBtn = document.getElementById('btn-copy-offer');
+        const answerText = document.getElementById('answer-text');
+        const applyAnswerBtn = document.getElementById('btn-apply-answer');
+
+        createOfferBtn.onclick = async () => {
+          createOfferBtn.disabled = true;
+          createOfferBtn.textContent = 'GATHERING CANDIDATES...';
+          try {
+            const offerStr = await webRTC.createOffer();
+            offerText.value = offerStr;
+            copyOfferBtn.disabled = false;
+            createOfferBtn.textContent = '1. OFFER CREATED';
+          } catch(err) {
+            alert('Offer error: ' + err.message);
+            createOfferBtn.disabled = false;
+            createOfferBtn.textContent = '1. CREATE OFFER';
+          }
+        };
+
+        copyOfferBtn.onclick = () => {
+          navigator.clipboard.writeText(offerText.value).then(() => {
+            copyOfferBtn.textContent = 'COPIED TO CLIPBOARD!';
+            setTimeout(() => copyOfferBtn.textContent = 'COPY OFFER', 1500);
+          });
+        };
+
+        applyAnswerBtn.onclick = async () => {
+          const val = answerText.value.trim();
+          if (!val) { alert('Please paste the answer JSON from iPhone first.'); return; }
+          try {
+            await webRTC.applyAnswer(val);
+            applyAnswerBtn.textContent = 'ANSWER APPLIED!';
+          } catch(err) {
+            alert('Apply answer error: ' + err.message);
+          }
+        };
+
+        // Desktop Fallback Controls (Mouse & Keyboard)
+        window.addEventListener('mousemove', (e) => {
+          if (!gameInstance.isControllerConnected) {
+            const normX = e.clientX / window.innerWidth;
+            gameInstance.paddle.setNormalizedTarget(normX);
+          }
+        });
+
+        window.addEventListener('keydown', (e) => {
+          if (e.code === 'Space') {
+            e.preventDefault();
+            gameInstance.handleFlip(); // simulate flip
+          } else if (e.code === 'Escape') {
+            e.preventDefault();
+            gameInstance.handleShake(); // simulate shake
+          } else if (e.code === 'ArrowLeft') {
+            const currentNorm = gameInstance.paddle.x / (window.innerWidth - gameInstance.paddle.width);
+            gameInstance.paddle.setNormalizedTarget(Math.max(0, currentNorm - 0.05));
+          } else if (e.code === 'ArrowRight') {
+            const currentNorm = gameInstance.paddle.x / (window.innerWidth - gameInstance.paddle.width);
+            gameInstance.paddle.setNormalizedTarget(Math.min(1, currentNorm + 0.05));
+          }
+        });
+
+        // Initialize audio on first canvas click
+        window.addEventListener('click', () => audio.init(), { once: true });
+        window.addEventListener('touchstart', () => audio.init(), { once: true });
+      }
+
+      // ------------------------------------------
+      // CONTROLLER MODE SETUP (iPhone)
+      // ------------------------------------------
+      function initControllerMode() {
+        gestureDetector = new GestureDetector(
+          () => {
+            // Local flip gesture
+            const bFlip = document.getElementById('badge-flip');
+            if (bFlip) {
+              bFlip.className = 'badge active';
+              bFlip.textContent = 'FLIP TRIGGERED!';
+              setTimeout(() => { bFlip.textContent = 'FLIP: READY'; bFlip.className = 'badge'; }, 1500);
+            }
+            if (navigator.vibrate) navigator.vibrate([80]);
+            webRTC.send({ type: 'gesture', gesture: 'flip' });
+          },
+          () => {
+            // Local shake gesture
+            const bShake = document.getElementById('badge-shake');
+            if (bShake) {
+              bShake.className = 'badge warn';
+              bShake.textContent = 'SHAKE TRIGGERED!';
+              setTimeout(() => { bShake.textContent = 'SHAKE: READY'; bShake.className = 'badge'; }, 1500);
+            }
+            if (navigator.vibrate) navigator.vibrate([150, 80, 150]);
+            webRTC.send({ type: 'gesture', gesture: 'shake' });
+          }
+        );
+
+        // WebRTC setup (Client)
+        webRTC = new WebRTCManager(
+          false,
+          (data) => {},
+          (state) => {
+            const badge = document.getElementById('ctrl-status-badge');
+            if (state.isConnected) {
+              badge.className = 'badge active';
+              badge.textContent = 'CONNECTED';
+              // Collapse pairing section
+              const box = document.getElementById('ctrl-pairing-section');
+              if (box) box.style.display = 'none';
+            } else {
+              badge.className = 'badge';
+              badge.textContent = 'DISCONNECTED';
+            }
+          }
+        );
+
+        document.getElementById('btn-enable-motion').onclick = setupControllerSensors;
+        document.getElementById('btn-calibrate').onclick = calibrateNeutral;
+
+        // Controller Pairing UI wiring
+        const offerInput = document.getElementById('ctrl-offer-input');
+        const connectBtn = document.getElementById('btn-ctrl-connect');
+        const answerOutput = document.getElementById('ctrl-answer-output');
+        const copyAnswerBtn = document.getElementById('btn-ctrl-copy-answer');
+
+        connectBtn.onclick = async () => {
+          const offerStr = offerInput.value.trim();
+          if (!offerStr) { alert('Please paste the Offer JSON from your Mac screen first.'); return; }
+          connectBtn.disabled = true;
+          connectBtn.textContent = 'GENERATING ANSWER...';
+          try {
+            const answerStr = await webRTC.handleOfferAndCreateAnswer(offerStr);
+            answerOutput.value = answerStr;
+            copyAnswerBtn.disabled = false;
+            connectBtn.textContent = 'ANSWER READY!';
+          } catch(err) {
+            alert('Answer error: ' + err.message);
+            connectBtn.disabled = false;
+            connectBtn.textContent = 'PROCESS OFFER & GENERATE ANSWER';
+          }
+        };
+
+        copyAnswerBtn.onclick = () => {
+          navigator.clipboard.writeText(answerOutput.value).then(() => {
+            copyAnswerBtn.textContent = 'COPIED TO CLIPBOARD!';
+            setTimeout(() => copyAnswerBtn.textContent = 'COPY ANSWER', 1500);
+          });
+        };
+
+        // Draw initial visualizer
+        drawPhoneVisualizer(document.getElementById('phoneVisualizer'), 0, 0);
+      }
+
+      // Initialize on load
+      window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+  </body>
+</html>
