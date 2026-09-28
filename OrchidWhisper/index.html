@@ -26,8 +26,8 @@
       height: 100%;
       overflow: hidden;
       background-color: #0b0f14;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Hiragino Sans", "Microsoft JhengHei", "Noto Sans CJK TC", "Noto Sans CJK JP", 'Inter', sans-serif;
+      color: #f8fafc;
       -webkit-font-smoothing: antialiased;
     }
     canvas {
@@ -41,7 +41,7 @@
     }
 
     /* ==========================================================================
-       UI OVERLAYS & TYPOGRAPHY
+       UI OVERLAYS & TYPOGRAPHY — CONSISTENT GLASS UI SYSTEM
        ========================================================================== */
     .ui-layer {
       position: fixed;
@@ -53,50 +53,56 @@
       pointer-events: auto;
     }
 
-    /* Top Left: Health & Title */
+    /* Top Left: Clearly Readable Dark Glass Health Panel */
     .health-display {
       position: absolute;
-      top: 36px;
-      left: 40px;
+      top: 32px;
+      left: 36px;
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 2px;
+      z-index: 30;
+      min-width: 170px;
     }
     .plant-title {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 20px;
-      font-weight: 300;
-      letter-spacing: 0.18em;
+      font-family: 'Cormorant Garamond', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.24em;
       text-transform: uppercase;
-      color: rgba(226, 232, 240, 0.7);
-    }
-    .health-number-row {
-      display: flex;
-      align-items: baseline;
-      gap: 8px;
+      color: rgba(255, 255, 255, 0.90);
     }
     .health-val {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 42px;
-      font-weight: 300;
+      font-family: 'Cormorant Garamond', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", serif;
+      font-size: 48px;
+      font-weight: 400;
       line-height: 1;
-      color: #f8fafc;
-      letter-spacing: 0.04em;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      margin: 2px 0;
     }
     .health-denom {
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      font-weight: 200;
-      letter-spacing: 0.12em;
-      color: rgba(226, 232, 240, 0.4);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.20em;
+      color: rgba(255, 255, 255, 0.75);
+      text-transform: uppercase;
     }
     .health-track {
-      width: 160px;
-      height: 1.5px;
-      background: rgba(255, 255, 255, 0.12);
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.18);
       position: relative;
-      margin-top: 4px;
-      border-radius: 1px;
+      margin-top: 8px;
+      border-radius: 2px;
       overflow: hidden;
     }
     .health-fill {
@@ -105,55 +111,62 @@
       top: 0;
       height: 100%;
       width: 30%;
-      background: linear-gradient(90deg, #f472b6, #ec4899);
-      transition: width 0.4s ease-out, background 0.4s ease;
+      background: linear-gradient(90deg, #f472b6, #fb7185);
+      box-shadow: 0 0 10px rgba(244, 114, 182, 0.85);
+      border-radius: 2px;
+      transition: width 0.4s ease-out;
     }
 
-    /* Bottom Center: Microphone State Indicator */
+    /* Bottom Center: Microphone State Indicator Glass Pill */
     .mic-status-container {
       position: absolute;
-      bottom: 34px;
+      bottom: 28px;
       left: 50%;
       transform: translateX(-50%);
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 7px 20px;
+      border-radius: 24px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
       display: flex;
-      flex-direction: column;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      z-index: 20;
     }
     .mic-dot-row {
       display: flex;
       align-items: center;
-      gap: 9px;
     }
     .mic-glow-dot {
-      width: 6px;
-      height: 6px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.4);
       transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
     }
     .mic-glow-dot.listening {
       background: #38bdf8;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
       transform: scale(1.2);
     }
     .mic-glow-dot.speaking {
       background: #4ade80;
-      box-shadow: 0 0 14px rgba(74, 222, 128, 0.9);
-      transform: scale(1.6);
+      box-shadow: 0 0 14px rgba(74, 222, 128, 1);
+      transform: scale(1.5);
     }
     .mic-glow-dot.processing {
       background: #fbbf24;
-      box-shadow: 0 0 12px rgba(251, 191, 36, 0.85);
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.9);
       transform: scale(1.3);
     }
     .mic-status-text {
-      font-family: 'Inter', sans-serif;
       font-size: 11px;
-      font-weight: 300;
+      font-weight: 500;
       letter-spacing: 0.22em;
       text-transform: uppercase;
-      color: rgba(226, 232, 240, 0.55);
+      color: rgba(255, 255, 255, 0.90);
       transition: color 0.3s;
     }
 
@@ -161,18 +174,18 @@
     .floating-transcript {
       position: absolute;
       pointer-events: none;
-      font-family: 'Cormorant Garamond', serif;
+      font-family: 'Cormorant Garamond', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", serif;
       font-style: italic;
-      font-size: 18px;
+      font-size: 20px;
       letter-spacing: 0.04em;
-      color: rgba(248, 250, 252, 0.9);
-      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
       transform: translate(-50%, -50%);
       transition: opacity 0.6s ease, transform 0.6s ease;
       opacity: 0;
       z-index: 15;
       text-align: center;
-      max-width: 320px;
+      max-width: 360px;
     }
 
     /* Climax Banner */
@@ -199,23 +212,59 @@
       text-shadow: 0 0 20px rgba(148, 163, 184, 0.5);
     }
 
-    /* Top Right: Voice History Panel */
-    .history-container {
+    /* Top Right: Controls Container & Voice History Panel */
+    .top-right-controls {
       position: absolute;
       top: 32px;
       right: 36px;
       z-index: 35;
       display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .lang-selector-wrap {
+      display: flex;
+      align-items: center;
+    }
+    .glass-select {
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
+      color: rgba(255, 255, 255, 0.9);
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      padding: 7px 14px;
+      cursor: pointer;
+      outline: none;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      transition: all 0.25s ease;
+    }
+    .glass-select:hover {
+      background: rgba(28, 48, 44, 0.85);
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #fff;
+    }
+    .glass-select option {
+      background: #142320;
+      color: #ffffff;
+    }
+
+    .history-container {
+      display: flex;
       flex-direction: column;
       align-items: flex-end;
     }
     .history-toggle-btn {
-      background: rgba(15, 23, 42, 0.65);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: rgba(241, 245, 249, 0.85);
-      font-family: 'Inter', sans-serif;
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: rgba(255, 255, 255, 0.9);
+      font-family: inherit;
       font-size: 11px;
       letter-spacing: 0.18em;
       padding: 7px 16px;
@@ -225,28 +274,28 @@
       align-items: center;
       gap: 6px;
       transition: all 0.25s ease;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     }
     .history-toggle-btn:hover {
-      background: rgba(30, 41, 59, 0.85);
-      border-color: rgba(255, 255, 255, 0.3);
-      color: #fff;
+      background: rgba(28, 48, 44, 0.85);
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #ffffff;
     }
     .history-panel {
       width: 320px;
       max-height: 440px;
-      background: rgba(11, 19, 15, 0.88);
+      background: rgba(16, 28, 25, 0.88);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
       padding: 14px;
       margin-top: 8px;
       display: none;
       flex-direction: column;
       gap: 10px;
       color: #e2e8f0;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
     }
     .history-panel.expanded {
       display: flex;
@@ -438,23 +487,24 @@
       position: absolute;
       bottom: 28px;
       right: 32px;
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      color: rgba(226, 232, 240, 0.6);
-      font-family: 'Inter', sans-serif;
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: rgba(255, 255, 255, 0.85);
+      font-family: inherit;
       font-size: 10px;
-      letter-spacing: 0.14em;
-      padding: 6px 14px;
+      letter-spacing: 0.16em;
+      padding: 7px 16px;
       border-radius: 20px;
       cursor: pointer;
       transition: all 0.25s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     }
     .debug-toggle-btn:hover {
-      background: rgba(30, 41, 59, 0.85);
-      color: #f8fafc;
-      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(28, 48, 44, 0.85);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.35);
     }
 
     .debug-panel {
@@ -462,18 +512,18 @@
       bottom: 68px;
       right: 32px;
       width: 320px;
-      background: rgba(11, 15, 23, 0.88);
+      background: rgba(16, 28, 25, 0.90);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
       padding: 16px;
       display: none;
       flex-direction: column;
       gap: 10px;
       font-size: 11px;
-      color: #cbd5e1;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      color: #f1f5f9;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
       z-index: 40;
     }
     .debug-panel.active {
@@ -483,11 +533,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
       padding-bottom: 6px;
       font-weight: 500;
-      color: #f1f5f9;
-      letter-spacing: 0.08em;
+      color: #ffffff;
+      letter-spacing: 0.10em;
       text-transform: uppercase;
       font-size: 10px;
     }
@@ -644,11 +694,9 @@
   <div class="ui-layer">
     <!-- Top Left: Health Display -->
     <div class="health-display">
-      <span class="plant-title">Phalaenopsis</span>
-      <div class="health-number-row">
-        <span class="health-val" id="healthVal">30</span>
-        <span class="health-denom">/ 100 HEALTH</span>
-      </div>
+      <span class="plant-title">PHALAENOPSIS</span>
+      <div class="health-val" id="healthVal">30</div>
+      <span class="health-denom">HEALTH</span>
       <div class="health-track">
         <div class="health-fill" id="healthFill"></div>
       </div>
@@ -662,29 +710,39 @@
       <div class="mic-status-text" id="micStatusText">RESTING</div>
     </div>
 
-    <!-- Top Right: Voice History Panel -->
-    <div class="history-container interactive">
-      <button class="history-toggle-btn" id="historyToggleBtn">VOICE HISTORY ▸</button>
-      <div class="history-panel" id="historyPanel">
-        <div class="history-header">
-          <span>Voice History</span>
-          <span style="cursor: pointer; opacity: 0.7;" id="historyCloseBtn">✕</span>
-        </div>
-        <div class="graph-legend">
-          <div class="legend-tag">
-            <div class="legend-dot" style="background: #f472b6;"></div>
-            <span>Valence</span>
+    <!-- Top Right: Language Selector & Voice History Panel -->
+    <div class="top-right-controls interactive">
+      <div class="lang-selector-wrap">
+        <select class="glass-select" id="langSelect" title="Speech & Sentiment Language">
+          <option value="zh-TW" selected>繁體中文 (Taiwan)</option>
+          <option value="en-US">English (US)</option>
+          <option value="zh-CN">简体中文 (Mandarin)</option>
+          <option value="ja-JP">日本語 (Japanese)</option>
+        </select>
+      </div>
+      <div class="history-container">
+        <button class="history-toggle-btn" id="historyToggleBtn">VOICE HISTORY ▸</button>
+        <div class="history-panel" id="historyPanel">
+          <div class="history-header">
+            <span>Voice History</span>
+            <span style="cursor: pointer; opacity: 0.7;" id="historyCloseBtn">✕</span>
           </div>
-          <div class="legend-tag">
-            <div class="legend-dot" style="background: #34d399;"></div>
-            <span>Acoustic</span>
+          <div class="graph-legend">
+            <div class="legend-tag">
+              <div class="legend-dot" style="background: #f472b6;"></div>
+              <span>Valence</span>
+            </div>
+            <div class="legend-tag">
+              <div class="legend-dot" style="background: #34d399;"></div>
+              <span>Acoustic</span>
+            </div>
           </div>
-        </div>
-        <div class="history-graph-box">
-          <canvas id="historyGraphCanvas" width="292" height="70"></canvas>
-        </div>
-        <div class="history-list" id="historyList">
-          <div style="font-size: 10px; color: #64748b; text-align: center; padding: 12px 0;">No speech events yet. Speak or press P/N/U.</div>
+          <div class="history-graph-box">
+            <canvas id="historyGraphCanvas" width="292" height="70"></canvas>
+          </div>
+          <div class="history-list" id="historyList">
+            <div style="font-size: 10px; color: #94a3b8; text-align: center; padding: 12px 0;">No speech events yet. Speak or press P/N/U.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -876,6 +934,7 @@
       spectralFlux: 0,
 
       // Recognition & AI
+      selectedLanguage: 'zh-TW',
       localAiAvailable: false,
       localAiEngine: null,
       transcriptionActive: false,
@@ -1104,7 +1163,7 @@
         const recognition = new SpeechRec();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-US';
+        recognition.lang = STATE.selectedLanguage || 'zh-TW';
 
         recognition.onresult = (event) => {
           let interim = '';
@@ -1128,14 +1187,17 @@
 
         recognition.onend = () => {
           if (STATE.audioInitialized) {
-            try { recognition.start(); } catch (err) {}
+            try {
+              recognition.lang = STATE.selectedLanguage || 'zh-TW';
+              recognition.start();
+            } catch (err) {}
           }
         };
 
         recognition.start();
         STATE.speechRecognition = recognition;
         STATE.transcriptionActive = true;
-        document.getElementById('dbgTranscribeMode').textContent = 'Browser Native (WebSpeech)';
+        document.getElementById('dbgTranscribeMode').textContent = `Browser Native (${STATE.selectedLanguage || 'zh-TW'})`;
       } catch (err) {
         console.warn('Speech recognition not active:', err);
         STATE.transcriptionActive = false;
@@ -1143,24 +1205,53 @@
     }
 
     async function transcribeSpeech(audioData) {
-      // Modular replaceable transcription function
       return STATE.pendingTranscript || STATE.lastFinalTranscript || '';
     }
 
     /* ==========================================================================
-       SECTION 6: LOCAL AI DETECTION & TWO-DIMENSIONAL EMOTION ANALYSIS
+       SECTION 6: MULTILINGUAL LOCAL AI & EMOTION ANALYSIS
        ========================================================================== */
-    // Fallback dictionary for transparent, deterministic botanical sentiment
-    const POSITIVE_WORDS = [
+    const POSITIVE_WORDS_EN = [
       'beautiful', 'love', 'grow', 'pretty', 'good', 'sweet', 'gentle', 'shine',
       'blossom', 'bloom', 'thrive', 'wonderful', 'grace', 'radiant', 'precious',
       'peace', 'alive', 'flower', 'tender', 'magnificent', 'kind', 'soft', 'cherish',
-      'sun', 'water', 'delicate', 'breathe', 'strong', 'elegant', 'darling', 'pure'
+      'sun', 'water', 'delicate', 'breathe', 'strong', 'elegant', 'darling', 'pure',
+      'nice', 'happy', 'bright', 'care', 'healthy', 'thanks', 'thank', 'lovely', 'joy'
     ];
-    const NEGATIVE_WORDS = [
+    const NEGATIVE_WORDS_EN = [
       'hate', 'ugly', 'terrible', 'die', 'wilt', 'wither', 'bad', 'stupid',
       'horrible', 'rot', 'stink', 'disgusting', 'kill', 'awful', 'worthless',
-      'useless', 'poison', 'harsh', 'break', 'dead', 'trash', 'failure', 'decay'
+      'useless', 'poison', 'harsh', 'break', 'dead', 'trash', 'failure', 'decay',
+      'angry', 'cruel', 'hurt', 'pain', 'ruin', 'worst', 'nasty', 'shut'
+    ];
+
+    const POSITIVE_WORDS_ZH = [
+      '美麗', '漂亮', '可愛', '喜歡', '愛', '成長', '開花', '綻放', '溫柔', '陽光',
+      '盛開', '茁壯', '乾淨', '幸福', '謝謝', '好棒', '優秀', '生機', '滋潤', '珍惜',
+      '呵護', '棒', '好看', '讚', '活潑', '健康', '芬芳', '乖', '寶貝', '堅強',
+      '典雅', '舒暢', '翠綠', '欣欣向榮', '好美', '開心', '燦爛', '舒服', '喜歡你',
+      '朝氣', '溫暖', '柔美', '好乖', '太棒了', '真好', '加油', '好香', '光彩',
+      '美丽', '可爱', '喜欢', '成长', '绽放', '温柔', '阳光', '盛开', '茁壮', '干净',
+      '优秀', '生机', '滋润', '赞', '活泼', '宝贵', '坚强', '开心', '灿烂', '温暖'
+    ];
+    const NEGATIVE_WORDS_ZH = [
+      '討厭', '醜', '醜陋', '死', '枯萎', '爛', '枯', '凋謝', '臭', '噁心',
+      '垃圾', '笨', '廢物', '差勁', '破壞', '毒', '殘害', '凋零', '衰弱', '腐爛',
+      '死亡', '討厭你', '滾', '煩', '糟糕', '惡劣', '痛', '恨', '壞', '枯黃',
+      '爛掉', '弄死', '髒', '難看', '去死', '討人厭', '吵', '閉嘴',
+      '讨厌', '丑', '丑陋', '枯萎', '烂', '凋谢', '恶心', '废物', '差劲', '破坏',
+      '残害', '衰弱', '腐烂', '讨厌你', '滚', '烦', '糟糕', '恶劣', '坏', '枯黄',
+      '烂掉', '弄死', '脏', '难看', '去死', '闭嘴'
+    ];
+
+    const POSITIVE_WORDS_JA = [
+      '綺麗', '美し', 'かわいい', '咲く', '咲い', '育つ', '優し', '大好き', '愛',
+      '素敵', '元気', '幸せ', 'ありがとう', '輝く', '満開', '素晴らし', '健やか',
+      '癒し', '太陽', '芽吹き', '好き', '嬉し', '楽し', 'いい子', '温かい'
+    ];
+    const NEGATIVE_WORDS_JA = [
+      '嫌い', '醜い', '枯れる', '枯れ', '死ぬ', '死ね', '最悪', '汚い', '臭い',
+      'ダメ', '邪魔', '腐る', '落ちる', '苦しい', '痛い', 'バカ', '嫌だ', '酷い'
     ];
 
     async function detectLocalAiEngine() {
@@ -1177,7 +1268,7 @@
       } catch (e) {}
       
       STATE.localAiAvailable = false;
-      document.getElementById('dbgLocalAI').textContent = 'Local Heuristic Fallback';
+      document.getElementById('dbgLocalAI').textContent = 'Multilingual Heuristic Engine';
     }
 
     async function analyzeSemanticEmotion(text) {
@@ -1187,11 +1278,11 @@
 
       const cleanText = text.toLowerCase().trim();
 
-      // Try Chrome local Prompt API / LanguageModel if available
+      // 1. Try Chrome local Prompt API / LanguageModel if available
       if (STATE.localAiAvailable && window.ai?.languageModel) {
         try {
           const session = await window.ai.languageModel.create({
-            systemPrompt: "Evaluate the emotional valence of spoken words to a flower. Return only a floating point number between -1.0 (very cruel/hateful) and +1.0 (very loving/nurturing)."
+            systemPrompt: "Evaluate the emotional valence of spoken words to a Phalaenopsis orchid in any language (English, Chinese, Japanese, etc.). Return only a single floating point number between -1.0 (very cruel/hateful/negative) and +1.0 (very loving/nurturing/positive)."
           });
           const result = await session.prompt(cleanText);
           const parsed = parseFloat(result);
@@ -1203,24 +1294,97 @@
         }
       }
 
-      // Graceful local heuristic dictionary fallback
-      let score = 0;
-      let matchedCount = 0;
+      // 2. Multilingual Local Heuristic Analysis
+      let posScore = 0;
+      let negScore = 0;
+      let matches = 0;
 
-      const words = cleanText.split(/[\s,.;!?]+/);
-      for (const word of words) {
-        if (POSITIVE_WORDS.includes(word)) {
-          score += 1.0;
-          matchedCount++;
-        } else if (NEGATIVE_WORDS.includes(word)) {
-          score -= 1.0;
-          matchedCount++;
+      // English word tokens
+      const engTokens = cleanText.split(/[\s,.;!?，。！？、]+/);
+      for (const tok of engTokens) {
+        if (!tok) continue;
+        if (POSITIVE_WORDS_EN.includes(tok)) {
+          posScore += 1.0;
+          matches++;
+        } else if (NEGATIVE_WORDS_EN.includes(tok)) {
+          negScore += 1.0;
+          matches++;
         }
       }
 
-      if (matchedCount === 0) return 0.0;
-      const valence = score / Math.max(1, matchedCount);
-      return Math.max(-1.0, Math.min(1.0, valence));
+      // Chinese keywords
+      for (const pw of POSITIVE_WORDS_ZH) {
+        if (cleanText.includes(pw.toLowerCase())) {
+          posScore += 1.25;
+          matches++;
+        }
+      }
+      for (const nw of NEGATIVE_WORDS_ZH) {
+        if (cleanText.includes(nw.toLowerCase())) {
+          negScore += 1.25;
+          matches++;
+        }
+      }
+
+      // Japanese keywords
+      for (const pw of POSITIVE_WORDS_JA) {
+        if (cleanText.includes(pw)) {
+          posScore += 1.25;
+          matches++;
+        }
+      }
+      for (const nw of NEGATIVE_WORDS_JA) {
+        if (cleanText.includes(nw)) {
+          negScore += 1.25;
+          matches++;
+        }
+      }
+
+      if (matches === 0) return 0.0;
+      const rawValence = (posScore - negScore) / Math.max(1, matches);
+      return Math.max(-1.0, Math.min(1.0, rawValence));
+    }
+
+    // Multilingual smart tokenizer for falling word tiles
+    function tokenizeTranscript(text) {
+      if (!text || !text.trim()) return [];
+      const clean = text.trim();
+      const hasCJK = /[\u4e00-\u9fa5\u3040-\u30ff]/.test(clean);
+
+      if (!hasCJK) {
+        return clean.split(/[\s,.;!?，。！？、]+/).filter(w => w.length > 0);
+      }
+
+      const tokens = [];
+      const chunks = clean.split(/[\s,.;!?，。！？、…—\n\t]+/).filter(c => c.length > 0);
+      const cjkKeywords = [...POSITIVE_WORDS_ZH, ...NEGATIVE_WORDS_ZH, ...POSITIVE_WORDS_JA, ...NEGATIVE_WORDS_JA];
+
+      for (const chunk of chunks) {
+        if (!/[\u4e00-\u9fa5\u3040-\u30ff]/.test(chunk)) {
+          tokens.push(chunk);
+          continue;
+        }
+
+        let i = 0;
+        while (i < chunk.length) {
+          let matched = false;
+          for (const kw of cjkKeywords) {
+            if (chunk.startsWith(kw, i)) {
+              tokens.push(kw);
+              i += kw.length;
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            const len = (i + 2 <= chunk.length) ? 2 : 1;
+            tokens.push(chunk.substr(i, len));
+            i += len;
+          }
+        }
+      }
+
+      return tokens.filter(t => t.length > 0);
     }
 
     /* ==========================================================================
@@ -1257,9 +1421,9 @@
         healthDelta = 0.0; // Strictly zero for neutral category
       }
 
-      // 3. Extract word tokens for Falling Word Memory
+      // 3. Extract word tokens using multilingual tokenizer
       const cleanTranscript = (transcript || '').trim();
-      const wordTokens = cleanTranscript ? cleanTranscript.split(/[\s,.;!?]+/).filter(w => w.length > 0) : [];
+      const wordTokens = tokenizeTranscript(cleanTranscript);
 
       // 4. Create Unified Speech Event Object
       const now = new Date();
@@ -1311,10 +1475,8 @@
       // Speed influenced by category & voice gentleness
       let speedFactor = 1.0;
       if (category === 'NEGATIVE') {
-        // Aggressive negative voice moves faster and more forcefully
         speedFactor = 1.25 + (voiceGentleness < 0 ? Math.abs(voiceGentleness) * 0.6 : 0);
       } else if (category === 'POSITIVE') {
-        // Gentle positive floats smoothly
         speedFactor = 0.95 - (voiceGentleness > 0 ? voiceGentleness * 0.15 : 0);
       } else {
         speedFactor = 0.9;
@@ -1356,18 +1518,25 @@
       const centerX = canvas.width / 2;
       const spawnY = canvas.height * 0.38;
       const mag = Math.abs(valence);
-      const fontSize = Math.round(11 + mag * 4.0); // 11-15px
+      // High-readability font size range: 14px to 18px (minimum 14px)
+      const fontSize = Math.round(14 + mag * 4.0);
 
       words.forEach((w, i) => {
-        // Stagger spawn delay between 80-160ms per word
         const staggerDelay = i * (85 + Math.random() * 55);
 
         setTimeout(() => {
-          // Precise physical word tile container dimensions
-          const charW = fontSize * 0.62;
-          const textW = Math.max(18, w.length * charW);
-          const padX = 6;
-          const padY = 3.5;
+          // Precise physical word tile container dimensions for both Latin and CJK
+          let textW = 0;
+          for (let ch of w) {
+            if (ch.charCodeAt(0) > 255) {
+              textW += fontSize * 1.05;
+            } else {
+              textW += fontSize * 0.62;
+            }
+          }
+          textW = Math.max(22, textW);
+          const padX = 9.0; // 7-10px horizontal padding
+          const padY = 5.0; // 4-6px vertical padding
           const tileWidth = textW + padX * 2;
           const tileHeight = fontSize + padY * 2;
 
@@ -1425,7 +1594,6 @@
         }
 
         if (!w.settled) {
-          // Physics: gravity & subtle air drag
           w.vy += 0.16;
           w.vx *= 0.98;
           w.x += w.vx;
@@ -1441,7 +1609,7 @@
             w.rotationVel = 0;
             w.rotation *= 0.5;
           } else {
-            // Collision with already settled word tiles (forming an organic mound)
+            // Collision with already settled word tiles
             for (let j = 0; j < STATE.wordObjects.length; j++) {
               if (i === j) continue;
               const s = STATE.wordObjects[j];
@@ -1454,7 +1622,6 @@
 
               if (dx < collideX && dy > 0 && dy < collideY) {
                 w.y = s.y - collideY;
-                // Natural sand sliding outward from peak to create a gentle mound
                 const outward = w.x >= s.x ? 1 : -1;
                 const distFromCenter = w.x - potX;
                 if (Math.abs(distFromCenter) < 220) {
@@ -1471,7 +1638,7 @@
           }
         }
 
-        // Render Physical Word Tile Container
+        // Render Physical Word Tile Container with High-Contrast Glass Appearance
         ctx.save();
         ctx.translate(w.x, w.y);
         ctx.rotate(w.rotation);
@@ -1480,43 +1647,43 @@
         const th = w.tileHeight;
 
         // 1. Subtle drop shadow
-        ctx.fillStyle = `rgba(0, 0, 0, ${w.alpha * 0.35})`;
+        ctx.fillStyle = `rgba(0, 0, 0, ${w.alpha * 0.45})`;
         ctx.beginPath();
-        ctx.roundRect(-tw * 0.5 + 1, -th * 0.5 + 2, tw, th, 3.5);
+        ctx.roundRect(-tw * 0.5 + 1, -th * 0.5 + 2, tw, th, 4.5);
         ctx.fill();
 
-        // 2. Translucent dark charcoal container background
-        ctx.fillStyle = `rgba(18, 28, 26, ${w.alpha * 0.70})`;
+        // 2. High-opacity dark charcoal glass container
+        ctx.fillStyle = `rgba(14, 25, 22, ${w.alpha * 0.88})`;
         ctx.beginPath();
-        ctx.roundRect(-tw * 0.5, -th * 0.5, tw, th, 3.5);
+        ctx.roundRect(-tw * 0.5, -th * 0.5, tw, th, 4.5);
         ctx.fill();
 
-        // 3. Subtle outer container hairline border
-        ctx.strokeStyle = `rgba(255, 255, 255, ${w.alpha * 0.12})`;
+        // 3. Crisp outer container hairline border
+        ctx.strokeStyle = `rgba(255, 255, 255, ${w.alpha * 0.22})`;
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // 4. Emotional Category Accent: 2px colored bottom border
+        // 4. Emotional Category Accent: 2.5px colored bottom border
         let accentColor;
         if (w.category === 'POSITIVE') {
-          accentColor = `rgba(244, 114, 182, ${w.alpha * 0.95})`; // soft pink
+          accentColor = `rgba(244, 114, 182, ${w.alpha * 0.98})`; // vibrant pink
         } else if (w.category === 'NEGATIVE') {
-          accentColor = `rgba(56, 189, 248, ${w.alpha * 0.95})`; // cool blue
+          accentColor = `rgba(56, 189, 248, ${w.alpha * 0.98})`; // clear cyan-blue
         } else {
-          accentColor = `rgba(250, 204, 21, ${w.alpha * 0.95})`; // warm yellow
+          accentColor = `rgba(250, 204, 21, ${w.alpha * 0.98})`; // warm yellow
         }
 
         ctx.strokeStyle = accentColor;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.moveTo(-tw * 0.5 + 3, th * 0.5 - 1);
         ctx.lineTo(tw * 0.5 - 3, th * 0.5 - 1);
         ctx.stroke();
 
-        // 5. Crisp high-contrast white text
-        ctx.font = `400 ${w.fontSize}px 'Inter', sans-serif`;
-        ctx.fillStyle = `rgba(255, 255, 255, ${w.alpha * 0.95})`;
-        ctx.fillText(w.text, 0, -0.5);
+        // 5. Crisp high-contrast white text (14-18px)
+        ctx.font = `500 ${w.fontSize}px -apple-system, BlinkMacSystemFont, "PingFang TC", "Hiragino Sans", "Microsoft JhengHei", 'Inter', sans-serif`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${w.alpha * 0.98})`;
+        ctx.fillText(w.text, 0, 0);
 
         ctx.restore();
       }
@@ -2771,13 +2938,8 @@
       if (healthValEl) healthValEl.textContent = rounded;
       if (healthFillEl) {
         healthFillEl.style.width = `${Math.min(100, Math.max(0, STATE.displayedHealth))}%`;
-        if (STATE.displayedHealth > 75) {
-          healthFillEl.style.background = 'linear-gradient(90deg, #f472b6, #fb7185)';
-        } else if (STATE.displayedHealth > 25) {
-          healthFillEl.style.background = 'linear-gradient(90deg, #ec4899, #db2777)';
-        } else {
-          healthFillEl.style.background = 'linear-gradient(90deg, #71717a, #52525b)';
-        }
+        healthFillEl.style.background = 'linear-gradient(90deg, #f472b6, #fb7185)';
+        healthFillEl.style.boxShadow = '0 0 10px rgba(244, 114, 182, 0.85)';
       }
     }
 
@@ -2851,23 +3013,66 @@
        SECTION 12: INPUT, MANUAL TESTING & MODAL CONTROLS
        ========================================================================== */
     function setupKeyboardControls() {
+      // Language selector dropdown control
+      const langSelect = document.getElementById('langSelect');
+      if (langSelect) {
+        langSelect.value = STATE.selectedLanguage || 'zh-TW';
+        langSelect.addEventListener('change', (e) => {
+          STATE.selectedLanguage = e.target.value;
+          if (STATE.speechRecognition) {
+            STATE.speechRecognition.lang = STATE.selectedLanguage;
+            const modeEl = document.getElementById('dbgTranscribeMode');
+            if (modeEl) modeEl.textContent = `Browser Native (${STATE.selectedLanguage})`;
+            try {
+              STATE.speechRecognition.stop();
+            } catch (err) {}
+          }
+        });
+      }
+
       window.addEventListener('keydown', (e) => {
         // Prevent interfering if typing in select or inputs
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
         const key = e.key.toUpperCase();
+        const lang = STATE.selectedLanguage || 'zh-TW';
+
         if (key === 'P') {
           // Simulate strongly positive message
-          dispatchEmotionalMessage(0.85, 0.8, "You are beautiful and growing wonderfully.");
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(0.88, 0.82, "你開花開得好美麗，茁壯成長吧！");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(0.88, 0.82, "とても綺麗に咲いて、美しく育ってね。");
+          } else {
+            dispatchEmotionalMessage(0.85, 0.80, "You are beautiful and growing wonderfully.");
+          }
         } else if (key === 'N') {
           // Simulate strongly negative message
-          dispatchEmotionalMessage(-0.85, -0.75, "You look terrible and I don't like you.");
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(-0.88, -0.75, "你長得好醜，快點枯萎死掉吧。");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(-0.88, -0.75, "最悪で醜いから枯れてしまえ。");
+          } else {
+            dispatchEmotionalMessage(-0.85, -0.75, "You look terrible and I don't like you.");
+          }
         } else if (key === 'U') {
           // Simulate neutral speech
-          dispatchEmotionalMessage(0.02, 0.1, "The plant is sitting near the window.");
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(0.02, 0.10, "這盆蘭花正安靜地擺在窗台旁邊。");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(0.02, 0.10, "蘭の鉢植えが窓辺に置いてあります。");
+          } else {
+            dispatchEmotionalMessage(0.02, 0.10, "The plant is sitting near the window.");
+          }
         } else if (key === 'M') {
           // Simulate mildly positive message
-          dispatchEmotionalMessage(0.4, 0.45, "Keep growing gently.");
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(0.45, 0.45, "要溫柔地慢慢長大喔。");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(0.45, 0.45, "元気に優しく育ってね。");
+          } else {
+            dispatchEmotionalMessage(0.40, 0.45, "Keep growing gently.");
+          }
         } else if (key === 'B') {
           // Toggle debug panel
           toggleDebug();
