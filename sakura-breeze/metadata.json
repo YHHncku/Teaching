@@ -1,0 +1,6 @@
+{
+  "name": "Sakura Breeze AR",
+  "description": "Web Native interactive installation connecting iPhone and MacBook display.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

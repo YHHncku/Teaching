@@ -1,0 +1,275 @@
+/* ==========================================================================
+   Sakura Breeze AR - iPhone Controller Styles
+   Mobile-Optimized Touch Interface
+   ========================================================================== */
+
+:root {
+  --phone-bg: #090b10;
+  --card-bg: rgba(22, 27, 38, 0.85);
+  --sakura-pink: #ffb7c5;
+  --sakura-accent: #ff758c;
+  --sakura-glow: rgba(255, 117, 140, 0.4);
+  --text-main: #f5f6f8;
+  --text-dim: #9aa2b4;
+  --color-green: #34d399;
+  --color-red: #f87171;
+  --font-serif: "Cinzel", "Playfair Display", "Noto Serif", "Georgia", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  background-color: var(--phone-bg);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Security HTTPS Warning Banner */
+.https-warning {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #991b1b;
+  border-bottom: 1px solid rgba(248, 113, 113, 0.6);
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.warning-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.phone-container {
+  width: 100vw;
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(env(safe-area-inset-top, 20px) + 16px) 16px calc(env(safe-area-inset-bottom, 20px) + 16px) 16px;
+  background: radial-gradient(circle at 50% 25%, #171d2b 0%, #090b10 80%);
+}
+
+.ambient-glow {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, var(--sakura-glow) 0%, transparent 70%);
+  filter: blur(50px);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.phone-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 380px;
+  padding: 32px 20px;
+  background: var(--card-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 28px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Header */
+.phone-header {
+  margin-bottom: 28px;
+}
+
+.sakura-symbol {
+  font-size: 2.2rem;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 0 12px var(--sakura-glow));
+}
+
+.phone-title {
+  font-family: var(--font-serif);
+  font-size: 1.95rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.phone-subtitle {
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  font-style: italic;
+  color: var(--sakura-pink);
+}
+
+/* Action Area */
+.action-section {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.btn-start {
+  position: relative;
+  width: 100%;
+  max-width: 220px;
+  height: 56px;
+  border: none;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #ff8da1 0%, #ff5277 100%);
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(255, 82, 119, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-start:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 14px rgba(255, 82, 119, 0.45);
+}
+
+.btn-start.active {
+  background: #2a3447;
+  color: #9aa2b4;
+  box-shadow: none;
+  cursor: default;
+}
+
+.action-hint {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  min-height: 1.2em;
+}
+
+/* Diagnostics Card */
+.diagnostics-card {
+  width: 100%;
+  background: rgba(13, 17, 24, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 18px;
+  padding: 16px 14px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.diagnostics-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #d8dbe2;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.diagnostics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.diag-item {
+  background: rgba(24, 30, 44, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.diag-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.diag-value {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diag-value.status-ok {
+  color: var(--color-green);
+}
+
+.diag-value.status-err {
+  color: var(--color-red);
+}
+
+/* Architecture Notice */
+.architecture-notice {
+  background: rgba(255, 183, 197, 0.04);
+  border: 1px solid rgba(255, 183, 197, 0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.notice-body {
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+/* Footer */
+.phone-footer {
+  margin-top: 6px;
+}
+
+.back-link {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.back-link:hover {
+  color: var(--sakura-pink);
+}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Sakura Breeze - Controller</title>
+  <meta name="description" content="Sakura Breeze AR iPhone Controller" />
+  <link rel="stylesheet" href="./phone.css" />
+</head>
+<body>
+  <div id="phone-app" class="phone-container">
+    <!-- Non-HTTPS Security Warning Banner -->
+    <div id="https-warning" class="https-warning" style="display: none;">
+      <div class="warning-content">
+        <span class="warning-icon">⚠️</span>
+        <span class="warning-text">Please open this website via HTTPS.</span>
+      </div>
+    </div>
+
+    <div class="ambient-glow"></div>
+
+    <main class="phone-card">
+      <header class="phone-header">
+        <div class="sakura-symbol" aria-hidden="true">🌸</div>
+        <h1 class="phone-title">Sakura Breeze</h1>
+        <p class="phone-subtitle">"Connect to the Sakura World"</p>
+      </header>
+
+      <section class="action-section">
+        <button id="start-button" class="btn-start" type="button">
+          <span class="btn-text">Start</span>
+        </button>
+        <p id="action-hint" class="action-hint">Tap to prepare interaction</p>
+      </section>
+
+      <!-- Connection Environment & Diagnostics -->
+      <section class="diagnostics-card">
+        <h2 class="diagnostics-title">Connection Environment</h2>
+
+        <div class="diagnostics-grid">
+          <div class="diag-item">
+            <span class="diag-label">Browser</span>
+            <span id="diag-browser" class="diag-value">Detecting...</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">HTTPS</span>
+            <span id="diag-https" class="diag-value">Detecting...</span>
+          </div>
+          <div class="diag-item">
+            <span class="diag-label">Online</span>
+            <span id="diag-online" class="diag-value">Detecting...</span>
+          </div>
+        </div>
+
+        <div class="architecture-notice">
+          <p class="notice-body">
+            USB-C is primarily used to establish a network environment between devices.
+            Camera, Microphone, and Motion will later be transmitted via WebRTC.
+          </p>
+        </div>
+      </section>
+
+      <footer class="phone-footer">
+        <a href="index.html" class="back-link">← Return to Main Display (MacBook)</a>
+      </footer>
+    </main>
+  </div>
+
+  <script src="./diagnostics.js"></script>
+  <script src="./phone.js"></script>
+</body>
+</html>
