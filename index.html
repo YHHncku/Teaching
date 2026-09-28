@@ -1,0 +1,3240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orchid Whisper — Interactive Botanical Art</title>
+  <meta name="description" content="An interactive botanical art installation where you care for a Phalaenopsis orchid through speech, gentle tone, and emotional presence.">
+  <meta property="og:title" content="Orchid Whisper">
+  <meta property="og:description" content="An interactive botanical art installation where you care for a Phalaenopsis orchid through speech, gentle tone, and emotional presence.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@200;300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       RESET & BASE STYLES
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0b0f14;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Hiragino Sans", "Microsoft JhengHei", "Noto Sans CJK TC", "Noto Sans CJK JP", 'Inter', sans-serif;
+      color: #f8fafc;
+      -webkit-font-smoothing: antialiased;
+    }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 1;
+      display: block;
+    }
+
+    /* ==========================================================================
+       UI OVERLAYS & TYPOGRAPHY — CONSISTENT GLASS UI SYSTEM
+       ========================================================================== */
+    .ui-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Top Left: Clearly Readable Dark Glass Health Panel */
+    .health-display {
+      position: absolute;
+      top: 32px;
+      left: 36px;
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      z-index: 30;
+      min-width: 170px;
+    }
+    .plant-title {
+      font-family: 'Cormorant Garamond', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.24em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.90);
+    }
+    .health-val {
+      font-family: 'Cormorant Garamond', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", serif;
+      font-size: 48px;
+      font-weight: 400;
+      line-height: 1;
+      color: #ffffff;
+      letter-spacing: 0.02em;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      margin: 2px 0;
+    }
+    .health-denom {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.20em;
+      color: rgba(255, 255, 255, 0.75);
+      text-transform: uppercase;
+    }
+    .health-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.18);
+      position: relative;
+      margin-top: 8px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .health-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 30%;
+      background: linear-gradient(90deg, #f472b6, #fb7185);
+      box-shadow: 0 0 10px rgba(244, 114, 182, 0.85);
+      border-radius: 2px;
+      transition: width 0.4s ease-out;
+    }
+
+    /* Bottom Center: Microphone State Indicator Glass Pill */
+    .mic-status-container {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 7px 20px;
+      border-radius: 24px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 20;
+    }
+    .mic-dot-row {
+      display: flex;
+      align-items: center;
+    }
+    .mic-glow-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.4);
+      transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+    }
+    .mic-glow-dot.listening {
+      background: #38bdf8;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.9);
+      transform: scale(1.2);
+    }
+    .mic-glow-dot.speaking {
+      background: #4ade80;
+      box-shadow: 0 0 14px rgba(74, 222, 128, 1);
+      transform: scale(1.5);
+    }
+    .mic-glow-dot.processing {
+      background: #fbbf24;
+      box-shadow: 0 0 12px rgba(251, 191, 36, 0.9);
+      transform: scale(1.3);
+    }
+    .mic-status-text {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.90);
+      transition: color 0.3s;
+    }
+
+    /* Floating speech transcript */
+    .floating-transcript {
+      position: absolute;
+      pointer-events: none;
+      font-family: 'Cormorant Garamond', -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", serif;
+      font-style: italic;
+      font-size: 20px;
+      letter-spacing: 0.04em;
+      color: rgba(255, 255, 255, 0.95);
+      text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
+      transform: translate(-50%, -50%);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+      opacity: 0;
+      z-index: 15;
+      text-align: center;
+      max-width: 360px;
+    }
+
+    /* Climax Banner */
+    .climax-banner {
+      position: absolute;
+      top: 26%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      color: #fef08a;
+      text-shadow: 0 0 25px rgba(254, 240, 138, 0.8);
+      opacity: 0;
+      transition: opacity 1.8s ease-in-out, transform 1.8s ease-in-out;
+      pointer-events: none;
+      z-index: 25;
+      text-align: center;
+    }
+    .climax-banner.wilted {
+      color: #94a3b8;
+      text-shadow: 0 0 20px rgba(148, 163, 184, 0.5);
+    }
+
+    /* Top Right: Controls Container & Voice History Panel */
+    .top-right-controls {
+      position: absolute;
+      top: 32px;
+      right: 36px;
+      z-index: 35;
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .lang-selector-wrap {
+      display: flex;
+      align-items: center;
+    }
+    .glass-select {
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
+      color: rgba(255, 255, 255, 0.9);
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      padding: 7px 14px;
+      cursor: pointer;
+      outline: none;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+      transition: all 0.25s ease;
+    }
+    .glass-select:hover {
+      background: rgba(28, 48, 44, 0.85);
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #fff;
+    }
+    .glass-select option {
+      background: #142320;
+      color: #ffffff;
+    }
+
+    .history-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+    .history-toggle-btn {
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: rgba(255, 255, 255, 0.9);
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      padding: 7px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+    .history-toggle-btn:hover {
+      background: rgba(28, 48, 44, 0.85);
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #ffffff;
+    }
+    .history-panel {
+      width: 320px;
+      max-height: 440px;
+      background: rgba(16, 28, 25, 0.88);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 8px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      color: #e2e8f0;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+    }
+    .history-panel.expanded {
+      display: flex;
+    }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 6px;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #cbd5e1;
+    }
+    .history-graph-box {
+      width: 100%;
+      height: 70px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      position: relative;
+    }
+    .history-graph-box canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .graph-legend {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      font-size: 9px;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+    }
+    .legend-tag {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+      max-height: 250px;
+      padding-right: 4px;
+    }
+    .history-list::-webkit-scrollbar {
+      width: 4px;
+    }
+    .history-list::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+    }
+    .history-item {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 3px solid #94a3b8;
+      padding: 6px 8px;
+      border-radius: 0 4px 4px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 10px;
+    }
+    .history-item.positive {
+      border-left-color: #f472b6;
+    }
+    .history-item.negative {
+      border-left-color: #38bdf8;
+    }
+    .history-item.neutral {
+      border-left-color: #facc15;
+    }
+    .history-item-top {
+      display: flex;
+      justify-content: space-between;
+      color: #94a3b8;
+      font-size: 9px;
+    }
+    .history-category-badge {
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .history-item.positive .history-category-badge { color: #f472b6; }
+    .history-item.negative .history-category-badge { color: #38bdf8; }
+    .history-item.neutral .history-category-badge { color: #facc15; }
+    .history-quote {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 13px;
+      color: #f1f5f9;
+      line-height: 1.25;
+      margin: 2px 0;
+    }
+    .history-metrics {
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5e1;
+      font-size: 9px;
+      font-family: monospace;
+    }
+
+    /* Reset Confirmation Modal */
+    .reset-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 80;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+    .reset-modal-overlay.active {
+      display: flex;
+    }
+    .reset-modal {
+      background: rgba(15, 23, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 24px 28px;
+      max-width: 380px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+    }
+    .reset-modal h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      font-weight: 300;
+      letter-spacing: 0.1em;
+      color: #f8fafc;
+      margin-bottom: 8px;
+    }
+    .reset-modal p {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .reset-btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .reset-confirm-btn {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fca5a5;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .reset-confirm-btn:hover {
+      background: rgba(239, 68, 68, 0.4);
+      color: #fff;
+    }
+    .reset-cancel-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e2e8f0;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .reset-cancel-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    /* Bottom Right: Debug Button & Panel */
+    .debug-toggle-btn {
+      position: absolute;
+      bottom: 28px;
+      right: 32px;
+      background: rgba(20, 35, 32, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      color: rgba(255, 255, 255, 0.85);
+      font-family: inherit;
+      font-size: 10px;
+      letter-spacing: 0.16em;
+      padding: 7px 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    }
+    .debug-toggle-btn:hover {
+      background: rgba(28, 48, 44, 0.85);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+
+    .debug-panel {
+      position: absolute;
+      bottom: 68px;
+      right: 32px;
+      width: 320px;
+      background: rgba(16, 28, 25, 0.90);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 12px;
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 11px;
+      color: #f1f5f9;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+      z-index: 40;
+    }
+    .debug-panel.active {
+      display: flex;
+    }
+    .debug-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding-bottom: 6px;
+      font-weight: 500;
+      color: #ffffff;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      line-height: 1.3;
+    }
+    .debug-label {
+      color: #64748b;
+    }
+    .debug-val {
+      font-family: monospace;
+      color: #e2e8f0;
+      text-align: right;
+      max-width: 170px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .meter-container {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      margin-top: 4px;
+    }
+    .meter-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+    }
+    .meter-bar-track {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    .meter-bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 2px;
+      transition: width 0.08s ease-out;
+    }
+    .meter-bar-bipolar {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      left: 50%;
+      transition: all 0.08s ease-out;
+    }
+    .mic-select-dropdown {
+      width: 100%;
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 10px;
+      outline: none;
+      margin-top: 4px;
+    }
+    .shortcut-hint {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      font-size: 9px;
+      color: #64748b;
+      line-height: 1.4;
+    }
+
+    /* Introduction Modal */
+    .intro-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(17, 24, 39, 0.85) 0%, rgba(7, 10, 15, 0.97) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 24px;
+      transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 1.2s;
+    }
+    .intro-overlay.dismissed {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .intro-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 52px;
+      font-weight: 300;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #f8fafc;
+      margin-bottom: 12px;
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+    .intro-subtitle {
+      font-family: 'Cormorant Garamond', serif;
+      font-style: italic;
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 0.06em;
+      color: rgba(226, 232, 240, 0.7);
+      margin-bottom: 36px;
+      max-width: 480px;
+      line-height: 1.5;
+    }
+    .begin-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+      padding: 13px 38px;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: all 0.35s ease;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+    .begin-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.6);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(244, 114, 182, 0.25);
+    }
+    .intro-note {
+      margin-top: 24px;
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.55);
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fullscreen Generative Canvas -->
+  <canvas id="orchidCanvas"></canvas>
+
+  <!-- HTML UI Overlays -->
+  <div class="ui-layer">
+    <!-- Top Left: Health Display -->
+    <div class="health-display">
+      <span class="plant-title">PHALAENOPSIS</span>
+      <div class="health-val" id="healthVal">30</div>
+      <span class="health-denom">HEALTH</span>
+      <div class="health-track">
+        <div class="health-fill" id="healthFill"></div>
+      </div>
+    </div>
+
+    <!-- Bottom Center: Listening Indicator -->
+    <div class="mic-status-container">
+      <div class="mic-dot-row">
+        <div class="mic-glow-dot" id="micDot"></div>
+      </div>
+      <div class="mic-status-text" id="micStatusText">RESTING</div>
+    </div>
+
+    <!-- Top Right: Language Selector & Voice History Panel -->
+    <div class="top-right-controls interactive">
+      <div class="lang-selector-wrap">
+        <select class="glass-select" id="langSelect" title="Speech & Sentiment Language">
+          <option value="zh-TW" selected>繁體中文 (Taiwan)</option>
+          <option value="en-US">English (US)</option>
+          <option value="zh-CN">简体中文 (Mandarin)</option>
+          <option value="ja-JP">日本語 (Japanese)</option>
+        </select>
+      </div>
+      <div class="history-container">
+        <button class="history-toggle-btn" id="historyToggleBtn">VOICE HISTORY ▸</button>
+        <div class="history-panel" id="historyPanel">
+          <div class="history-header">
+            <span>Voice History</span>
+            <span style="cursor: pointer; opacity: 0.7;" id="historyCloseBtn">✕</span>
+          </div>
+          <div class="graph-legend">
+            <div class="legend-tag">
+              <div class="legend-dot" style="background: #f472b6;"></div>
+              <span>Valence</span>
+            </div>
+            <div class="legend-tag">
+              <div class="legend-dot" style="background: #34d399;"></div>
+              <span>Acoustic</span>
+            </div>
+          </div>
+          <div class="history-graph-box">
+            <canvas id="historyGraphCanvas" width="292" height="70"></canvas>
+          </div>
+          <div class="history-list" id="historyList">
+            <div style="font-size: 10px; color: #94a3b8; text-align: center; padding: 12px 0;">No speech events yet. Speak or press P/N/U.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Floating Transcript Element -->
+    <div class="floating-transcript" id="floatingTranscript"></div>
+
+    <!-- Climax Victory / Wilt Banner -->
+    <div class="climax-banner" id="climaxBanner">FULL BLOOM</div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="reset-modal-overlay interactive" id="resetModal">
+      <div class="reset-modal">
+        <h3>Reset Orchid</h3>
+        <p>Reset the plant health to 30 and clear all accumulated word memory and speech history?</p>
+        <div class="reset-btn-row">
+          <button class="reset-cancel-btn" id="resetCancelBtn">Cancel</button>
+          <button class="reset-confirm-btn" id="resetConfirmBtn">Reset Orchid</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug Toggle Button -->
+    <button class="debug-toggle-btn interactive" id="debugToggleBtn">DEBUG (B)</button>
+
+    <!-- Debug Panel -->
+    <div class="debug-panel interactive" id="debugPanel">
+      <div class="debug-header">
+        <span>Diagnostics</span>
+        <span id="fpsCounter">60 FPS</span>
+      </div>
+
+      <div class="debug-row">
+        <span class="debug-label">Audio Input</span>
+        <span class="debug-val" id="dbgMicState">Uninitialized</span>
+      </div>
+      <select class="mic-select-dropdown" id="micDeviceSelect" title="Select audio input device">
+        <option value="">Default Microphone</option>
+      </select>
+
+      <div class="debug-row">
+        <span class="debug-label">Speech Detected</span>
+        <span class="debug-val" id="dbgSpeechDetected">No</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Segment Duration</span>
+        <span class="debug-val" id="dbgSegDuration">0 ms</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Transcript</span>
+        <span class="debug-val" id="dbgTranscript">—</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Semantic Category</span>
+        <span class="debug-val" id="dbgCategory">NEUTRAL</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Semantic Valence</span>
+        <span class="debug-val" id="dbgValence">0.00</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Voice Gentleness</span>
+        <span class="debug-val" id="dbgGentleness">0.00</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Combined Impact</span>
+        <span class="debug-val" id="dbgCombined">0.00</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Health Delta</span>
+        <span class="debug-val" id="dbgHealthDelta">0.0</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Word Memory</span>
+        <span class="debug-val" id="dbgWordCount">0 (0 settled)</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">History Events</span>
+        <span class="debug-val" id="dbgHistoryCount">0</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Local AI Engine</span>
+        <span class="debug-val" id="dbgLocalAI">Checking...</span>
+      </div>
+      <div class="debug-row">
+        <span class="debug-label">Transcription Mode</span>
+        <span class="debug-val" id="dbgTranscribeMode">Browser Native</span>
+      </div>
+
+      <!-- Live Signal Meters -->
+      <div class="meter-container">
+        <div class="meter-label-row">
+          <span>VOICE ENERGY</span>
+          <span id="dbgRmsVal">0.00</span>
+        </div>
+        <div class="meter-bar-track">
+          <div class="meter-bar-fill" id="meterRmsFill" style="background: #38bdf8;"></div>
+        </div>
+      </div>
+
+      <div class="meter-container">
+        <div class="meter-label-row">
+          <span>GENTLENESS (-1 to +1)</span>
+          <span id="meterGentleVal">0.00</span>
+        </div>
+        <div class="meter-bar-track">
+          <div class="meter-bar-bipolar" id="meterGentleFill"></div>
+        </div>
+      </div>
+
+      <div class="meter-container">
+        <div class="meter-label-row">
+          <span>SEMANTIC VALENCE (-1 to +1)</span>
+          <span id="meterValenceVal">0.00</span>
+        </div>
+        <div class="meter-bar-track">
+          <div class="meter-bar-bipolar" id="meterValenceFill"></div>
+        </div>
+      </div>
+
+      <div class="shortcut-hint">
+        Keyboard controls: <b>P</b> = Strong +, <b>M</b> = Mild +, <b>N</b> = Strong -, <b>U</b> = Neutral, <b>B</b> = Debug, <b>R</b> = Reset plant
+      </div>
+    </div>
+  </div>
+
+  <!-- First-Run Introduction Modal -->
+  <div class="intro-overlay" id="introOverlay">
+    <h1 class="intro-title">Orchid Whisper</h1>
+    <p class="intro-subtitle">“Speak, and the orchid will remember.”</p>
+    <button class="begin-btn" id="beginBtn">BEGIN</button>
+    <p class="intro-note">Enable microphone when prompted. All voice & emotion processing stays entirely inside your browser.</p>
+  </div>
+
+  <!-- ==========================================================================
+       ORCHID WHISPER SCRIPT ENGINE
+       ========================================================================== -->
+  <script>
+    /* ==========================================================================
+       SECTION 1: CONFIGURATION
+       ========================================================================== */
+    const CONFIG = {
+      healthStart: 30.0,
+      minHealth: 0.0,
+      maxHealth: 100.0,
+      maxHealthDelta: 8.0,
+      silenceTimeout: 850,            // ms of silence to conclude speech segment
+      minSegmentDuration: 300,        // ms minimum for valid speech segment
+      speechEnergyThreshold: 0.024,   // dynamic RMS threshold for speech start
+      silenceEnergyThreshold: 0.015,  // RMS below which counts as silence
+      semanticWeight: 0.65,
+      voiceWeight: 0.35,
+      positiveThreshold: 0.12,        // valence > 0.12 is POSITIVE
+      negativeThreshold: -0.12,       // valence < -0.12 is NEGATIVE
+      maxWordObjects: 250,            // maximum physical memory words in pile
+      particleTravelDuration: 2.8,    // seconds for message orb to reach the orchid
+      bloomThreshold: 100.0,
+      wiltThreshold: 0.0,
+      debug: false
+    };
+
+    /* ==========================================================================
+       SECTION 2: STATE
+       ========================================================================== */
+    const STATE = {
+      plantHealth: CONFIG.healthStart,
+      displayedHealth: CONFIG.healthStart,
+      speechState: 'RESTING', // 'RESTING' | 'LISTENING' | 'SPEECH DETECTED' | 'PROCESSING'
+      hasStarted: false,
+      audioInitialized: false,
+      micPermission: 'prompt',
+      selectedDeviceId: null,
+      availableAudioDevices: [],
+      
+      // Real-time audio features
+      currentRms: 0,
+      currentGentleness: 0,
+      currentValence: 0,
+      currentCategory: 'NEUTRAL',
+      
+      // Speech segmentation state
+      isSpeaking: false,
+      speechStartTime: 0,
+      silenceStartTime: 0,
+      audioSamplesBuffer: [],
+      peakAmplitude: 0,
+      sumRms: 0,
+      rmsSampleCount: 0,
+      spectralFlux: 0,
+
+      // Recognition & AI
+      selectedLanguage: 'zh-TW',
+      localAiAvailable: false,
+      localAiEngine: null,
+      transcriptionActive: false,
+      pendingTranscript: '',
+      lastFinalTranscript: '',
+      speechRecognition: null,
+
+      // Unified Voice History & Graph (last 20 events)
+      voiceHistory: [],
+
+      // Falling Word Memory objects (sand-like linguistic pile behind pot)
+      wordObjects: [],
+
+      // Visual message particles & plant response pulses
+      messageParticles: [],
+      plantPulses: [],
+      floatingTranscripts: [],
+      pollenParticles: [],
+      ambientMotes: [],
+
+      // Victory / Defeat flags
+      hasReachedBloom: false,
+      hasReachedDeath: false
+    };
+
+    /* ==========================================================================
+       SECTION 3: AUDIO ENGINE & MICROPHONE CAPTURE
+       ========================================================================== */
+    let audioCtx = null;
+    let analyserNode = null;
+    let micStream = null;
+    let sourceNode = null;
+    let scriptProcessor = null;
+    let audioDataArray = null;
+
+    async function initAudioEngine(deviceId = null) {
+      try {
+        if (!audioCtx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContextClass();
+        }
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+
+        if (micStream) {
+          micStream.getTracks().forEach(track => track.stop());
+        }
+
+        const audioConstraints = {
+          audio: deviceId ? { deviceId: { exact: deviceId } } : true
+        };
+
+        micStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        STATE.micPermission = 'granted';
+        STATE.audioInitialized = true;
+        setSpeechStatus('LISTENING');
+
+        sourceNode = audioCtx.createMediaStreamSource(micStream);
+        analyserNode = audioCtx.createAnalyser();
+        analyserNode.fftSize = 512;
+        analyserNode.smoothingTimeConstant = 0.5;
+
+        // Use ScriptProcessor for continuous non-recording acoustic measurement
+        scriptProcessor = audioCtx.createScriptProcessor(2048, 1, 1);
+        sourceNode.connect(analyserNode);
+        sourceNode.connect(scriptProcessor);
+        scriptProcessor.connect(audioCtx.destination);
+
+        scriptProcessor.onaudioprocess = handleAudioFrame;
+
+        await enumerateMicrophones();
+        initSpeechRecognition();
+        updateDebugDisplay();
+      } catch (err) {
+        console.warn('Microphone initialization warning/error:', err);
+        STATE.micPermission = 'denied';
+        STATE.audioInitialized = false;
+        setSpeechStatus('RESTING');
+        updateDebugDisplay();
+      }
+    }
+
+    async function enumerateMicrophones() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(d => d.kind === 'audioinput');
+        STATE.availableAudioDevices = audioInputs;
+        const select = document.getElementById('micDeviceSelect');
+        select.innerHTML = '';
+        audioInputs.forEach((device, index) => {
+          const opt = document.createElement('option');
+          opt.value = device.deviceId;
+          opt.text = device.label || `Microphone ${index + 1}`;
+          if (device.label.toLowerCase().includes('iphone')) {
+            opt.text += ' (iPhone / Continuity)';
+          }
+          select.appendChild(opt);
+        });
+        select.onchange = (e) => {
+          STATE.selectedDeviceId = e.target.value;
+          initAudioEngine(STATE.selectedDeviceId);
+        };
+      } catch (e) {
+        console.log('Unable to enumerate audio devices:', e);
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 4: SPEECH SEGMENTATION & ACOUSTIC GENTLENESS
+       ========================================================================== */
+    function handleAudioFrame(event) {
+      if (!STATE.audioInitialized) return;
+
+      const inputBuffer = event.inputBuffer.getChannelData(0);
+      let sumSquares = 0;
+      let peak = 0;
+
+      for (let i = 0; i < inputBuffer.length; i++) {
+        const sample = inputBuffer[i];
+        sumSquares += sample * sample;
+        const absVal = Math.abs(sample);
+        if (absVal > peak) peak = absVal;
+      }
+
+      const rms = Math.sqrt(sumSquares / inputBuffer.length);
+      STATE.currentRms = rms;
+
+      const now = performance.now();
+
+      // Detect speech activation
+      if (rms > CONFIG.speechEnergyThreshold) {
+        if (!STATE.isSpeaking) {
+          STATE.isSpeaking = true;
+          STATE.speechStartTime = now;
+          STATE.silenceStartTime = 0;
+          STATE.peakAmplitude = peak;
+          STATE.sumRms = rms;
+          STATE.rmsSampleCount = 1;
+          setSpeechStatus('SPEECH DETECTED');
+        } else {
+          // Accumulate ongoing segment metrics
+          STATE.silenceStartTime = 0;
+          STATE.sumRms += rms;
+          STATE.rmsSampleCount++;
+          if (peak > STATE.peakAmplitude) STATE.peakAmplitude = peak;
+        }
+      } else {
+        // Below speech energy: check if we are currently in speech segment
+        if (STATE.isSpeaking) {
+          if (STATE.silenceStartTime === 0) {
+            STATE.silenceStartTime = now;
+          } else if (now - STATE.silenceStartTime > CONFIG.silenceTimeout) {
+            // Speech segment ended!
+            const duration = now - STATE.speechStartTime - CONFIG.silenceTimeout;
+            finalizeSpeechSegment(duration);
+          }
+        }
+      }
+    }
+
+    function calculateVoiceGentleness(avgRms, peakAmp) {
+      // Soft, stable, calm speech -> voiceGentleness > 0
+      // Shouting, sudden harsh bursts, clipping -> voiceGentleness < 0
+      // Ideal gentle whisper/caring speech: RMS around 0.03 - 0.09, peak not clipped
+      const loudnessScore = 1.0 - Math.min(1.0, (avgRms - 0.02) / 0.18);
+      const peakPenalty = peakAmp > 0.65 ? -0.8 : (peakAmp > 0.4 ? -0.3 : 0.3);
+      const stability = peakAmp > 0 ? Math.min(1.0, (avgRms * 2.5) / peakAmp) : 0.5;
+
+      let gentleness = (loudnessScore * 0.4) + (peakPenalty * 0.35) + (stability * 0.25);
+      return Math.max(-1.0, Math.min(1.0, gentleness * 2.0 - 0.5));
+    }
+
+    async function finalizeSpeechSegment(duration) {
+      STATE.isSpeaking = false;
+      STATE.silenceStartTime = 0;
+      setSpeechStatus('PROCESSING');
+
+      if (duration < CONFIG.minSegmentDuration) {
+        setSpeechStatus('LISTENING');
+        return;
+      }
+
+      const avgRms = STATE.rmsSampleCount > 0 ? (STATE.sumRms / STATE.rmsSampleCount) : 0.03;
+      const gentleness = calculateVoiceGentleness(avgRms, STATE.peakAmplitude);
+      STATE.currentGentleness = gentleness;
+
+      // Extract transcript captured during this segment
+      const transcript = STATE.pendingTranscript.trim() || STATE.lastFinalTranscript.trim();
+      STATE.pendingTranscript = '';
+
+      // Perform semantic emotion analysis
+      const valence = await analyzeSemanticEmotion(transcript);
+      STATE.currentValence = valence;
+
+      dispatchEmotionalMessage(valence, gentleness, transcript);
+      setSpeechStatus('LISTENING');
+    }
+
+    function setSpeechStatus(status) {
+      STATE.speechState = status;
+      const micDot = document.getElementById('micDot');
+      const micStatusText = document.getElementById('micStatusText');
+      if (!micDot || !micStatusText) return;
+
+      micDot.className = 'mic-glow-dot';
+      if (status === 'LISTENING') micDot.classList.add('listening');
+      else if (status === 'SPEECH DETECTED') micDot.classList.add('speaking');
+      else if (status === 'PROCESSING') micDot.classList.add('processing');
+
+      micStatusText.textContent = status;
+    }
+
+    /* ==========================================================================
+       SECTION 5: LOCAL SPEECH-TO-TEXT (TRANSCRIBE SPEECH)
+       ========================================================================== */
+    function initSpeechRecognition() {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRec) {
+        STATE.transcriptionActive = false;
+        document.getElementById('dbgTranscribeMode').textContent = 'Acoustic Only (No WebSpeech)';
+        return;
+      }
+
+      try {
+        const recognition = new SpeechRec();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = STATE.selectedLanguage || 'zh-TW';
+
+        recognition.onresult = (event) => {
+          let interim = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            const transcriptText = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              STATE.lastFinalTranscript = transcriptText;
+              STATE.pendingTranscript += ' ' + transcriptText;
+            } else {
+              interim += transcriptText;
+            }
+          }
+          if (interim) {
+            STATE.pendingTranscript = interim;
+          }
+        };
+
+        recognition.onerror = (e) => {
+          console.log('Speech recognition notice:', e.error);
+        };
+
+        recognition.onend = () => {
+          if (STATE.audioInitialized) {
+            try {
+              recognition.lang = STATE.selectedLanguage || 'zh-TW';
+              recognition.start();
+            } catch (err) {}
+          }
+        };
+
+        recognition.start();
+        STATE.speechRecognition = recognition;
+        STATE.transcriptionActive = true;
+        document.getElementById('dbgTranscribeMode').textContent = `Browser Native (${STATE.selectedLanguage || 'zh-TW'})`;
+      } catch (err) {
+        console.warn('Speech recognition not active:', err);
+        STATE.transcriptionActive = false;
+      }
+    }
+
+    async function transcribeSpeech(audioData) {
+      return STATE.pendingTranscript || STATE.lastFinalTranscript || '';
+    }
+
+    /* ==========================================================================
+       SECTION 6: MULTILINGUAL LOCAL AI & EMOTION ANALYSIS
+       ========================================================================== */
+    const POSITIVE_WORDS_EN = [
+      'beautiful', 'love', 'grow', 'pretty', 'good', 'sweet', 'gentle', 'shine',
+      'blossom', 'bloom', 'thrive', 'wonderful', 'grace', 'radiant', 'precious',
+      'peace', 'alive', 'flower', 'tender', 'magnificent', 'kind', 'soft', 'cherish',
+      'sun', 'water', 'delicate', 'breathe', 'strong', 'elegant', 'darling', 'pure',
+      'nice', 'happy', 'bright', 'care', 'healthy', 'thanks', 'thank', 'lovely', 'joy'
+    ];
+    const NEGATIVE_WORDS_EN = [
+      'hate', 'ugly', 'terrible', 'die', 'wilt', 'wither', 'bad', 'stupid',
+      'horrible', 'rot', 'stink', 'disgusting', 'kill', 'awful', 'worthless',
+      'useless', 'poison', 'harsh', 'break', 'dead', 'trash', 'failure', 'decay',
+      'angry', 'cruel', 'hurt', 'pain', 'ruin', 'worst', 'nasty', 'shut'
+    ];
+
+    const POSITIVE_WORDS_ZH = [
+      '美麗', '漂亮', '可愛', '喜歡', '愛', '成長', '開花', '綻放', '溫柔', '陽光',
+      '盛開', '茁壯', '乾淨', '幸福', '謝謝', '好棒', '優秀', '生機', '滋潤', '珍惜',
+      '呵護', '棒', '好看', '讚', '活潑', '健康', '芬芳', '乖', '寶貝', '堅強',
+      '典雅', '舒暢', '翠綠', '欣欣向榮', '好美', '開心', '燦爛', '舒服', '喜歡你',
+      '朝氣', '溫暖', '柔美', '好乖', '太棒了', '真好', '加油', '好香', '光彩',
+      '美丽', '可爱', '喜欢', '成长', '绽放', '温柔', '阳光', '盛开', '茁壮', '干净',
+      '优秀', '生机', '滋润', '赞', '活泼', '宝贵', '坚强', '开心', '灿烂', '温暖'
+    ];
+    const NEGATIVE_WORDS_ZH = [
+      '討厭', '醜', '醜陋', '死', '枯萎', '爛', '枯', '凋謝', '臭', '噁心',
+      '垃圾', '笨', '廢物', '差勁', '破壞', '毒', '殘害', '凋零', '衰弱', '腐爛',
+      '死亡', '討厭你', '滾', '煩', '糟糕', '惡劣', '痛', '恨', '壞', '枯黃',
+      '爛掉', '弄死', '髒', '難看', '去死', '討人厭', '吵', '閉嘴',
+      '讨厌', '丑', '丑陋', '枯萎', '烂', '凋谢', '恶心', '废物', '差劲', '破坏',
+      '残害', '衰弱', '腐烂', '讨厌你', '滚', '烦', '糟糕', '恶劣', '坏', '枯黄',
+      '烂掉', '弄死', '脏', '难看', '去死', '闭嘴'
+    ];
+
+    const POSITIVE_WORDS_JA = [
+      '綺麗', '美し', 'かわいい', '咲く', '咲い', '育つ', '優し', '大好き', '愛',
+      '素敵', '元気', '幸せ', 'ありがとう', '輝く', '満開', '素晴らし', '健やか',
+      '癒し', '太陽', '芽吹き', '好き', '嬉し', '楽し', 'いい子', '温かい'
+    ];
+    const NEGATIVE_WORDS_JA = [
+      '嫌い', '醜い', '枯れる', '枯れ', '死ぬ', '死ね', '最悪', '汚い', '臭い',
+      'ダメ', '邪魔', '腐る', '落ちる', '苦しい', '痛い', 'バカ', '嫌だ', '酷い'
+    ];
+
+    async function detectLocalAiEngine() {
+      try {
+        if (window.ai && window.ai.languageModel) {
+          const capabilities = await window.ai.languageModel.capabilities();
+          if (capabilities && capabilities.available !== 'no') {
+            STATE.localAiAvailable = true;
+            STATE.localAiEngine = 'window.ai.languageModel';
+            document.getElementById('dbgLocalAI').textContent = 'Chrome Local AI (Prompt API)';
+            return;
+          }
+        }
+      } catch (e) {}
+      
+      STATE.localAiAvailable = false;
+      document.getElementById('dbgLocalAI').textContent = 'Multilingual Heuristic Engine';
+    }
+
+    async function analyzeSemanticEmotion(text) {
+      if (!text || text.trim() === '') {
+        return 0.0;
+      }
+
+      const cleanText = text.toLowerCase().trim();
+
+      // 1. Try Chrome local Prompt API / LanguageModel if available
+      if (STATE.localAiAvailable && window.ai?.languageModel) {
+        try {
+          const session = await window.ai.languageModel.create({
+            systemPrompt: "Evaluate the emotional valence of spoken words to a Phalaenopsis orchid in any language (English, Chinese, Japanese, etc.). Return only a single floating point number between -1.0 (very cruel/hateful/negative) and +1.0 (very loving/nurturing/positive)."
+          });
+          const result = await session.prompt(cleanText);
+          const parsed = parseFloat(result);
+          if (!isNaN(parsed)) {
+            return Math.max(-1.0, Math.min(1.0, parsed));
+          }
+        } catch (err) {
+          console.log('Local AI prompt fallback triggered:', err);
+        }
+      }
+
+      // 2. Multilingual Local Heuristic Analysis
+      let posScore = 0;
+      let negScore = 0;
+      let matches = 0;
+
+      // English word tokens
+      const engTokens = cleanText.split(/[\s,.;!?，。！？、]+/);
+      for (const tok of engTokens) {
+        if (!tok) continue;
+        if (POSITIVE_WORDS_EN.includes(tok)) {
+          posScore += 1.0;
+          matches++;
+        } else if (NEGATIVE_WORDS_EN.includes(tok)) {
+          negScore += 1.0;
+          matches++;
+        }
+      }
+
+      // Chinese keywords
+      for (const pw of POSITIVE_WORDS_ZH) {
+        if (cleanText.includes(pw.toLowerCase())) {
+          posScore += 1.25;
+          matches++;
+        }
+      }
+      for (const nw of NEGATIVE_WORDS_ZH) {
+        if (cleanText.includes(nw.toLowerCase())) {
+          negScore += 1.25;
+          matches++;
+        }
+      }
+
+      // Japanese keywords
+      for (const pw of POSITIVE_WORDS_JA) {
+        if (cleanText.includes(pw)) {
+          posScore += 1.25;
+          matches++;
+        }
+      }
+      for (const nw of NEGATIVE_WORDS_JA) {
+        if (cleanText.includes(nw)) {
+          negScore += 1.25;
+          matches++;
+        }
+      }
+
+      if (matches === 0) return 0.0;
+      const rawValence = (posScore - negScore) / Math.max(1, matches);
+      return Math.max(-1.0, Math.min(1.0, rawValence));
+    }
+
+    // Multilingual smart tokenizer for falling word tiles
+    function tokenizeTranscript(text) {
+      if (!text || !text.trim()) return [];
+      const clean = text.trim();
+      const hasCJK = /[\u4e00-\u9fa5\u3040-\u30ff]/.test(clean);
+
+      if (!hasCJK) {
+        return clean.split(/[\s,.;!?，。！？、]+/).filter(w => w.length > 0);
+      }
+
+      const tokens = [];
+      const chunks = clean.split(/[\s,.;!?，。！？、…—\n\t]+/).filter(c => c.length > 0);
+      const cjkKeywords = [...POSITIVE_WORDS_ZH, ...NEGATIVE_WORDS_ZH, ...POSITIVE_WORDS_JA, ...NEGATIVE_WORDS_JA];
+
+      for (const chunk of chunks) {
+        if (!/[\u4e00-\u9fa5\u3040-\u30ff]/.test(chunk)) {
+          tokens.push(chunk);
+          continue;
+        }
+
+        let i = 0;
+        while (i < chunk.length) {
+          let matched = false;
+          for (const kw of cjkKeywords) {
+            if (chunk.startsWith(kw, i)) {
+              tokens.push(kw);
+              i += kw.length;
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            const len = (i + 2 <= chunk.length) ? 2 : 1;
+            tokens.push(chunk.substr(i, len));
+            i += len;
+          }
+        }
+      }
+
+      return tokens.filter(t => t.length > 0);
+    }
+
+    /* ==========================================================================
+       SECTION 7: COMBINED EMOTIONAL IMPACT, FALLING WORDS & HISTORY
+       ========================================================================== */
+    function dispatchEmotionalMessage(semanticValence, voiceGentleness, transcript = '') {
+      // 1. Determine semantic category based on continuous valence and thresholds
+      let category = 'NEUTRAL';
+      if (semanticValence > CONFIG.positiveThreshold) {
+        category = 'POSITIVE';
+      } else if (semanticValence < CONFIG.negativeThreshold) {
+        category = 'NEGATIVE';
+      } else {
+        category = 'NEUTRAL';
+      }
+      STATE.currentCategory = category;
+
+      // 2. Calculate combined emotional impact while preserving independent features
+      let combinedImpact;
+      if (!transcript || transcript.trim() === '') {
+        combinedImpact = voiceGentleness * 0.7;
+      } else {
+        combinedImpact = (semanticValence * CONFIG.semanticWeight) + (voiceGentleness * CONFIG.voiceWeight);
+      }
+      combinedImpact = Math.max(-1.0, Math.min(1.0, combinedImpact));
+
+      // Neutral speech produces little or no effect on plant health (0 or <= 0.5)
+      let healthDelta = 0;
+      if (category === 'POSITIVE') {
+        healthDelta = Math.max(0.6, (semanticValence * 0.7 + voiceGentleness * 0.3) * CONFIG.maxHealthDelta);
+      } else if (category === 'NEGATIVE') {
+        healthDelta = Math.min(-0.6, (semanticValence * 0.7 + voiceGentleness * 0.3) * CONFIG.maxHealthDelta);
+      } else {
+        healthDelta = 0.0; // Strictly zero for neutral category
+      }
+
+      // 3. Extract word tokens using multilingual tokenizer
+      const cleanTranscript = (transcript || '').trim();
+      const wordTokens = tokenizeTranscript(cleanTranscript);
+
+      // 4. Create Unified Speech Event Object
+      const now = new Date();
+      const timeStr = now.toTimeString().split(' ')[0];
+      const speechEvent = {
+        timestamp: timeStr,
+        transcript: cleanTranscript || '(Ambient Voice Tone)',
+        semanticValence: semanticValence,
+        semanticCategory: category,
+        voiceGentleness: voiceGentleness,
+        emotionalImpact: combinedImpact,
+        healthDelta: healthDelta,
+        words: wordTokens
+      };
+
+      // Push to history log (keep last 20)
+      STATE.voiceHistory.unshift(speechEvent);
+      if (STATE.voiceHistory.length > 20) {
+        STATE.voiceHistory.pop();
+      }
+      renderVoiceHistory();
+      drawHistoryGraph();
+
+      // 5. Spawn Falling Word Memory (falling behind pot like sand grains)
+      if (wordTokens.length > 0) {
+        spawnFallingWords(wordTokens, category, semanticValence);
+      }
+
+      // 6. Create Message Object near canvas edge
+      const canvas = document.getElementById('orchidCanvas');
+      const startSide = Math.random() < 0.5 ? 'left' : 'right';
+      const startX = startSide === 'left' ? 45 : (canvas.width - 45);
+      const startY = canvas.height * (0.18 + Math.random() * 0.32);
+
+      // Target position: root / base of orchid pot
+      const targetX = canvas.width / 2;
+      const targetY = canvas.height * 0.72;
+
+      // Trajectory control points
+      const ctrl1X = startSide === 'left' ? startX + 220 : startX - 220;
+      const ctrl1Y = startY - 120;
+      const ctrl2X = targetX + (startSide === 'left' ? -90 : 90);
+      const ctrl2Y = targetY - 170;
+
+      // Magnitude based on abs(semanticValence), modulated by gentleness
+      const valenceMag = Math.abs(semanticValence);
+      const baseSize = 20 + valenceMag * 24;
+
+      // Speed influenced by category & voice gentleness
+      let speedFactor = 1.0;
+      if (category === 'NEGATIVE') {
+        speedFactor = 1.25 + (voiceGentleness < 0 ? Math.abs(voiceGentleness) * 0.6 : 0);
+      } else if (category === 'POSITIVE') {
+        speedFactor = 0.95 - (voiceGentleness > 0 ? voiceGentleness * 0.15 : 0);
+      } else {
+        speedFactor = 0.9;
+      }
+
+      const particle = {
+        startX, startY,
+        ctrl1X, ctrl1Y,
+        ctrl2X, ctrl2Y,
+        targetX, targetY,
+        progress: 0,
+        speed: (1.0 / (CONFIG.particleTravelDuration * 60)) * speedFactor,
+        category: category,
+        valence: semanticValence,
+        gentleness: voiceGentleness,
+        impact: combinedImpact,
+        healthDelta: healthDelta,
+        size: baseSize,
+        pulseOffset: Math.random() * Math.PI * 2,
+        jitterSeed: Math.random() * 100,
+        rotation: Math.atan2(targetY - startY, targetX - startX),
+        trail: [],
+        event: speechEvent
+      };
+
+      STATE.messageParticles.push(particle);
+
+      // Show floating transcript near message origin
+      if (cleanTranscript.length > 0) {
+        triggerFloatingTranscript(cleanTranscript, startX, startY);
+      }
+
+      updateDebugDisplay(combinedImpact, cleanTranscript);
+    }
+
+    /* Falling Word Memory: Words fall like sand and pile behind the pot */
+    function spawnFallingWords(words, category, valence) {
+      const canvas = document.getElementById('orchidCanvas');
+      const centerX = canvas.width / 2;
+      const spawnY = canvas.height * 0.38;
+      const mag = Math.abs(valence);
+      // High-readability font size range: 14px to 18px (minimum 14px)
+      const fontSize = Math.round(14 + mag * 4.0);
+
+      words.forEach((w, i) => {
+        const staggerDelay = i * (85 + Math.random() * 55);
+
+        setTimeout(() => {
+          // Precise physical word tile container dimensions for both Latin and CJK
+          let textW = 0;
+          for (let ch of w) {
+            if (ch.charCodeAt(0) > 255) {
+              textW += fontSize * 1.05;
+            } else {
+              textW += fontSize * 0.62;
+            }
+          }
+          textW = Math.max(22, textW);
+          const padX = 9.0; // 7-10px horizontal padding
+          const padY = 5.0; // 4-6px vertical padding
+          const tileWidth = textW + padX * 2;
+          const tileHeight = fontSize + padY * 2;
+
+          // Distributed spawn area: centerX - 180 to centerX + 180
+          const spawnX = centerX + (Math.random() - 0.5) * 360;
+
+          STATE.wordObjects.push({
+            text: w.toUpperCase(),
+            category: category,
+            x: spawnX,
+            y: spawnY + (Math.random() - 0.5) * 20,
+            vx: (Math.random() - 0.5) * 1.1,
+            vy: 0.9 + Math.random() * 1.2,
+            rotation: (Math.random() - 0.5) * 0.28,
+            rotationVel: (Math.random() - 0.5) * 0.02,
+            tileWidth: tileWidth,
+            tileHeight: tileHeight,
+            fontSize: fontSize,
+            settled: false,
+            alpha: 1.0,
+            age: 0
+          });
+
+          // Limit memory pile size: fade out oldest settled words if exceeding max
+          if (STATE.wordObjects.length > CONFIG.maxWordObjects) {
+            const excess = STATE.wordObjects.length - CONFIG.maxWordObjects;
+            for (let k = 0; k < excess; k++) {
+              if (STATE.wordObjects[k] && STATE.wordObjects[k].settled) {
+                STATE.wordObjects[k].fading = true;
+              }
+            }
+          }
+        }, staggerDelay);
+      });
+    }
+
+    function updateAndDrawWordMemory(ctx) {
+      const canvas = document.getElementById('orchidCanvas');
+      const groundY = canvas.height * 0.72 + 104; // ground level behind base of pot
+      const potX = canvas.width / 2;
+
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let i = STATE.wordObjects.length - 1; i >= 0; i--) {
+        const w = STATE.wordObjects[i];
+
+        if (w.fading) {
+          w.alpha -= 0.015;
+          if (w.alpha <= 0) {
+            STATE.wordObjects.splice(i, 1);
+            continue;
+          }
+        }
+
+        if (!w.settled) {
+          w.vy += 0.16;
+          w.vx *= 0.98;
+          w.x += w.vx;
+          w.y += w.vy;
+          w.rotation += w.rotationVel;
+
+          // Ground collision
+          if (w.y >= groundY - w.tileHeight * 0.5) {
+            w.y = groundY - w.tileHeight * 0.5;
+            w.settled = true;
+            w.vx = 0;
+            w.vy = 0;
+            w.rotationVel = 0;
+            w.rotation *= 0.5;
+          } else {
+            // Collision with already settled word tiles
+            for (let j = 0; j < STATE.wordObjects.length; j++) {
+              if (i === j) continue;
+              const s = STATE.wordObjects[j];
+              if (!s.settled) continue;
+
+              const dx = Math.abs(w.x - s.x);
+              const dy = s.y - w.y;
+              const collideX = (w.tileWidth + s.tileWidth) * 0.46;
+              const collideY = (w.tileHeight + s.tileHeight) * 0.50;
+
+              if (dx < collideX && dy > 0 && dy < collideY) {
+                w.y = s.y - collideY;
+                const outward = w.x >= s.x ? 1 : -1;
+                const distFromCenter = w.x - potX;
+                if (Math.abs(distFromCenter) < 220) {
+                  w.x += outward * (2.0 + Math.random() * 2.5);
+                }
+                w.settled = true;
+                w.vx = 0;
+                w.vy = 0;
+                w.rotationVel = 0;
+                w.rotation = (Math.random() - 0.5) * 0.14;
+                break;
+              }
+            }
+          }
+        }
+
+        // Render Physical Word Tile Container with High-Contrast Glass Appearance
+        ctx.save();
+        ctx.translate(w.x, w.y);
+        ctx.rotate(w.rotation);
+
+        const tw = w.tileWidth;
+        const th = w.tileHeight;
+
+        // 1. Subtle drop shadow
+        ctx.fillStyle = `rgba(0, 0, 0, ${w.alpha * 0.45})`;
+        ctx.beginPath();
+        ctx.roundRect(-tw * 0.5 + 1, -th * 0.5 + 2, tw, th, 4.5);
+        ctx.fill();
+
+        // 2. High-opacity dark charcoal glass container
+        ctx.fillStyle = `rgba(14, 25, 22, ${w.alpha * 0.88})`;
+        ctx.beginPath();
+        ctx.roundRect(-tw * 0.5, -th * 0.5, tw, th, 4.5);
+        ctx.fill();
+
+        // 3. Crisp outer container hairline border
+        ctx.strokeStyle = `rgba(255, 255, 255, ${w.alpha * 0.22})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // 4. Emotional Category Accent: 2.5px colored bottom border
+        let accentColor;
+        if (w.category === 'POSITIVE') {
+          accentColor = `rgba(244, 114, 182, ${w.alpha * 0.98})`; // vibrant pink
+        } else if (w.category === 'NEGATIVE') {
+          accentColor = `rgba(56, 189, 248, ${w.alpha * 0.98})`; // clear cyan-blue
+        } else {
+          accentColor = `rgba(250, 204, 21, ${w.alpha * 0.98})`; // warm yellow
+        }
+
+        ctx.strokeStyle = accentColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-tw * 0.5 + 3, th * 0.5 - 1);
+        ctx.lineTo(tw * 0.5 - 3, th * 0.5 - 1);
+        ctx.stroke();
+
+        // 5. Crisp high-contrast white text (14-18px)
+        ctx.font = `500 ${w.fontSize}px -apple-system, BlinkMacSystemFont, "PingFang TC", "Hiragino Sans", "Microsoft JhengHei", 'Inter', sans-serif`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${w.alpha * 0.98})`;
+        ctx.fillText(w.text, 0, 0);
+
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    /* History Panel & Graph rendering */
+    function renderVoiceHistory() {
+      const list = document.getElementById('historyList');
+      if (!list) return;
+
+      if (STATE.voiceHistory.length === 0) {
+        list.innerHTML = '<div style="font-size: 10px; color: #64748b; text-align: center; padding: 12px 0;">No speech events yet. Speak or press P/N/U.</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      STATE.voiceHistory.forEach(ev => {
+        const item = document.createElement('div');
+        const catClass = ev.semanticCategory.toLowerCase();
+        item.className = `history-item ${catClass}`;
+
+        const icon = ev.semanticCategory === 'POSITIVE' ? '♥' : (ev.semanticCategory === 'NEGATIVE' ? '➔' : '■');
+        const dHealthSign = ev.healthDelta >= 0 ? `+${ev.healthDelta.toFixed(1)}` : ev.healthDelta.toFixed(1);
+        const valSign = ev.semanticValence >= 0 ? `+${ev.semanticValence.toFixed(2)}` : ev.semanticValence.toFixed(2);
+        const acSign = ev.voiceGentleness >= 0 ? `+${ev.voiceGentleness.toFixed(2)}` : ev.voiceGentleness.toFixed(2);
+        const impSign = ev.emotionalImpact >= 0 ? `+${ev.emotionalImpact.toFixed(2)}` : ev.emotionalImpact.toFixed(2);
+
+        item.innerHTML = `
+          <div class="history-item-top">
+            <span class="history-category-badge">${ev.semanticCategory} ${icon}</span>
+            <span>${ev.timestamp}</span>
+          </div>
+          <div class="history-quote">“${ev.transcript}”</div>
+          <div class="history-metrics">
+            <span>Val: ${valSign}</span>
+            <span>Tone: ${acSign}</span>
+            <span>Imp: ${impSign}</span>
+            <span style="color: ${ev.healthDelta > 0 ? '#4ade80' : (ev.healthDelta < 0 ? '#f87171' : '#94a3b8')};">H: ${dHealthSign}</span>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+
+      const countEl = document.getElementById('dbgHistoryCount');
+      if (countEl) countEl.textContent = STATE.voiceHistory.length;
+    }
+
+    function drawHistoryGraph() {
+      const canvas = document.getElementById('historyGraphCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Horizontal zero line
+      const zeroY = h * 0.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, zeroY);
+      ctx.lineTo(w, zeroY);
+      ctx.stroke();
+
+      // Top (+1) and bottom (-1) guides
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.beginPath();
+      ctx.moveTo(0, 5); ctx.lineTo(w, 5);
+      ctx.moveTo(0, h - 5); ctx.lineTo(w, h - 5);
+      ctx.stroke();
+
+      const events = STATE.voiceHistory.slice(0, 20).reverse();
+      if (events.length < 2) return;
+
+      const stepX = (w - 16) / (events.length - 1);
+
+      // Trace 1: Semantic Valence (Pink line)
+      ctx.strokeStyle = '#f472b6';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      events.forEach((ev, idx) => {
+        const x = 8 + idx * stepX;
+        const y = zeroY - ev.semanticValence * (zeroY - 6);
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Trace 2: Acoustic Tone / Gentleness (Emerald/Mint line)
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 1.8;
+      ctx.setLineDash([3, 2]);
+      ctx.beginPath();
+      events.forEach((ev, idx) => {
+        const x = 8 + idx * stepX;
+        const y = zeroY - ev.voiceGentleness * (zeroY - 6);
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function triggerFloatingTranscript(text, x, y) {
+      const el = document.getElementById('floatingTranscript');
+      if (!el) return;
+      el.textContent = `“${text}”`;
+      el.style.left = `${x}px`;
+      el.style.top = `${y - 30}px`;
+      el.style.opacity = '1';
+      el.style.transform = 'translate(-50%, -50%) scale(1)';
+
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translate(-50%, -80px) scale(0.95)';
+      }, 3200);
+    }
+
+    function absorbMessageParticle(particle) {
+      // Apply exact health delta calculated for this speechEvent
+      STATE.plantHealth = Math.max(CONFIG.minHealth, Math.min(CONFIG.maxHealth, STATE.plantHealth + particle.healthDelta));
+
+      // Visual pulse along vascular stem based on category
+      let pulseColor;
+      if (particle.category === 'POSITIVE') {
+        pulseColor = 'rgba(244, 114, 182, ';
+      } else if (particle.category === 'NEGATIVE') {
+        pulseColor = 'rgba(56, 189, 248, ';
+      } else {
+        pulseColor = 'rgba(250, 204, 21, ';
+      }
+
+      STATE.plantPulses.push({
+        progress: 0,
+        speed: particle.category === 'NEGATIVE' ? 0.03 : 0.022,
+        category: particle.category,
+        magnitude: Math.abs(particle.impact),
+        color: pulseColor
+      });
+
+      // Botanical memory response
+      if (particle.category === 'NEGATIVE') {
+        orchid.inflictDamage(Math.abs(particle.impact));
+      } else if (particle.category === 'POSITIVE') {
+        orchid.nurture(Math.abs(particle.impact));
+      }
+
+      // Check victory / wilt conditions
+      if (STATE.plantHealth >= CONFIG.bloomThreshold && !STATE.hasReachedBloom) {
+        triggerVictoryClimax();
+      } else if (STATE.plantHealth <= CONFIG.wiltThreshold && !STATE.hasReachedDeath) {
+        triggerDeathClimax();
+      }
+    }
+
+    function triggerVictoryClimax() {
+      STATE.hasReachedBloom = true;
+      const banner = document.getElementById('climaxBanner');
+      banner.textContent = 'FULL BLOOM';
+      banner.classList.remove('wilted');
+      banner.style.opacity = '1';
+      banner.style.transform = 'translate(-50%, -50%) scale(1.05)';
+
+      // Spawn burst of luminous golden pollen particles
+      const canvas = document.getElementById('orchidCanvas');
+      for (let i = 0; i < 90; i++) {
+        STATE.pollenParticles.push({
+          x: canvas.width / 2 + (Math.random() - 0.5) * 260,
+          y: canvas.height * 0.45 + (Math.random() - 0.5) * 200,
+          vx: (Math.random() - 0.5) * 1.5,
+          vy: -0.8 - Math.random() * 1.8,
+          radius: 1.5 + Math.random() * 3.5,
+          alpha: 0.85,
+          decay: 0.003 + Math.random() * 0.004,
+          glow: true
+        });
+      }
+
+      setTimeout(() => {
+        banner.style.opacity = '0';
+      }, 7000);
+    }
+
+    function triggerDeathClimax() {
+      STATE.hasReachedDeath = true;
+      const banner = document.getElementById('climaxBanner');
+      banner.textContent = 'THE ORCHID HAS FALLEN SILENT';
+      banner.classList.add('wilted');
+      banner.style.opacity = '1';
+      banner.style.transform = 'translate(-50%, -50%) scale(1)';
+
+      setTimeout(() => {
+        banner.style.opacity = '0';
+      }, 7000);
+    }
+
+    /* ==========================================================================
+       SECTION 8: PROCEDURAL PHALAENOPSIS ORCHID MODEL & BOTANICAL MEMORY
+       ========================================================================== */
+    class Petal {
+      constructor(type, angle, length, width, colorBase) {
+        this.type = type; // 'dorsal', 'lateral', 'sepal', 'lip'
+        this.angle = angle;
+        this.length = length;
+        this.width = width;
+        this.colorBase = colorBase;
+      }
+    }
+
+    class Flower {
+      constructor(stemT, side, baseScale = 1.0) {
+        this.stemT = stemT; // Position along curved stem [0, 1]
+        this.side = side;   // -1 left, +1 right
+        this.openAmount = 0.0;     // 0 = closed bud, 1 = fully open flower
+        this.targetOpenAmount = 0.0;
+        this.wiltAmount = 0.0;     // botanical memory of damage [0, 1]
+        this.health = 1.0;
+        this.droopAngle = 0.0;
+        this.baseScale = baseScale;
+        this.wrinkle = 0.0;
+        this.colorShift = 0.0; // desaturation
+        this.petalLoss = false;
+      }
+
+      update(plantHealth, stemX, stemY, stemAngle) {
+        this.x = stemX;
+        this.y = stemY;
+        this.stemAngle = stemAngle;
+
+        // Progressive opening curve based on plant health and position along stem
+        // Lower flowers on stem open earlier (stemT between 0.35 and 0.85)
+        const threshold = 35 + (1.0 - this.stemT) * 45;
+        if (plantHealth >= threshold) {
+          const excess = (plantHealth - threshold) / (100 - threshold);
+          this.targetOpenAmount = Math.min(1.0, 0.2 + excess * 0.85);
+        } else {
+          this.targetOpenAmount = Math.max(0.0, (plantHealth - 15) / 35);
+        }
+
+        // Animate geometry transforming/opening smoothly over time
+        this.openAmount += (this.targetOpenAmount - this.openAmount) * 0.035;
+
+        // Health droop and wilting behavior
+        if (plantHealth < 30) {
+          const distress = (30 - plantHealth) / 30;
+          this.droopAngle += (distress * 0.45 - this.droopAngle) * 0.03;
+          this.wrinkle = Math.min(1.0, this.wrinkle + distress * 0.02);
+          this.colorShift = Math.min(1.0, this.colorShift + distress * 0.03);
+          if (plantHealth <= 5) this.petalLoss = true;
+        } else {
+          // Gradual recovery, but retain persistent botanical memory of wilt
+          this.droopAngle += (0 - this.droopAngle) * 0.02;
+          this.colorShift += (0 - this.colorShift) * 0.01;
+        }
+      }
+
+      nurture(magnitude) {
+        this.health = Math.min(1.0, this.health + magnitude * 0.15);
+        this.wiltAmount = Math.max(0.0, this.wiltAmount - magnitude * 0.08);
+      }
+
+      damage(magnitude) {
+        this.wiltAmount = Math.min(1.0, this.wiltAmount + magnitude * 0.22);
+        this.wrinkle = Math.min(1.0, this.wrinkle + magnitude * 0.18);
+        this.health = Math.max(0.0, this.health - magnitude * 0.2);
+      }
+
+      draw(ctx, pulseGlow = 0) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Branch pedicel connecting flower to main stem
+        const pedicelLen = 22 * this.baseScale;
+        const pedAngle = this.stemAngle + (this.side * Math.PI * 0.42) + this.droopAngle;
+        const pEndX = Math.cos(pedAngle) * pedicelLen;
+        const pEndY = Math.sin(pedAngle) * pedicelLen;
+
+        ctx.strokeStyle = `rgba(55, 78, 48, ${0.9 - this.colorShift * 0.4})`;
+        ctx.lineWidth = 2.2 * this.baseScale;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(pEndX * 0.5, pEndY * 0.4, pEndX, pEndY);
+        ctx.stroke();
+
+        ctx.translate(pEndX, pEndY);
+        ctx.rotate(pedAngle + this.droopAngle);
+
+        if (this.openAmount < 0.2) {
+          // Draw closed / swelling bud
+          this.drawBud(ctx, pulseGlow);
+        } else {
+          // Draw opening or blooming Phalaenopsis orchid flower
+          this.drawPhalaenopsisFlower(ctx, pulseGlow);
+        }
+
+        ctx.restore();
+      }
+
+      drawBud(ctx, pulseGlow) {
+        const budSize = (9 + this.openAmount * 12) * this.baseScale;
+        ctx.save();
+        
+        // Bud gradient (green tip to soft pink base)
+        const grad = ctx.createRadialGradient(-2, -3, 1, 0, 0, budSize);
+        if (STATE.plantHealth > 25) {
+          grad.addColorStop(0, '#fbcfe8');
+          grad.addColorStop(0.5, '#f472b6');
+          grad.addColorStop(1, '#4d7c0f');
+        } else {
+          grad.addColorStop(0, '#a8a29e');
+          grad.addColorStop(1, '#57534e');
+        }
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, budSize * 1.1, budSize * 0.7, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bud seam
+        ctx.strokeStyle = 'rgba(74, 107, 60, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-budSize * 0.9, 0);
+        ctx.quadraticCurveTo(0, -budSize * 0.35, budSize * 0.9, 0);
+        ctx.stroke();
+
+        if (pulseGlow > 0) {
+          ctx.strokeStyle = `rgba(244, 114, 182, ${pulseGlow})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      drawPhalaenopsisFlower(ctx, pulseGlow) {
+        const t = this.openAmount; // 0.2 to 1.0
+        const scale = this.baseScale * (0.6 + t * 0.65);
+        const wiltFactor = this.wiltAmount;
+
+        ctx.save();
+        ctx.scale(scale, scale);
+
+        // Saturation & color calculations
+        // Vibrant pink Phalaenopsis coloration with white-to-magenta blush
+        const healthRatio = Math.max(0, Math.min(1, STATE.plantHealth / 90));
+        const rPetal = Math.round(250 - this.colorShift * 110);
+        const gPetal = Math.round(210 * healthRatio + 35 * (1 - healthRatio));
+        const bPetal = Math.round(230 * healthRatio + 30 * (1 - healthRatio));
+        
+        // Petal base gradient
+        const petalColor = `rgba(${rPetal}, ${gPetal}, ${bPetal}, 0.92)`;
+        const sepalColor = `rgba(${rPetal - 15}, ${gPetal + 10}, ${bPetal - 10}, 0.88)`;
+        const blushColor = `rgba(219, 39, 119, ${0.45 * (1 - this.colorShift)})`;
+
+        // 1. DORSAL & LATERAL SEPALS (Background layer: 3 sepals)
+        const sepalSpread = t * 1.1;
+        // Upper dorsal sepal
+        this.renderPetalShape(ctx, 0, -28 * sepalSpread, 16, 26, 0, sepalColor, blushColor, wiltFactor);
+        // Lower left sepal
+        this.renderPetalShape(ctx, -18 * sepalSpread, 20 * sepalSpread, 15, 24, -0.65, sepalColor, blushColor, wiltFactor);
+        // Lower right sepal
+        this.renderPetalShape(ctx, 18 * sepalSpread, 20 * sepalSpread, 15, 24, 0.65, sepalColor, blushColor, wiltFactor);
+
+        // 2. BROAD LATERAL PETALS (Phalaenopsis "moth wings" - distinctive wide round petals)
+        const petalSpread = t * 1.25;
+        const wingWidth = 24 * (1.0 - wiltFactor * 0.25);
+        const wingLength = 26 * (1.0 - wiltFactor * 0.2);
+        
+        // Left lateral petal
+        this.renderWingPetal(ctx, -26 * petalSpread, -4, wingWidth, wingLength, -0.25, petalColor, blushColor, wiltFactor);
+        // Right lateral petal
+        this.renderWingPetal(ctx, 26 * petalSpread, -4, wingWidth, wingLength, 0.25, petalColor, blushColor, wiltFactor);
+
+        // 3. LABELLUM / LIP (Distinctive central 3-lobed lip of Phalaenopsis)
+        this.renderLabellum(ctx, t, blushColor, wiltFactor);
+
+        // 4. COLUMN (gynostemium) & ANTHER CAP
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.ellipse(0, -2, 3.5, 4.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pulse absorption glow
+        if (pulseGlow > 0.05) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(253, 224, 71, ${pulseGlow * 0.8})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(0, 0, 36, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      renderWingPetal(ctx, cx, cy, w, h, rot, baseCol, blushCol, wilt) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot + (wilt * (rot < 0 ? -0.2 : 0.2)));
+
+        const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, Math.max(w, h));
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.55, baseCol);
+        grad.addColorStop(1, blushCol);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        // Bilateral rounded moth petal
+        ctx.ellipse(0, 0, w, h, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Subtle veins
+        ctx.strokeStyle = 'rgba(219, 39, 119, 0.18)';
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(w * 0.4, -h * 0.3, w * 0.8, -h * 0.5);
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(w * 0.4, h * 0.3, w * 0.8, h * 0.5);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      renderPetalShape(ctx, cx, cy, w, h, rot, baseCol, blushCol, wilt) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot + wilt * 0.15);
+
+        const grad = ctx.createLinearGradient(0, -h, 0, h);
+        grad.addColorStop(0, baseCol);
+        grad.addColorStop(0.7, blushCol);
+        grad.addColorStop(1, '#ffffff');
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w, h, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      renderLabellum(ctx, t, blushCol, wilt) {
+        // Labellum (lip) with deep magenta speckles and yellow callus
+        ctx.save();
+        ctx.translate(0, 14 * t);
+
+        // Center mid-lobe
+        ctx.fillStyle = '#9d174d';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.bezierCurveTo(-10, 8, -6, 20, 0, 24);
+        ctx.bezierCurveTo(6, 20, 10, 8, 0, 0);
+        ctx.fill();
+
+        // Lateral lip side-lobes
+        ctx.fillStyle = '#be185d';
+        ctx.beginPath();
+        ctx.ellipse(-7, 3, 5, 7, -0.4, 0, Math.PI * 2);
+        ctx.ellipse(7, 3, 5, 7, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Callus center (bright yellow crest with tiny spots)
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(0, 4, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    class Stem {
+      constructor(baseX, baseY, targetEndX, targetEndY, ctrl1X, ctrl1Y, ctrl2X, ctrl2Y) {
+        this.baseX = baseX;
+        this.baseY = baseY;
+        this.endX = targetEndX;
+        this.endY = targetEndY;
+        this.ctrl1X = ctrl1X;
+        this.ctrl1Y = ctrl1Y;
+        this.ctrl2X = ctrl2X;
+        this.ctrl2Y = ctrl2Y;
+        this.flowers = [];
+      }
+
+      getPoint(t) {
+        const u = 1 - t;
+        const tt = t * t;
+        const uu = u * u;
+        const uuu = uu * u;
+        const ttt = tt * t;
+
+        const x = uuu * this.baseX + 3 * uu * t * this.ctrl1X + 3 * u * tt * this.ctrl2X + ttt * this.endX;
+        const y = uuu * this.baseY + 3 * uu * t * this.ctrl1Y + 3 * u * tt * this.ctrl2Y + ttt * this.endY;
+
+        // Derivative for tangent angle
+        const dx = 3 * uu * (this.ctrl1X - this.baseX) + 6 * u * t * (this.ctrl2X - this.ctrl1X) + 3 * tt * (this.endX - this.ctrl2X);
+        const dy = 3 * uu * (this.ctrl1Y - this.baseY) + 6 * u * t * (this.ctrl2Y - this.ctrl1Y) + 3 * tt * (this.endY - this.ctrl2Y);
+        const angle = Math.atan2(dy, dx);
+
+        return { x, y, angle };
+      }
+
+      draw(ctx, plantHealth, breathSway, pulseProgress, pulsePosColor) {
+        ctx.save();
+        
+        // Sway adjustment
+        const curCtrl1X = this.ctrl1X + Math.sin(breathSway) * 8;
+        const curCtrl2X = this.ctrl2X + Math.sin(breathSway * 0.8) * 14;
+        const curEndX = this.endX + Math.sin(breathSway * 0.6) * 18;
+
+        // Stem color degrades with poor health
+        const healthRatio = Math.max(0, Math.min(1, plantHealth / 80));
+        const rStem = Math.round(55 * healthRatio + 70 * (1 - healthRatio));
+        const gStem = Math.round(95 * healthRatio + 50 * (1 - healthRatio));
+        const bStem = Math.round(45 * healthRatio + 35 * (1 - healthRatio));
+
+        ctx.strokeStyle = `rgb(${rStem}, ${gStem}, ${bStem})`;
+        ctx.lineWidth = 5.0;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(this.baseX, this.baseY);
+        ctx.bezierCurveTo(curCtrl1X, this.ctrl1Y, curCtrl2X, this.ctrl2Y, curEndX, this.endY);
+        ctx.stroke();
+
+        // Wooden bamboo support stake & floral clip (typical Phalaenopsis styling)
+        ctx.strokeStyle = 'rgba(148, 120, 85, 0.45)';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(this.baseX, this.baseY);
+        ctx.lineTo(this.ctrl1X - 8, this.ctrl1Y + 30);
+        ctx.stroke();
+
+        // Pulse passing along stem
+        if (pulseProgress !== null && pulseProgress >= 0 && pulseProgress <= 1) {
+          const pt = this.getPoint(pulseProgress);
+          ctx.strokeStyle = pulsePosColor + '0.85)';
+          ctx.lineWidth = 8;
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    class Leaf {
+      constructor(baseX, baseY, length, width, angle, curl) {
+        this.baseX = baseX;
+        this.baseY = baseY;
+        this.length = length;
+        this.width = width;
+        this.angle = angle;
+        this.curl = curl;
+      }
+
+      draw(ctx, plantHealth, breathSway) {
+        ctx.save();
+        ctx.translate(this.baseX, this.baseY);
+
+        const healthRatio = Math.max(0, Math.min(1, plantHealth / 80));
+        // Leaves droop when health drops
+        const droop = (1.0 - healthRatio) * 0.35;
+        const currentAngle = this.angle + Math.sin(breathSway + this.angle) * 0.04 + (this.angle > 0 ? droop : -droop);
+        ctx.rotate(currentAngle);
+
+        const rLeaf = Math.round(28 * healthRatio + 95 * (1 - healthRatio));
+        const gLeaf = Math.round(85 * healthRatio + 65 * (1 - healthRatio));
+        const bLeaf = Math.round(38 * healthRatio + 32 * (1 - healthRatio));
+
+        // Leaf outline & gradient
+        const grad = ctx.createLinearGradient(0, -this.width / 2, this.length, this.width / 2);
+        grad.addColorStop(0, `rgb(${rLeaf - 10}, ${gLeaf - 15}, ${bLeaf - 10})`);
+        grad.addColorStop(0.5, `rgb(${rLeaf}, ${gLeaf}, ${bLeaf})`);
+        grad.addColorStop(1, `rgb(${rLeaf + 15}, ${gLeaf + 25}, ${bLeaf + 10})`);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        // Leathery arched Phalaenopsis leaf curve
+        ctx.bezierCurveTo(this.length * 0.3, -this.width * 0.7, this.length * 0.75, -this.width * 0.65, this.length, 0);
+        ctx.bezierCurveTo(this.length * 0.75, this.width * 0.65, this.length * 0.3, this.width * 0.7, 0, 0);
+        ctx.fill();
+
+        // Central vein & leathery gloss highlight
+        ctx.strokeStyle = `rgba(${rLeaf + 30}, ${gLeaf + 35}, ${bLeaf + 25}, 0.6)`;
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(2, 0);
+        ctx.lineTo(this.length * 0.92, 0);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+    }
+
+    class OrchidPlant {
+      constructor() {
+        this.stems = [];
+        this.leaves = [];
+        this.roots = [];
+        this.potRadius = 88;
+        this.potHeight = 110;
+        this.breathPhase = 0;
+      }
+
+      init(canvasWidth, canvasHeight) {
+        const rootX = canvasWidth / 2;
+        const rootY = canvasHeight * 0.72;
+
+        this.rootX = rootX;
+        this.rootY = rootY;
+        this.stems = [];
+        this.leaves = [];
+        this.roots = [];
+
+        // 1. Two graceful arching flower spikes
+        // Main primary stem curving rightward
+        const stem1 = new Stem(
+          rootX - 10, rootY - 15,
+          rootX + 220, rootY - 330,
+          rootX - 35, rootY - 190,
+          rootX + 110, rootY - 390
+        );
+        // Secondary stem curving leftward
+        const stem2 = new Stem(
+          rootX + 12, rootY - 15,
+          rootX - 190, rootY - 300,
+          rootX + 30, rootY - 170,
+          rootX - 90, rootY - 360
+        );
+
+        // Distribute 10-12 buds/flowers along stems
+        // Stem 1 has 6 flowers
+        const tPositions1 = [0.38, 0.50, 0.62, 0.73, 0.84, 0.95];
+        tPositions1.forEach((t, i) => {
+          const side = (i % 2 === 0) ? 1 : -1;
+          const flower = new Flower(t, side, 1.0 - (i * 0.04));
+          stem1.flowers.push(flower);
+        });
+
+        // Stem 2 has 5 flowers
+        const tPositions2 = [0.42, 0.55, 0.68, 0.80, 0.94];
+        tPositions2.forEach((t, i) => {
+          const side = (i % 2 === 0) ? -1 : 1;
+          const flower = new Flower(t, side, 0.95 - (i * 0.04));
+          stem2.flowers.push(flower);
+        });
+
+        this.stems = [stem1, stem2];
+
+        // 2. Thick leathery Phalaenopsis leaves (bilateral fan)
+        this.leaves = [
+          new Leaf(rootX - 12, rootY - 8, 175, 48, -0.65, 0.1),
+          new Leaf(rootX + 14, rootY - 6, 185, 52, 0.62, 0.1),
+          new Leaf(rootX - 15, rootY - 4, 155, 44, -1.05, 0.2),
+          new Leaf(rootX + 16, rootY - 2, 160, 46, 0.98, 0.2),
+          new Leaf(rootX - 5, rootY - 14, 135, 40, -0.32, 0.05),
+          new Leaf(rootX + 5, rootY - 12, 140, 42, 0.34, 0.05)
+        ];
+
+        // 3. Silvery-green aerial roots spilling over pot rim
+        for (let i = 0; i < 9; i++) {
+          const side = i % 2 === 0 ? 1 : -1;
+          this.roots.push({
+            startX: rootX + (Math.random() - 0.5) * 60,
+            startY: rootY - 4,
+            endX: rootX + side * (55 + Math.random() * 55),
+            endY: rootY + 25 + Math.random() * 55,
+            ctrlX: rootX + side * (75 + Math.random() * 30),
+            ctrlY: rootY + 5 + Math.random() * 25
+          });
+        }
+      }
+
+      nurture(magnitude) {
+        this.stems.forEach(stem => {
+          stem.flowers.forEach(fl => fl.nurture(magnitude));
+        });
+      }
+
+      inflictDamage(magnitude) {
+        this.stems.forEach(stem => {
+          stem.flowers.forEach(fl => fl.damage(magnitude));
+        });
+      }
+
+      update() {
+        this.breathPhase += 0.02;
+
+        // Update all flowers along stems
+        this.stems.forEach(stem => {
+          stem.flowers.forEach(flower => {
+            const pt = stem.getPoint(flower.stemT);
+            flower.update(STATE.plantHealth, pt.x, pt.y, pt.angle);
+          });
+        });
+      }
+
+      draw(ctx) {
+        const pulse = STATE.plantPulses.length > 0 ? STATE.plantPulses[0] : null;
+
+        ctx.save();
+
+        // 1. Draw ceramic pot & moss base
+        this.drawPot(ctx);
+
+        // 2. Draw silvery-green aerial roots
+        this.drawRoots(ctx);
+
+        // 3. Draw leaves
+        this.leaves.forEach(leaf => {
+          leaf.draw(ctx, STATE.plantHealth, this.breathPhase);
+        });
+
+        // 4. Draw stems and flowers
+        this.stems.forEach(stem => {
+          const pulseProg = pulse ? pulse.progress : null;
+          const pulseCol = pulse ? pulse.color : 'rgba(244, 114, 182, ';
+          stem.draw(ctx, STATE.plantHealth, this.breathPhase, pulseProg, pulseCol);
+
+          // Draw each flower along the stem
+          stem.flowers.forEach(flower => {
+            // If pulse is nearby flower's stem position, give it a glowing boost
+            let flowerGlow = 0;
+            if (pulse && Math.abs(pulse.progress - flower.stemT) < 0.12) {
+              flowerGlow = (1 - Math.abs(pulse.progress - flower.stemT) / 0.12) * pulse.magnitude;
+            }
+            flower.draw(ctx, flowerGlow);
+          });
+        });
+
+        ctx.restore();
+      }
+
+      drawPot(ctx) {
+        const rx = this.rootX;
+        const ry = this.rootY;
+        const pr = this.potRadius;
+        const ph = this.potHeight;
+
+        // Ceramic pot shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(rx, ry + ph + 8, pr * 1.15, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Textured matte charcoal ceramic pot
+        const potGrad = ctx.createLinearGradient(rx - pr, ry, rx + pr, ry);
+        potGrad.addColorStop(0, '#1c222c');
+        potGrad.addColorStop(0.2, '#2b3342');
+        potGrad.addColorStop(0.6, '#1f2633');
+        potGrad.addColorStop(1, '#111620');
+
+        ctx.fillStyle = potGrad;
+        ctx.beginPath();
+        ctx.moveTo(rx - pr, ry);
+        ctx.bezierCurveTo(rx - pr * 0.95, ry + ph * 0.5, rx - pr * 0.75, ry + ph, rx - pr * 0.7, ry + ph);
+        ctx.lineTo(rx + pr * 0.7, ry + ph);
+        ctx.bezierCurveTo(rx + pr * 0.75, ry + ph, rx + pr * 0.95, ry + ph * 0.5, rx + pr, ry);
+        ctx.closePath();
+        ctx.fill();
+
+        // Pot Rim
+        ctx.fillStyle = '#222936';
+        ctx.beginPath();
+        ctx.ellipse(rx, ry, pr, 14, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Dark rich bark & sphagnum moss medium inside rim
+        ctx.fillStyle = '#1c1b18';
+        ctx.beginPath();
+        ctx.ellipse(rx, ry, pr * 0.92, 11, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      drawRoots(ctx) {
+        this.roots.forEach(root => {
+          ctx.strokeStyle = 'rgba(101, 138, 92, 0.7)';
+          ctx.lineWidth = 3.2;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(root.startX, root.startY);
+          ctx.quadraticCurveTo(root.ctrlX, root.ctrlY, root.endX, root.endY);
+          ctx.stroke();
+
+          // Silvery velamen tip
+          ctx.strokeStyle = 'rgba(175, 195, 165, 0.85)';
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.moveTo(root.endX - 5, root.endY - 6);
+          ctx.lineTo(root.endX, root.endY);
+          ctx.stroke();
+        });
+      }
+    }
+
+    const orchid = new OrchidPlant();
+
+    /* ==========================================================================
+       SECTION 9: BRIGHT LUSH BOTANICAL GARDEN & SUNLIT GREENHOUSE
+       ========================================================================== */
+    function initAtmosphere(width, height) {
+      STATE.ambientMotes = [];
+      for (let i = 0; i < 55; i++) {
+        STATE.ambientMotes.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          radius: 1.0 + Math.random() * 2.5,
+          alpha: 0.2 + Math.random() * 0.5,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: -0.2 - Math.random() * 0.45,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+    }
+
+    function drawGreenhouse(ctx, width, height) {
+      const now = performance.now() * 0.001;
+      const bloomBonus = STATE.hasReachedBloom ? 0.2 : 0;
+
+      // 1. Bright Sunlit Greenhouse Atmosphere (Fresh Emerald & Soft Sunlight)
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#eaf7ed');
+      skyGrad.addColorStop(0.35, '#d8f0dc');
+      skyGrad.addColorStop(0.7, '#c2e4c8');
+      skyGrad.addColorStop(1, '#9fcca7');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // 2. Greenhouse Glass Arch Architecture & Conservatory Rafters
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+      ctx.lineWidth = 2.5;
+
+      // Vaulted glass ceiling ribs
+      const centerX = width * 0.5;
+      for (let offset = -width * 0.45; offset <= width * 0.45; offset += width * 0.18) {
+        ctx.beginPath();
+        ctx.moveTo(centerX + offset * 0.3, 0);
+        ctx.bezierCurveTo(centerX + offset * 0.6, height * 0.25, centerX + offset, height * 0.6, centerX + offset * 1.15, height);
+        ctx.stroke();
+      }
+
+      // Horizontal glazing bars
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+      ctx.lineWidth = 1.8;
+      for (let y = height * 0.12; y < height * 0.85; y += height * 0.14) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Diagonal sunlight shafts streaming through conservatory glass
+      const sunBeamGrad = ctx.createLinearGradient(width * 0.2, 0, width * 0.7, height);
+      sunBeamGrad.addColorStop(0, `rgba(255, 255, 235, ${0.35 + bloomBonus * 0.3})`);
+      sunBeamGrad.addColorStop(0.3, `rgba(254, 249, 195, ${0.22 + bloomBonus * 0.2})`);
+      sunBeamGrad.addColorStop(0.7, 'rgba(255, 255, 255, 0.08)');
+      sunBeamGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+      ctx.fillStyle = sunBeamGrad;
+      ctx.beginPath();
+      ctx.moveTo(width * 0.1, 0);
+      ctx.lineTo(width * 0.48, 0);
+      ctx.lineTo(width * 0.95, height);
+      ctx.lineTo(width * 0.45, height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Second soft sunbeam crossing
+      ctx.beginPath();
+      ctx.moveTo(width * 0.55, 0);
+      ctx.lineTo(width * 0.85, 0);
+      ctx.lineTo(width, height * 0.75);
+      ctx.lineTo(width * 0.8, height);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 3. Layer 1: Distant Atmospheric Depth (Soft botanical wash, no geometric ovals)
+      ctx.save();
+      const distGrad = ctx.createLinearGradient(0, height * 0.45, 0, height);
+      distGrad.addColorStop(0, 'rgba(74, 122, 85, 0)');
+      distGrad.addColorStop(0.5, 'rgba(60, 110, 72, 0.18)');
+      distGrad.addColorStop(1, 'rgba(42, 82, 54, 0.32)');
+      ctx.fillStyle = distGrad;
+      ctx.fillRect(0, height * 0.45, width, height * 0.55);
+      ctx.restore();
+
+      // 4. Layer 2: Midground Lush Foliage & Hanging Garden Plants
+      ctx.save();
+      // Hanging planters from conservatory rafters (left and right flanks)
+      drawHangingGarden(ctx, width * 0.16, height * 0.18, 0.9, now, 0);
+      drawHangingGarden(ctx, width * 0.84, height * 0.22, 1.05, now, 1.4);
+      drawHangingGarden(ctx, width * 0.06, height * 0.34, 0.8, now, 2.1);
+      drawHangingGarden(ctx, width * 0.92, height * 0.38, 0.85, now, 0.8);
+
+      // Low lush fern bed flanks behind the table/pot
+      drawFernCluster(ctx, width * 0.18, height * 0.82, 1.1, now);
+      drawFernCluster(ctx, width * 0.82, height * 0.82, -1.1, now);
+      ctx.restore();
+
+      // 5. Sunlit dust motes & golden pollen particles
+      STATE.ambientMotes.forEach(mote => {
+        mote.y += mote.vy;
+        mote.x += mote.vx + Math.sin(mote.phase) * 0.25;
+        mote.phase += 0.018;
+        if (mote.y < 0) mote.y = height + 10;
+        if (mote.x < 0) mote.x = width;
+        if (mote.x > width) mote.x = 0;
+
+        ctx.fillStyle = `rgba(254, 240, 138, ${mote.alpha * (0.75 + bloomBonus)})`;
+        ctx.beginPath();
+        ctx.arc(mote.x, mote.y, mote.radius, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Climax golden pollen burst
+      for (let i = STATE.pollenParticles.length - 1; i >= 0; i--) {
+        const p = STATE.pollenParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+
+        if (p.alpha <= 0) {
+          STATE.pollenParticles.splice(i, 1);
+          continue;
+        }
+
+        ctx.fillStyle = `rgba(253, 224, 71, ${p.alpha})`;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function drawHangingGarden(ctx, x, y, scale, time, phaseOffset) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      const sway = Math.sin(time * 0.8 + phaseOffset) * 0.04;
+      ctx.rotate(sway);
+
+      // Hanging cords from rafter
+      ctx.strokeStyle = 'rgba(78, 64, 50, 0.55)';
+      ctx.lineWidth = 1.2 * scale;
+      ctx.beginPath();
+      ctx.moveTo(-16 * scale, -80 * scale);
+      ctx.lineTo(-14 * scale, 0);
+      ctx.moveTo(16 * scale, -80 * scale);
+      ctx.lineTo(14 * scale, 0);
+      ctx.stroke();
+
+      // Terra cotta / woven basket pot
+      ctx.fillStyle = '#8b5a3e';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 18 * scale, 7 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(-18 * scale, 0);
+      ctx.lineTo(-12 * scale, 16 * scale);
+      ctx.lineTo(12 * scale, 16 * scale);
+      ctx.lineTo(18 * scale, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Cascading fern fronds & philodendron vines
+      const vines = [
+        { angle: -0.65, len: 75, col: '#2d6a3f' },
+        { angle: -0.3, len: 110, col: '#40916c' },
+        { angle: 0.0, len: 135, col: '#52b788' },
+        { angle: 0.35, len: 105, col: '#40916c' },
+        { angle: 0.7, len: 80, col: '#2d6a3f' },
+        { angle: -0.9, len: 60, col: '#1b4332' },
+        { angle: 0.95, len: 65, col: '#1b4332' }
+      ];
+
+      vines.forEach(v => {
+        const vSway = Math.sin(time * 1.1 + v.angle * 2) * 6;
+        ctx.strokeStyle = v.col;
+        ctx.lineWidth = 2.4 * scale;
+        ctx.beginPath();
+        ctx.moveTo(0, 8 * scale);
+        const endX = Math.sin(v.angle) * v.len * scale + vSway;
+        const endY = Math.cos(v.angle) * v.len * scale;
+        ctx.quadraticCurveTo(endX * 0.4, endY * 0.6, endX, endY);
+        ctx.stroke();
+
+        // Leaflets along vine
+        ctx.fillStyle = v.col;
+        for (let t = 0.2; t <= 0.95; t += 0.15) {
+          const lx = endX * t;
+          const ly = endY * t;
+          ctx.beginPath();
+          ctx.ellipse(lx - 4, ly, 5 * scale, 2.5 * scale, v.angle - 0.4, 0, Math.PI * 2);
+          ctx.ellipse(lx + 4, ly, 5 * scale, 2.5 * scale, v.angle + 0.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      ctx.restore();
+    }
+
+    function drawFernCluster(ctx, x, y, scaleDir, time) {
+      ctx.save();
+      ctx.translate(x, y);
+      const fernLeaves = [
+        { rot: -0.7, len: 120, col: '#1b4332' },
+        { rot: -0.4, len: 145, col: '#2d6a3f' },
+        { rot: -0.1, len: 160, col: '#40916c' },
+        { rot: 0.2, len: 135, col: '#52b788' },
+        { rot: 0.55, len: 115, col: '#2d6a3f' }
+      ];
+
+      fernLeaves.forEach(f => {
+        const fSway = Math.sin(time + f.rot) * 0.03;
+        ctx.save();
+        ctx.rotate((f.rot + fSway) * Math.sign(scaleDir));
+        ctx.strokeStyle = f.col;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.quadraticCurveTo(30, -f.len * 0.5, 50, -f.len);
+        ctx.stroke();
+
+        ctx.fillStyle = f.col;
+        for (let t = 20; t < f.len; t += 14) {
+          ctx.beginPath();
+          ctx.ellipse(12, -t, 14, 4.5, 0.4, 0, Math.PI * 2);
+          ctx.ellipse(-12, -t, 14, 4.5, -0.4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      });
+      ctx.restore();
+    }
+
+    /* ==========================================================================
+       SECTION 10: RENDER THREE MESSAGE OBJECTS & TRAVEL TRAJECTORIES
+       ========================================================================== */
+    function updateAndDrawParticles(ctx) {
+      const now = performance.now();
+
+      for (let i = STATE.messageParticles.length - 1; i >= 0; i--) {
+        const p = STATE.messageParticles[i];
+        p.progress += p.speed;
+
+        // Cubic Bezier interpolation
+        const t = Math.min(1.0, p.progress);
+        const u = 1 - t;
+        const tt = t * t;
+        const uu = u * u;
+        const uuu = uu * u;
+        const ttt = tt * t;
+
+        const curX = uuu * p.startX + 3 * uu * t * p.ctrl1X + 3 * u * tt * p.ctrl2X + ttt * p.targetX;
+        const curY = uuu * p.startY + 3 * uu * t * p.ctrl1Y + 3 * u * tt * p.ctrl2Y + ttt * p.targetY;
+
+        // Tangent angle along trajectory
+        const dx = 3 * uu * (p.ctrl1X - p.startX) + 6 * u * t * (p.ctrl2X - p.ctrl1X) + 3 * tt * (p.targetX - p.ctrl2X);
+        const dy = 3 * uu * (p.ctrl1Y - p.startY) + 6 * u * t * (p.ctrl2Y - p.ctrl1Y) + 3 * tt * (p.targetY - p.ctrl2Y);
+        const trajAngle = Math.atan2(dy, dx);
+
+        ctx.save();
+        ctx.translate(curX, curY);
+
+        if (p.category === 'POSITIVE') {
+          // -------------------------------------------------------------
+          // POSITIVE: SOFT GLOWING PINK HEART
+          // -------------------------------------------------------------
+          // Gentle pulsing modulated by acoustic gentleness
+          const pulseSpeed = 0.005 + (p.gentleness < 0 ? 0.004 : 0);
+          const pulse = Math.sin(now * pulseSpeed + p.pulseOffset) * 0.18 + 1.0;
+          const r = p.size * pulse;
+
+          // Buoyant floating sway
+          const floatY = Math.sin(now * 0.003 + p.pulseOffset) * 4;
+          ctx.translate(0, floatY);
+
+          // Outer soft pink atmospheric aura
+          const glowGrad = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r * 2.2);
+          glowGrad.addColorStop(0, 'rgba(251, 207, 232, 0.7)');
+          glowGrad.addColorStop(0.5, 'rgba(244, 114, 182, 0.35)');
+          glowGrad.addColorStop(1, 'rgba(244, 114, 182, 0)');
+          ctx.fillStyle = glowGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Procedural Luminous Pink Heart Silhouette
+          const hScale = r * 0.045;
+          ctx.save();
+          ctx.scale(hScale, hScale);
+
+          // Heart path (symmetric parametric bezier heart)
+          ctx.beginPath();
+          ctx.moveTo(0, -6);
+          ctx.bezierCurveTo(-12, -22, -26, -10, -26, 4);
+          ctx.bezierCurveTo(-26, 16, -14, 26, 0, 36);
+          ctx.bezierCurveTo(14, 26, 26, 16, 26, 4);
+          ctx.bezierCurveTo(26, -10, 12, -22, 0, -6);
+          ctx.closePath();
+
+          // Translucent gradient fill
+          const heartGrad = ctx.createRadialGradient(0, 2, 2, 0, 10, 32);
+          heartGrad.addColorStop(0, '#ffffff'); // pure luminous highlight
+          heartGrad.addColorStop(0.35, '#fbcfe8'); // pale rose
+          heartGrad.addColorStop(0.75, '#f472b6'); // orchid pink
+          heartGrad.addColorStop(1, '#db2777');   // magenta edge
+          ctx.fillStyle = heartGrad;
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+          ctx.restore();
+
+          // Tiny sparkling particles around the heart
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+          for (let s = 0; s < 4; s++) {
+            const sa = now * 0.003 + s * 1.57;
+            const sd = r * (0.8 + Math.sin(now * 0.005 + s) * 0.4);
+            ctx.fillRect(Math.cos(sa) * sd, Math.sin(sa) * sd, 2, 2);
+          }
+
+        } else if (p.category === 'NEGATIVE') {
+          // -------------------------------------------------------------
+          // NEGATIVE: SHARP BLUE ARROW
+          // -------------------------------------------------------------
+          // Oriented directly along trajectory tangent
+          ctx.rotate(trajAngle);
+
+          // Aggressive voice produces jitter & faster trails
+          if (p.gentleness < 0) {
+            const jit = (Math.random() - 0.5) * 3;
+            ctx.translate(0, jit);
+          }
+
+          const r = p.size;
+
+          // Electric blue directional glow trail
+          const trailGrad = ctx.createLinearGradient(-r * 1.5, 0, r * 1.2, 0);
+          trailGrad.addColorStop(0, 'rgba(56, 189, 248, 0)');
+          trailGrad.addColorStop(0.7, 'rgba(56, 189, 248, 0.4)');
+          trailGrad.addColorStop(1, 'rgba(186, 230, 253, 0.9)');
+
+          // Sharp Arrow Geometry
+          ctx.beginPath();
+          ctx.moveTo(r * 1.2, 0);                  // Arrow tip
+          ctx.lineTo(r * 0.1, -r * 0.65);          // Upper barb
+          ctx.lineTo(r * 0.25, -r * 0.24);         // Upper inner crook
+          ctx.lineTo(-r * 1.3, -r * 0.2);          // Shaft top left
+          ctx.lineTo(-r * 1.3, r * 0.2);           // Shaft bottom left
+          ctx.lineTo(r * 0.25, r * 0.24);          // Lower inner crook
+          ctx.lineTo(r * 0.1, r * 0.65);           // Lower barb
+          ctx.closePath();
+
+          ctx.fillStyle = trailGrad;
+          ctx.fill();
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+
+          // Electric blue shock fragments
+          ctx.fillStyle = 'rgba(125, 211, 252, 0.8)';
+          for (let f = 0; f < 3; f++) {
+            const fx = -r * (0.8 + Math.random() * 0.9);
+            const fy = (Math.random() - 0.5) * r * 0.7;
+            ctx.fillRect(fx, fy, 2.5, 2.5);
+          }
+
+        } else {
+          // -------------------------------------------------------------
+          // NEUTRAL: SOFT YELLOW SQUARE
+          // -------------------------------------------------------------
+          // Slow, stable, calm rotation
+          ctx.rotate(now * 0.0008 + p.pulseOffset);
+
+          const sqSize = p.size * 1.1;
+          const half = sqSize * 0.5;
+
+          // Warm amber / pale gold soft glow
+          const nGlow = ctx.createRadialGradient(0, 0, half * 0.3, 0, 0, sqSize * 1.4);
+          nGlow.addColorStop(0, 'rgba(254, 240, 138, 0.55)');
+          nGlow.addColorStop(0.6, 'rgba(250, 204, 21, 0.2)');
+          nGlow.addColorStop(1, 'rgba(250, 204, 21, 0)');
+          ctx.fillStyle = nGlow;
+          ctx.beginPath();
+          ctx.arc(0, 0, sqSize * 1.4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Translucent softened square
+          const sqGrad = ctx.createLinearGradient(-half, -half, half, half);
+          sqGrad.addColorStop(0, '#fef9c3');
+          sqGrad.addColorStop(0.5, '#fde047');
+          sqGrad.addColorStop(1, '#eab308');
+
+          ctx.fillStyle = sqGrad;
+          ctx.beginPath();
+          ctx.roundRect(-half, -half, sqSize, sqSize, 4.5);
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          // Subtle internal geometric concentric texture
+          ctx.strokeStyle = 'rgba(161, 98, 7, 0.25)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(-half * 0.5, -half * 0.5, half, half, 2);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // Check if message reached destination
+        if (p.progress >= 1.0) {
+          absorbMessageParticle(p);
+          STATE.messageParticles.splice(i, 1);
+        }
+      }
+
+      // Update plant pulses travelling up stems
+      for (let j = STATE.plantPulses.length - 1; j >= 0; j--) {
+        const pulse = STATE.plantPulses[j];
+        pulse.progress += pulse.speed;
+        if (pulse.progress > 1.0) {
+          STATE.plantPulses.splice(j, 1);
+        }
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 11: UI INTERPOLATION & DEBUG METER CONTROLLERS
+       ========================================================================== */
+    function updateUI() {
+      // Smooth health number interpolation
+      STATE.displayedHealth += (STATE.plantHealth - STATE.displayedHealth) * 0.08;
+      const rounded = Math.round(STATE.displayedHealth);
+      const healthValEl = document.getElementById('healthVal');
+      const healthFillEl = document.getElementById('healthFill');
+
+      if (healthValEl) healthValEl.textContent = rounded;
+      if (healthFillEl) {
+        healthFillEl.style.width = `${Math.min(100, Math.max(0, STATE.displayedHealth))}%`;
+        healthFillEl.style.background = 'linear-gradient(90deg, #f472b6, #fb7185)';
+        healthFillEl.style.boxShadow = '0 0 10px rgba(244, 114, 182, 0.85)';
+      }
+    }
+
+    function updateDebugDisplay(combined = null, transcript = null) {
+      if (!CONFIG.debug) return;
+
+      document.getElementById('dbgMicState').textContent = STATE.micPermission;
+      document.getElementById('dbgSpeechDetected').textContent = STATE.isSpeaking ? 'YES' : 'No';
+      
+      const duration = STATE.isSpeaking ? Math.round(performance.now() - STATE.speechStartTime) : 0;
+      document.getElementById('dbgSegDuration').textContent = `${duration} ms`;
+
+      if (transcript !== null) {
+        document.getElementById('dbgTranscript').textContent = transcript || '—';
+      }
+
+      const catEl = document.getElementById('dbgCategory');
+      if (catEl) catEl.textContent = STATE.currentCategory;
+
+      document.getElementById('dbgValence').textContent = STATE.currentValence.toFixed(2);
+      document.getElementById('dbgGentleness').textContent = STATE.currentGentleness.toFixed(2);
+      if (combined !== null) {
+        document.getElementById('dbgCombined').textContent = combined.toFixed(2);
+        document.getElementById('dbgHealthDelta').textContent = (combined * CONFIG.maxHealthDelta).toFixed(1);
+      }
+
+      const wordEl = document.getElementById('dbgWordCount');
+      if (wordEl) {
+        const settledCount = STATE.wordObjects.filter(w => w.settled).length;
+        wordEl.textContent = `${STATE.wordObjects.length} (${settledCount} settled)`;
+      }
+
+      const histCountEl = document.getElementById('dbgHistoryCount');
+      if (histCountEl) histCountEl.textContent = STATE.voiceHistory.length;
+
+      // Live meter updates
+      const rmsClamped = Math.min(1.0, STATE.currentRms * 12);
+      document.getElementById('meterRmsFill').style.width = `${rmsClamped * 100}%`;
+      document.getElementById('dbgRmsVal').textContent = STATE.currentRms.toFixed(3);
+
+      // Bipolar gentleness meter (-1 to +1)
+      const gFill = document.getElementById('meterGentleFill');
+      const gVal = STATE.currentGentleness;
+      document.getElementById('meterGentleVal').textContent = gVal.toFixed(2);
+      if (gVal >= 0) {
+        gFill.style.left = '50%';
+        gFill.style.width = `${(gVal / 2) * 100}%`;
+        gFill.style.background = '#4ade80';
+      } else {
+        gFill.style.left = `${50 - (Math.abs(gVal) / 2) * 100}%`;
+        gFill.style.width = `${(Math.abs(gVal) / 2) * 100}%`;
+        gFill.style.background = '#f87171';
+      }
+
+      // Bipolar semantic valence meter (-1 to +1)
+      const vFill = document.getElementById('meterValenceFill');
+      const vVal = STATE.currentValence;
+      document.getElementById('meterValenceVal').textContent = vVal.toFixed(2);
+      if (vVal >= 0) {
+        vFill.style.left = '50%';
+        vFill.style.width = `${(vVal / 2) * 100}%`;
+        vFill.style.background = '#38bdf8';
+      } else {
+        vFill.style.left = `${50 - (Math.abs(vVal) / 2) * 100}%`;
+        vFill.style.width = `${(Math.abs(vVal) / 2) * 100}%`;
+        vFill.style.background = '#f87171';
+      }
+    }
+
+    /* ==========================================================================
+       SECTION 12: INPUT, MANUAL TESTING & MODAL CONTROLS
+       ========================================================================== */
+    function setupKeyboardControls() {
+      // Language selector dropdown control
+      const langSelect = document.getElementById('langSelect');
+      if (langSelect) {
+        langSelect.value = STATE.selectedLanguage || 'zh-TW';
+        langSelect.addEventListener('change', (e) => {
+          STATE.selectedLanguage = e.target.value;
+          if (STATE.speechRecognition) {
+            STATE.speechRecognition.lang = STATE.selectedLanguage;
+            const modeEl = document.getElementById('dbgTranscribeMode');
+            if (modeEl) modeEl.textContent = `Browser Native (${STATE.selectedLanguage})`;
+            try {
+              STATE.speechRecognition.stop();
+            } catch (err) {}
+          }
+        });
+      }
+
+      window.addEventListener('keydown', (e) => {
+        // Prevent interfering if typing in select or inputs
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+
+        const key = e.key.toUpperCase();
+        const lang = STATE.selectedLanguage || 'zh-TW';
+
+        if (key === 'P') {
+          // Simulate strongly positive message
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(0.88, 0.82, "你開花開得好美麗，茁壯成長吧！");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(0.88, 0.82, "とても綺麗に咲いて、美しく育ってね。");
+          } else {
+            dispatchEmotionalMessage(0.85, 0.80, "You are beautiful and growing wonderfully.");
+          }
+        } else if (key === 'N') {
+          // Simulate strongly negative message
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(-0.88, -0.75, "你長得好醜，快點枯萎死掉吧。");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(-0.88, -0.75, "最悪で醜いから枯れてしまえ。");
+          } else {
+            dispatchEmotionalMessage(-0.85, -0.75, "You look terrible and I don't like you.");
+          }
+        } else if (key === 'U') {
+          // Simulate neutral speech
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(0.02, 0.10, "這盆蘭花正安靜地擺在窗台旁邊。");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(0.02, 0.10, "蘭の鉢植えが窓辺に置いてあります。");
+          } else {
+            dispatchEmotionalMessage(0.02, 0.10, "The plant is sitting near the window.");
+          }
+        } else if (key === 'M') {
+          // Simulate mildly positive message
+          if (lang.startsWith('zh')) {
+            dispatchEmotionalMessage(0.45, 0.45, "要溫柔地慢慢長大喔。");
+          } else if (lang.startsWith('ja')) {
+            dispatchEmotionalMessage(0.45, 0.45, "元気に優しく育ってね。");
+          } else {
+            dispatchEmotionalMessage(0.40, 0.45, "Keep growing gently.");
+          }
+        } else if (key === 'B') {
+          // Toggle debug panel
+          toggleDebug();
+        } else if (key === 'R') {
+          // Open reset confirmation dialog
+          openResetModal();
+        }
+      });
+
+      document.getElementById('debugToggleBtn').onclick = toggleDebug;
+
+      // History panel toggle controls
+      const historyToggleBtn = document.getElementById('historyToggleBtn');
+      const historyPanel = document.getElementById('historyPanel');
+      const historyCloseBtn = document.getElementById('historyCloseBtn');
+
+      if (historyToggleBtn && historyPanel) {
+        historyToggleBtn.onclick = () => {
+          const isExpanded = historyPanel.classList.toggle('expanded');
+          historyToggleBtn.textContent = isExpanded ? 'VOICE HISTORY ▾' : 'VOICE HISTORY ▸';
+          if (isExpanded) {
+            drawHistoryGraph();
+          }
+        };
+      }
+      if (historyCloseBtn && historyPanel) {
+        historyCloseBtn.onclick = () => {
+          historyPanel.classList.remove('expanded');
+          historyToggleBtn.textContent = 'VOICE HISTORY ▸';
+        };
+      }
+
+      // Reset modal controls
+      const resetModal = document.getElementById('resetModal');
+      const resetCancelBtn = document.getElementById('resetCancelBtn');
+      const resetConfirmBtn = document.getElementById('resetConfirmBtn');
+
+      if (resetCancelBtn) {
+        resetCancelBtn.onclick = closeResetModal;
+      }
+      if (resetConfirmBtn) {
+        resetConfirmBtn.onclick = confirmResetPlant;
+      }
+    }
+
+    function toggleDebug() {
+      CONFIG.debug = !CONFIG.debug;
+      const panel = document.getElementById('debugPanel');
+      if (CONFIG.debug) {
+        panel.classList.add('active');
+      } else {
+        panel.classList.remove('active');
+      }
+    }
+
+    function openResetModal() {
+      const modal = document.getElementById('resetModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeResetModal() {
+      const modal = document.getElementById('resetModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function confirmResetPlant() {
+      closeResetModal();
+
+      // Reset health
+      STATE.plantHealth = CONFIG.healthStart;
+      STATE.displayedHealth = CONFIG.healthStart;
+      STATE.hasReachedBloom = false;
+      STATE.hasReachedDeath = false;
+
+      // Reset individual flower and stem states
+      orchid.init(window.innerWidth, window.innerHeight);
+
+      // Clear memory word pile
+      STATE.wordObjects = [];
+
+      // Clear history log & graph
+      STATE.voiceHistory = [];
+      STATE.messageParticles = [];
+      STATE.plantPulses = [];
+
+      renderVoiceHistory();
+      drawHistoryGraph();
+      updateUI();
+      if (CONFIG.debug) updateDebugDisplay();
+    }
+
+    /* ==========================================================================
+       SECTION 13: MAIN ANIMATION LOOP & RESIZE HANDLING
+       ========================================================================== */
+    let lastFrameTime = performance.now();
+    let frameCounter = 0;
+    let fpsTimer = performance.now();
+
+    function resizeCanvas() {
+      const canvas = document.getElementById('orchidCanvas');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      orchid.init(canvas.width, canvas.height);
+      initAtmosphere(canvas.width, canvas.height);
+      drawHistoryGraph();
+    }
+
+    function mainLoop(now) {
+      requestAnimationFrame(mainLoop);
+
+      // FPS tracking for debug
+      frameCounter++;
+      if (now - fpsTimer >= 1000) {
+        const fpsCounter = document.getElementById('fpsCounter');
+        if (fpsCounter) fpsCounter.textContent = `${frameCounter} FPS`;
+        frameCounter = 0;
+        fpsTimer = now;
+      }
+
+      const canvas = document.getElementById('orchidCanvas');
+      const ctx = canvas.getContext('2d');
+
+      // 1. Atmosphere & Sunlit Conservatory Background & Midground foliage
+      drawGreenhouse(ctx, canvas.width, canvas.height);
+
+      // 2. Falling & Settled Word Memory Pile (BEHIND THE FLOWER POT!)
+      updateAndDrawWordMemory(ctx);
+
+      // 3. Update & Draw Procedural Orchid (Pot, roots, leaves, stems, flowers)
+      orchid.update();
+      orchid.draw(ctx);
+
+      // 4. Update & Draw Message Objects & Trajectories (Flying toward orchid)
+      updateAndDrawParticles(ctx);
+
+      // 5. Update UI numbers and debug meters
+      updateUI();
+      if (CONFIG.debug) updateDebugDisplay();
+    }
+
+    /* ==========================================================================
+       SECTION 14: INITIALIZATION
+       ========================================================================== */
+    window.addEventListener('DOMContentLoaded', () => {
+      const beginBtn = document.getElementById('beginBtn');
+      const introOverlay = document.getElementById('introOverlay');
+
+      setupKeyboardControls();
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      beginBtn.addEventListener('click', async () => {
+        introOverlay.classList.add('dismissed');
+        STATE.hasStarted = true;
+
+        await detectLocalAiEngine();
+        await initAudioEngine();
+      });
+
+      // Start rendering loop immediately (plant breathes gently in background)
+      requestAnimationFrame(mainLoop);
+    });
+  </script>
+</body>
+</html>
