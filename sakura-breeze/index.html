@@ -77,6 +77,61 @@
           </div>
         </section>
 
+        <!-- iPhone Microphone & Wind Analysis Section (Phase 5) -->
+        <section class="audio-card">
+          <div class="audio-header">
+            <div class="audio-header-left">
+              <span class="audio-icon">🎙️</span>
+              <h2 class="audio-title">iPhone Microphone &amp; Wind Analysis</h2>
+            </div>
+            <div class="audio-status-wrap">
+              <span id="mic-status-badge" class="mic-badge mic-waiting">WAITING</span>
+              <button id="btn-enable-audio" class="btn-enable-audio" type="button" style="display: none;">Enable Audio Analysis</button>
+            </div>
+          </div>
+
+          <div id="mic-status-text" class="mic-status-text">Awaiting audio stream from iPhone</div>
+
+          <!-- Real-time Wind Strength Meter -->
+          <div class="wind-meter-panel">
+            <div class="wind-meter-top">
+              <span class="meter-title">Wind Strength (0 - 1)</span>
+              <span id="wind-meter-value" class="meter-value">0.00</span>
+            </div>
+            <div class="wind-meter-track">
+              <div id="wind-meter-bar" class="wind-meter-bar" style="width: 0%;"></div>
+            </div>
+            <div class="wind-meter-scale">
+              <span>0.0 (Calm)</span>
+              <span>0.5 (Breeze)</span>
+              <span>1.0 (Gale)</span>
+            </div>
+          </div>
+
+          <!-- Audio Metrics Grid -->
+          <div class="audio-metrics-grid">
+            <div class="audio-metric-item">
+              <span class="metric-label">Raw RMS</span>
+              <span id="audio-raw-rms" class="metric-val">0.000</span>
+            </div>
+            <div class="audio-metric-item">
+              <span class="metric-label">Smoothed Vol</span>
+              <span id="audio-smoothed" class="metric-val">0.00</span>
+            </div>
+            <div class="audio-metric-item">
+              <span class="metric-label">Wind Strength</span>
+              <span id="audio-wind-strength" class="metric-val">0.00</span>
+            </div>
+            <div class="audio-metric-item">
+              <span class="metric-label">Noise Floor</span>
+              <span id="audio-noise-floor" class="metric-val">0.010</span>
+            </div>
+          </div>
+          <div class="audio-safety-note">
+            🛡️ <em>Passive Analysis:</em> Remote microphone stream is analyzed mathematically without loudspeaker playback, preventing acoustic feedback.
+          </div>
+        </section>
+
         <!-- WebRTC Connection Section -->
         <section class="webrtc-card">
           <div class="webrtc-header">
@@ -84,7 +139,7 @@
               <span>WebRTC Connection</span>
             </h2>
             <div class="webrtc-actions">
-              <span class="webrtc-badge">WebRTC Video + RTCDataChannel</span>
+              <span class="webrtc-badge">WebRTC Video + Audio + DataChannel</span>
               <button id="btn-reset-webrtc" class="btn-reset" type="button">Reset WebRTC</button>
             </div>
           </div>
@@ -219,6 +274,22 @@
                   <span class="debug-label">iceGathering</span>
                   <span id="debug-ice-gather-state" class="debug-value">new</span>
                 </div>
+                <div class="debug-item">
+                  <span class="debug-label">MICROPHONE</span>
+                  <span id="debug-mic-state" class="debug-value">WAITING</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Raw RMS</span>
+                  <span id="debug-mic-rms" class="debug-value">0.000</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Smoothed Vol</span>
+                  <span id="debug-mic-smoothed" class="debug-value">0.00</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Wind Strength</span>
+                  <span id="debug-mic-wind" class="debug-value">0.00</span>
+                </div>
               </div>
             </div>
           </div>
@@ -269,6 +340,7 @@
 
   <script src="./diagnostics.js"></script>
   <script src="./ar.js"></script>
+  <script src="./audio.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

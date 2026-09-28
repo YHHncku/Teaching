@@ -25,9 +25,10 @@ class PhoneApp {
     this.httpsWarning = document.getElementById('https-warning');
     this.errorBox = document.getElementById('error-diagnostics');
 
-    // 2. Camera elements (Phase 4)
+    // 2. Camera & Microphone elements (Phase 5)
     this.localVideo = document.getElementById('local-video');
     this.cameraStatusBadge = document.getElementById('camera-status-badge');
+    this.micStatusBadge = document.getElementById('mic-status-badge');
     this.cameraStatus = document.getElementById('camera-status');
     this.cameraPlaceholder = document.getElementById('camera-placeholder');
     this.btnStartCamera = document.getElementById('btn-start-camera');
@@ -157,7 +158,8 @@ class PhoneApp {
       errorBox: this.errorBox,
       messageLog: this.messageLog,
       localVideo: this.localVideo,
-      btnStartCamera: this.btnStartCamera
+      btnStartCamera: this.btnStartCamera,
+      micStatusBadge: this.micStatusBadge
     };
 
     let allValid = true;
@@ -182,12 +184,13 @@ class PhoneApp {
   }
 
   /**
-   * Activates iPhone camera and binds stream to local video preview
+   * Activates iPhone camera & microphone in a single combined getUserMedia call
+   * CRITICAL: localVideo is strictly muted to prevent acoustic feedback.
    */
   async startCamera() {
     this.clearError();
     try {
-      if (this.cameraStatus) this.cameraStatus.textContent = 'Requesting camera access...';
+      if (this.cameraStatus) this.cameraStatus.textContent = 'Requesting camera & microphone access...';
       if (this.btnStartCamera) this.btnStartCamera.disabled = true;
 
       // Stop existing tracks if any
@@ -196,27 +199,58 @@ class PhoneApp {
         this.localStream = null;
       }
 
-      // Constraints: Strictly video only, no microphone per Phase 4 guidelines
+      // Exact Stage 5 specifications: Camera + Microphone in single request
       const constraints = {
         video: {
-          facingMode: this.currentFacingMode,
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: {
+            ideal: this.currentFacingMode
+          },
+          width: {
+            ideal: 1280
+          },
+          height: {
+            ideal: 720
+          },
+          frameRate: {
+            ideal: 30,
+            max: 30
+          }
         },
-        audio: false
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       };
 
-      let stream;
+      let stream = null;
+      let micAvailable = true;
+
       try {
         stream = await navigator.mediaDevices.getUserMedia(constraints);
-      } catch (err) {
-        console.warn('[PhoneApp] Primary camera constraint fallback:', err);
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      } catch (combinedErr) {
+        console.warn('[PhoneApp] Combined getUserMedia failed, attempting camera-only fallback:', combinedErr);
+        // Fallback: If microphone was denied or unavailable, continue with camera only
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: this.currentFacingMode },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            },
+            audio: false
+          });
+          micAvailable = false;
+        } catch (videoErr) {
+          throw videoErr;
+        }
       }
 
       this.localStream = stream;
 
+      // CRITICAL PREVIEW RULE: Muted local preview only, iPhone must NOT play its own microphone!
       if (this.localVideo) {
+        this.localVideo.muted = true;
         this.localVideo.srcObject = stream;
         this.localVideo.play().catch(e => console.warn('[PhoneApp] localVideo play caught:', e));
       }
@@ -227,7 +261,17 @@ class PhoneApp {
 
       if (this.cameraStatusBadge) {
         this.cameraStatusBadge.className = 'camera-badge camera-active';
-        this.cameraStatusBadge.textContent = 'ACTIVE';
+        this.cameraStatusBadge.textContent = 'CAM: ON';
+      }
+
+      if (this.micStatusBadge) {
+        if (micAvailable && stream.getAudioTracks().length > 0) {
+          this.micStatusBadge.className = 'camera-badge camera-active';
+          this.micStatusBadge.textContent = 'MIC: ON';
+        } else {
+          this.micStatusBadge.className = 'camera-badge camera-failed';
+          this.micStatusBadge.textContent = 'MIC: OFF';
+        }
       }
 
       const videoTrack = stream.getVideoTracks()[0];
@@ -237,60 +281,97 @@ class PhoneApp {
       const modeText = this.currentFacingMode === 'user' ? 'Front' : 'Back';
 
       if (this.cameraStatus) {
-        this.cameraStatus.textContent = `Camera Active (${modeText}, ~${w}x${h})`;
+        if (micAvailable && stream.getAudioTracks().length > 0) {
+          this.cameraStatus.textContent = `Camera & Mic Active (${modeText}, ~${w}x${h})`;
+        } else {
+          this.cameraStatus.textContent = `Microphone unavailable — Camera only mode (${modeText}, ~${w}x${h})`;
+        }
       }
+
       if (this.btnStartCamera) {
-        this.btnStartCamera.textContent = 'Camera Ready';
+        this.btnStartCamera.textContent = 'Camera & Mic Ready';
         this.btnStartCamera.disabled = false;
       }
       if (this.btnSwitchCamera) {
         this.btnSwitchCamera.disabled = false;
       }
 
-      this.logMessage('SYSTEM', `Camera activated: ${modeText} camera (~${w}x${h}).`);
+      this.logMessage('SYSTEM', `Media active: ${modeText} camera (~${w}x${h}), mic: ${micAvailable ? 'active' : 'unavailable'}.`);
       return stream;
     } catch (err) {
-      console.error('[PhoneApp] Failed to start camera:', err);
+      console.error('[PhoneApp] Failed to start media:', err);
       this.handleError(
-        'CAMERA_ACCESS_DENIED',
+        'MEDIA_ACCESS_DENIED',
         err,
-        `Camera access error: ${err.message || 'Permission denied'}. Please allow camera access in Safari settings.`
+        `Media access error: ${err.message || 'Permission denied'}. Please allow camera and microphone access in Safari settings.`
       );
       if (this.cameraStatus) {
-        this.cameraStatus.textContent = 'Camera access denied or unavailable.';
+        this.cameraStatus.textContent = 'Media access denied or unavailable.';
       }
       if (this.cameraStatusBadge) {
         this.cameraStatusBadge.className = 'camera-badge camera-failed';
-        this.cameraStatusBadge.textContent = 'ERROR';
+        this.cameraStatusBadge.textContent = 'CAM: ERR';
+      }
+      if (this.micStatusBadge) {
+        this.micStatusBadge.className = 'camera-badge camera-failed';
+        this.micStatusBadge.textContent = 'MIC: ERR';
       }
       if (this.btnStartCamera) {
         this.btnStartCamera.disabled = false;
-        this.btnStartCamera.textContent = 'Retry Camera';
+        this.btnStartCamera.textContent = 'Retry Camera & Mic';
       }
       return null;
     }
   }
 
   /**
-   * Switches between environment (back) and user (front) camera
+   * Switches between environment (back) and user (front) camera without disrupting audio
    */
   async switchCamera() {
     this.currentFacingMode = this.currentFacingMode === 'environment' ? 'user' : 'environment';
-    const newStream = await this.startCamera();
-    if (newStream && this.pc) {
-      const newTrack = newStream.getVideoTracks()[0];
-      if (newTrack) {
-        const senders = this.pc.getSenders ? this.pc.getSenders() : [];
-        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-        if (videoSender) {
-          try {
-            await videoSender.replaceTrack(newTrack);
-            console.log('[PhoneApp] Replaced video track on RTCRtpSender');
-          } catch (replaceErr) {
-            console.warn('[PhoneApp] replaceTrack warning:', replaceErr);
+    try {
+      const newVideoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: this.currentFacingMode },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      });
+      const newVideoTrack = newVideoStream.getVideoTracks()[0];
+      if (newVideoTrack) {
+        if (this.localStream) {
+          const oldVideoTracks = this.localStream.getVideoTracks();
+          oldVideoTracks.forEach(t => {
+            this.localStream.removeTrack(t);
+            t.stop();
+          });
+          this.localStream.addTrack(newVideoTrack);
+        }
+
+        if (this.pc) {
+          const senders = this.pc.getSenders ? this.pc.getSenders() : [];
+          const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+          if (videoSender) {
+            await videoSender.replaceTrack(newVideoTrack);
+            console.log('[PhoneApp] Replaced video track on RTCRtpSender (audio track unaffected)');
           }
         }
+
+        if (this.localVideo) {
+          this.localVideo.muted = true;
+          this.localVideo.srcObject = this.localStream;
+          this.localVideo.play().catch(e => console.warn('[PhoneApp] localVideo play caught:', e));
+        }
+
+        const modeText = this.currentFacingMode === 'user' ? 'Front' : 'Back';
+        if (this.cameraStatus) {
+          this.cameraStatus.textContent = `Camera Switched (${modeText})`;
+        }
+        this.logMessage('SYSTEM', `Flipped camera to ${modeText} mode.`);
       }
+    } catch (err) {
+      console.warn('[PhoneApp] switchCamera error:', err);
     }
   }
 
@@ -333,6 +414,36 @@ class PhoneApp {
     this.sessionId = '-';
     this.currentSessionActive = false;
     this.isCreatingAnswer = false;
+
+    // Stop local media stream tracks
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(t => t.stop());
+      this.localStream = null;
+    }
+    if (this.localVideo) {
+      this.localVideo.srcObject = null;
+    }
+    if (this.cameraPlaceholder) {
+      this.cameraPlaceholder.style.display = 'flex';
+    }
+    if (this.cameraStatusBadge) {
+      this.cameraStatusBadge.className = 'camera-badge camera-inactive';
+      this.cameraStatusBadge.textContent = 'CAM: OFF';
+    }
+    if (this.micStatusBadge) {
+      this.micStatusBadge.className = 'camera-badge camera-inactive';
+      this.micStatusBadge.textContent = 'MIC: OFF';
+    }
+    if (this.cameraStatus) {
+      this.cameraStatus.textContent = 'Ready to activate camera & microphone';
+    }
+    if (this.btnStartCamera) {
+      this.btnStartCamera.disabled = false;
+      this.btnStartCamera.textContent = 'Start Camera & Mic';
+    }
+    if (this.btnSwitchCamera) {
+      this.btnSwitchCamera.disabled = true;
+    }
 
     // Clear textareas
     if (this.offerTextarea) this.offerTextarea.value = '';
@@ -519,20 +630,20 @@ class PhoneApp {
     this.isCreatingAnswer = true;
     if (this.btnCreateAnswer) {
       this.btnCreateAnswer.disabled = true;
-      this.btnCreateAnswer.textContent = 'Preparing Camera & ICE...';
+      this.btnCreateAnswer.textContent = 'Preparing Media & ICE...';
     }
 
     // Update Signaling Diagnostics for received Offer
     this.renderSignalingDiagnostics(offer.type, offer.sdp);
 
     try {
-      // CRITICAL Phase 4 requirement:
-      // Ensure Camera is active before createAnswer()
+      // CRITICAL Phase 5 requirement:
+      // Ensure Camera & Microphone stream is active before createAnswer()
       if (!this.localStream || !this.localStream.getVideoTracks().length || this.localStream.getVideoTracks()[0].readyState === 'ended') {
-        this.logMessage('SYSTEM', 'Activating camera stream before generating Answer...');
+        this.logMessage('SYSTEM', 'Activating camera & microphone before generating Answer...');
         const stream = await this.startCamera();
         if (!stream) {
-          throw new Error('Camera initialization failed. Please allow camera access.');
+          throw new Error('Media initialization failed. Please allow camera and microphone access.');
         }
       }
 
@@ -550,10 +661,12 @@ class PhoneApp {
       }
       this.updateDebugStates();
 
-      // 4. Attach iPhone Camera Track to PeerConnection BEFORE createAnswer!
+      // 4. Attach iPhone Camera & Microphone Tracks to PeerConnection BEFORE createAnswer!
       const videoTrack = this.localStream.getVideoTracks()[0];
+      const audioTrack = this.localStream.getAudioTracks()[0];
+      const transceivers = this.pc.getTransceivers ? this.pc.getTransceivers() : [];
+
       if (videoTrack) {
-        const transceivers = this.pc.getTransceivers ? this.pc.getTransceivers() : [];
         const videoTransceiver = transceivers.find(t =>
           (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') ||
           (t.sender && (!t.sender.track || t.sender.track.kind === 'video'))
@@ -568,6 +681,23 @@ class PhoneApp {
           console.log(`[PhoneApp] Added camera track via pc.addTrack`);
         }
         this.logMessage('SYSTEM', 'Camera video track attached to WebRTC session.');
+      }
+
+      if (audioTrack) {
+        const audioTransceiver = transceivers.find(t =>
+          (t.receiver && t.receiver.track && t.receiver.track.kind === 'audio') ||
+          (t.sender && (!t.sender.track || t.sender.track.kind === 'audio'))
+        );
+
+        if (audioTransceiver && audioTransceiver.sender) {
+          await audioTransceiver.sender.replaceTrack(audioTrack);
+          audioTransceiver.direction = 'sendonly';
+          console.log(`[PhoneApp] Assigned audio track to transceiver (direction: sendonly)`);
+        } else {
+          this.pc.addTrack(audioTrack, this.localStream);
+          console.log(`[PhoneApp] Added audio track via pc.addTrack`);
+        }
+        this.logMessage('SYSTEM', 'Microphone audio track attached to WebRTC session.');
       }
 
       // 5. createAnswer

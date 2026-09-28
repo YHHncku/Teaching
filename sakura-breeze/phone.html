@@ -34,31 +34,35 @@
         </div>
       </section>
 
-      <!-- iPhone Camera Section (Phase 4) -->
+      <!-- iPhone Camera & Microphone Section (Phase 5) -->
       <section class="camera-card">
         <div class="camera-header">
           <div class="camera-header-left">
-            <span class="camera-icon">📷</span>
-            <h2 class="camera-title">iPhone Camera</h2>
+            <span class="camera-icon">📷🎙️</span>
+            <h2 class="camera-title">iPhone Media Stream</h2>
           </div>
-          <span id="camera-status-badge" class="camera-badge camera-inactive">INACTIVE</span>
+          <div class="camera-badges-wrap">
+            <span id="camera-status-badge" class="camera-badge camera-inactive">CAM: OFF</span>
+            <span id="mic-status-badge" class="camera-badge camera-inactive">MIC: OFF</span>
+          </div>
         </div>
 
         <div class="camera-preview-wrapper">
           <video id="local-video" autoplay playsinline muted></video>
           <div id="camera-placeholder" class="camera-placeholder">
-            <div class="placeholder-icon">📸</div>
-            <div class="placeholder-text">Camera Not Started</div>
-            <div class="placeholder-hint">Click "Start Camera" below, or click "Create Answer" to automatically activate</div>
+            <div class="placeholder-icon">📸🎙️</div>
+            <div class="placeholder-text">Camera &amp; Microphone Not Started</div>
+            <div class="placeholder-hint">Click "Start Camera &amp; Mic" below, or click "Create Answer" to automatically activate</div>
           </div>
         </div>
 
-        <div id="camera-status" class="camera-status-info">Ready to activate camera</div>
+        <div id="camera-status" class="camera-status-info">Ready to activate camera &amp; microphone</div>
 
         <div class="camera-btn-group">
-          <button id="btn-start-camera" class="btn-primary" type="button">Start Camera</button>
+          <button id="btn-start-camera" class="btn-primary" type="button">Start Camera &amp; Mic</button>
           <button id="btn-switch-camera" class="btn-secondary" type="button" disabled>Flip Camera</button>
         </div>
+        <div class="phone-muted-hint">🔇 Local preview is strictly muted to prevent microphone feedback.</div>
       </section>
 
       <!-- WebRTC Connection Section (Phase 3 & 4) -->

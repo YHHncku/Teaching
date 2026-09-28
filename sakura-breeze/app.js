@@ -32,6 +32,17 @@ class MacApp {
     this.videoTrackState = document.getElementById('video-track-state');
     this.videoTrackKind = document.getElementById('video-track-kind');
 
+    // 2.1 Microphone & Audio Analysis elements (Phase 5)
+    this.micStatusBadge = document.getElementById('mic-status-badge');
+    this.micStatusText = document.getElementById('mic-status-text');
+    this.btnEnableAudio = document.getElementById('btn-enable-audio');
+    this.audioRawRms = document.getElementById('audio-raw-rms');
+    this.audioSmoothed = document.getElementById('audio-smoothed');
+    this.audioWindStrength = document.getElementById('audio-wind-strength');
+    this.audioNoiseFloor = document.getElementById('audio-noise-floor');
+    this.windMeterBar = document.getElementById('wind-meter-bar');
+    this.windMeterValue = document.getElementById('wind-meter-value');
+
     // 3. Diagnostics elements (Phase 2 preserved)
     this.diagBrowser = document.getElementById('diag-browser');
     this.diagHttps = document.getElementById('diag-https');
@@ -72,12 +83,21 @@ class MacApp {
     this.debugConnState = document.getElementById('debug-conn-state');
     this.debugIceConnState = document.getElementById('debug-ice-conn-state');
     this.debugIceGatherState = document.getElementById('debug-ice-gather-state');
+    this.debugMicState = document.getElementById('debug-mic-state');
+    this.debugMicRms = document.getElementById('debug-mic-rms');
+    this.debugMicSmoothed = document.getElementById('debug-mic-smoothed');
+    this.debugMicWind = document.getElementById('debug-mic-wind');
 
-    // 10. WebRTC connection instances
+    // 10. WebRTC & Audio instances
     this.pc = null;
     this.channel = null;
     this.diagnostics = null;
     this.arRenderer = null;
+    this.audioManager = null;
+    this.remoteVideoStream = null;
+    this.remoteAudioStream = null;
+    this.videoTransceiver = null;
+    this.audioTransceiver = null;
 
     this.init();
   }
@@ -96,6 +116,25 @@ class MacApp {
     // Initial Connection Status
     this.updateStatus('DISCONNECTED');
     this.resetRemoteVideoUI();
+
+    // Initialize AudioManager (Stage 5)
+    if (typeof AudioManager !== 'undefined') {
+      this.audioManager = new AudioManager({
+        onUpdate: (data) => this.renderAudioMetrics(data),
+        onStatusChange: (status) => this.renderAudioStatus(status)
+      });
+      console.log('[MacApp] AudioManager initialized.');
+    } else {
+      console.warn('[MacApp] AudioManager not loaded.');
+    }
+
+    if (this.btnEnableAudio) {
+      this.btnEnableAudio.addEventListener('click', async () => {
+        if (this.audioManager) {
+          await this.audioManager.resume();
+        }
+      });
+    }
 
     // Initialize AR Renderer (Phase 1 stub preserved)
     if (typeof ARRenderer !== 'undefined') {
@@ -179,7 +218,21 @@ class MacApp {
       statusBadge: this.statusBadge,
       errorBox: this.errorBox,
       messageLog: this.messageLog,
-      remoteVideo: this.remoteVideo
+      remoteVideo: this.remoteVideo,
+      // Phase 5 Audio Elements
+      micStatusBadge: this.micStatusBadge,
+      micStatusText: this.micStatusText,
+      btnEnableAudio: this.btnEnableAudio,
+      audioRawRms: this.audioRawRms,
+      audioSmoothed: this.audioSmoothed,
+      audioWindStrength: this.audioWindStrength,
+      audioNoiseFloor: this.audioNoiseFloor,
+      windMeterBar: this.windMeterBar,
+      windMeterValue: this.windMeterValue,
+      debugMicState: this.debugMicState,
+      debugMicRms: this.debugMicRms,
+      debugMicSmoothed: this.debugMicSmoothed,
+      debugMicWind: this.debugMicWind
     };
 
     let allValid = true;
@@ -244,8 +297,33 @@ class MacApp {
     this.currentSessionActive = false;
     this.isConnecting = false;
 
-    // Reset video UI
+    // Reset video UI & streams
+    if (this.remoteVideoStream) {
+      try {
+        this.remoteVideoStream.getTracks().forEach(t => t.stop());
+      } catch (_) {}
+      this.remoteVideoStream = null;
+    }
     this.resetRemoteVideoUI();
+
+    // Reset audio analysis & stream
+    if (this.remoteAudioStream) {
+      try {
+        this.remoteAudioStream.getTracks().forEach(t => t.stop());
+      } catch (_) {}
+      this.remoteAudioStream = null;
+    }
+    if (this.audioManager) {
+      this.audioManager.reset();
+    }
+    this.renderAudioMetrics({
+      rawRMS: 0,
+      smoothedVolume: 0,
+      windStrength: 0,
+      noiseFloor: 0.01,
+      status: 'WAITING'
+    });
+    this.renderAudioStatus('WAITING');
 
     // Clear textareas
     if (this.offerTextarea) this.offerTextarea.value = '';
@@ -313,22 +391,26 @@ class MacApp {
     this.channel = this.pc.createDataChannel('sakura');
     this.setupDataChannel(this.channel);
 
-    // CRITICAL for Phase 4:
-    // Add recvonly video transceiver so MacBook Offer advertises video receiving capability
-    // This allows iPhone Safari to send its camera video track in the Answer without renegotiation!
+    // CRITICAL for Stage 5:
+    // Add recvonly video and audio transceivers so MacBook Offer advertises both receiving capabilities
     if (this.pc.addTransceiver) {
       try {
-        this.pc.addTransceiver('video', { direction: 'recvonly' });
-        console.log(`[MacApp] [Session ${this.sessionId}] Added recvonly video transceiver.`);
+        this.videoTransceiver = this.pc.addTransceiver('video', { direction: 'recvonly' });
+        this.audioTransceiver = this.pc.addTransceiver('audio', { direction: 'recvonly' });
+        console.log(`[MacApp] [Session ${this.sessionId}] Added recvonly video and audio transceivers.`);
       } catch (err) {
         console.warn('[MacApp] addTransceiver warning:', err);
       }
     }
 
-    // Listen for remote tracks (iPhone Camera)
+    // Listen for remote tracks (Differentiate video and audio)
     this.pc.ontrack = (event) => {
-      console.log(`[MacApp] [Session ${this.sessionId}] ontrack received:`, event.track.kind, event.streams);
-      this.handleRemoteTrack(event);
+      console.log(`[MacApp] [Session ${this.sessionId}] ontrack received: ${event.track.kind}`);
+      if (event.track.kind === 'video') {
+        this.handleRemoteVideoTrack(event);
+      } else if (event.track.kind === 'audio') {
+        this.handleRemoteAudioTrack(event);
+      }
     };
 
     // RTCPeerConnection Lifecycle Listeners
@@ -376,23 +458,17 @@ class MacApp {
   }
 
   /**
-   * Handles incoming remote media track from iPhone camera
+   * Handles incoming remote video track from iPhone camera
    */
-  handleRemoteTrack(event) {
+  handleRemoteVideoTrack(event) {
     if (!this.remoteVideo) return;
     const track = event.track;
-    console.log(`[MacApp] [Session ${this.sessionId}] Processing remote ${track.kind} track...`);
+    console.log(`[MacApp] [Session ${this.sessionId}] Processing remote video track...`);
 
-    if (event.streams && event.streams[0]) {
-      this.remoteVideo.srcObject = event.streams[0];
-    } else {
-      let inboundStream = this.remoteVideo.srcObject;
-      if (!inboundStream || !(inboundStream instanceof MediaStream)) {
-        inboundStream = new MediaStream();
-        this.remoteVideo.srcObject = inboundStream;
-      }
-      inboundStream.addTrack(track);
-    }
+    // Strictly separate video track: do NOT mix with audio track
+    this.remoteVideoStream = new MediaStream([track]);
+    this.remoteVideo.muted = true;
+    this.remoteVideo.srcObject = this.remoteVideoStream;
 
     const onPlayReady = () => {
       if (this.videoPlaceholder) this.videoPlaceholder.style.display = 'none';
@@ -420,13 +496,13 @@ class MacApp {
     this.remoteVideo.onplaying = onPlayReady;
 
     track.onunmute = () => {
-      console.log(`[MacApp] Track unmuted`);
+      console.log(`[MacApp] Video track unmuted`);
       this.remoteVideo.play().catch(err => console.warn('[MacApp] remoteVideo.play() caught:', err));
       onPlayReady();
     };
 
     track.onended = () => {
-      console.log(`[MacApp] Track ended`);
+      console.log(`[MacApp] Video track ended`);
       this.resetRemoteVideoUI();
     };
 
@@ -435,6 +511,102 @@ class MacApp {
     });
 
     this.logMessage('SYSTEM', `Remote camera track attached (${track.kind}). Streaming live.`);
+  }
+
+  /**
+   * Handles incoming remote audio track from iPhone microphone
+   * CRITICAL: Do NOT play to speakers or attach to <audio>/<video> elements!
+   * Purely routed to AudioManager for real-time RMS wind analysis.
+   */
+  handleRemoteAudioTrack(event) {
+    const track = event.track;
+    console.log(`[MacApp] [Session ${this.sessionId}] Processing remote audio track (ANALYSIS ONLY)...`);
+
+    // Dedicated audio stream for analysis only
+    this.remoteAudioStream = new MediaStream([track]);
+
+    if (this.audioManager) {
+      this.audioManager.attachStream(this.remoteAudioStream);
+    }
+
+    track.onunmute = () => {
+      console.log('[MacApp] Remote audio track unmuted.');
+      if (this.audioManager) {
+        this.audioManager.attachStream(this.remoteAudioStream);
+      }
+    };
+
+    track.onended = () => {
+      console.log('[MacApp] Remote audio track ended.');
+      if (this.audioManager) {
+        this.audioManager.reset();
+      }
+    };
+
+    this.logMessage('SYSTEM', 'Remote microphone track received. Real-time wind analysis active.');
+  }
+
+  /**
+   * Renders real-time audio metrics from AudioManager
+   */
+  renderAudioMetrics(data) {
+    if (this.audioRawRms) this.audioRawRms.textContent = data.rawRMS.toFixed(3);
+    if (this.audioSmoothed) this.audioSmoothed.textContent = data.smoothedVolume.toFixed(2);
+    if (this.audioWindStrength) this.audioWindStrength.textContent = data.windStrength.toFixed(2);
+    if (this.audioNoiseFloor) this.audioNoiseFloor.textContent = data.noiseFloor.toFixed(3);
+
+    if (this.windMeterBar) {
+      const pct = Math.min(100, Math.max(0, data.windStrength * 100));
+      this.windMeterBar.style.width = `${pct.toFixed(1)}%`;
+    }
+    if (this.windMeterValue) {
+      this.windMeterValue.textContent = data.windStrength.toFixed(2);
+    }
+
+    // Developer mode indicators
+    if (this.debugMicState) this.debugMicState.textContent = data.status;
+    if (this.debugMicRms) this.debugMicRms.textContent = data.rawRMS.toFixed(3);
+    if (this.debugMicSmoothed) this.debugMicSmoothed.textContent = data.smoothedVolume.toFixed(2);
+    if (this.debugMicWind) this.debugMicWind.textContent = data.windStrength.toFixed(2);
+  }
+
+  /**
+   * Renders audio status badge and user guidance
+   */
+  renderAudioStatus(status) {
+    if (this.micStatusBadge) {
+      this.micStatusBadge.textContent = status;
+      this.micStatusBadge.className = `mic-badge mic-${status.toLowerCase()}`;
+    }
+
+    if (this.micStatusText) {
+      switch (status) {
+        case 'ANALYZING':
+          this.micStatusText.textContent = 'Acoustic stream active — Real-time wind analysis running.';
+          break;
+        case 'SUSPENDED':
+          this.micStatusText.textContent = 'AudioContext suspended by browser. Click "Enable Audio Analysis" to resume.';
+          break;
+        case 'RECEIVING':
+          this.micStatusText.textContent = 'Microphone track received. Initializing analyser pipeline...';
+          break;
+        case 'UNAVAILABLE':
+          this.micStatusText.textContent = 'Microphone unavailable or denied on iPhone (Camera-only mode).';
+          break;
+        case 'WAITING':
+        default:
+          this.micStatusText.textContent = 'Awaiting audio stream from iPhone';
+          break;
+      }
+    }
+
+    if (this.btnEnableAudio) {
+      this.btnEnableAudio.style.display = (status === 'SUSPENDED') ? 'inline-block' : 'none';
+    }
+
+    if (this.debugMicState) {
+      this.debugMicState.textContent = status;
+    }
   }
 
   /**
@@ -515,13 +687,13 @@ class MacApp {
         this.btnConnect.textContent = 'Connect';
       }
 
-      this.logMessage('SYSTEM', `[Session ${this.sessionId}] Creating Offer with Video & DataChannel capabilities...`);
+      this.logMessage('SYSTEM', `[Session ${this.sessionId}] Creating Offer with Video, Audio & DataChannel capabilities...`);
 
       let offer;
       try {
         offer = await this.pc.createOffer({
           offerToReceiveVideo: true,
-          offerToReceiveAudio: false
+          offerToReceiveAudio: true
         });
       } catch (err) {
         this.handleError('CREATE_OFFER_FAILED', err, 'Failed to create local offer.');
@@ -606,6 +778,18 @@ class MacApp {
       return;
     }
 
+    // CRITICAL: Guard against false alarm if negotiation was already completed
+    if (this.pc.signalingState === 'stable' &&
+        this.pc.localDescription && this.pc.localDescription.type === 'offer' &&
+        this.pc.remoteDescription && this.pc.remoteDescription.type === 'answer') {
+      console.log('[MacApp] Negotiation already complete. WebRTC connection is active.');
+      if (this.btnConnect) {
+        this.btnConnect.disabled = true;
+        this.btnConnect.textContent = 'Connected';
+      }
+      return;
+    }
+
     if (this.pc.signalingState !== 'have-local-offer') {
       this.handleError(
         'INVALID_SIGNALING_STATE',
@@ -676,9 +860,16 @@ class MacApp {
       this.handleError('UNKNOWN_CONNECT_ERROR', err, 'Unexpected error applying answer.');
     } finally {
       this.isConnecting = false;
-      if (this.btnConnect) {
-        this.btnConnect.disabled = false;
-        this.btnConnect.textContent = 'Connect';
+      if (this.pc && this.pc.signalingState === 'stable' && this.pc.remoteDescription && this.pc.remoteDescription.type === 'answer') {
+        if (this.btnConnect) {
+          this.btnConnect.disabled = true;
+          this.btnConnect.textContent = 'Connected';
+        }
+      } else {
+        if (this.btnConnect) {
+          this.btnConnect.disabled = false;
+          this.btnConnect.textContent = 'Connect';
+        }
       }
     }
   }

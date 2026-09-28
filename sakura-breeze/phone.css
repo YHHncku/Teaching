@@ -342,6 +342,20 @@ html, body {
   flex: 1;
 }
 
+.camera-badges-wrap {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.phone-muted-hint {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+
 /* ==========================================================================
    WebRTC Connection Card (iPhone)
    ========================================================================== */

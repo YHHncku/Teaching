@@ -424,6 +424,222 @@ html, body {
 }
 
 /* ==========================================================================
+   iPhone Microphone & Wind Analysis Card (MacBook Phase 5)
+   ========================================================================== */
+.audio-card {
+  width: 100%;
+  background: rgba(16, 20, 29, 0.88);
+  border: 1px solid rgba(255, 183, 197, 0.18);
+  border-radius: 20px;
+  padding: 24px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 183, 197, 0.05);
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.audio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.audio-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.audio-icon {
+  font-size: 1.3rem;
+}
+
+.audio-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+
+.audio-status-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mic-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mic-badge.mic-waiting {
+  background: rgba(251, 191, 36, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.mic-badge.mic-receiving {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.4);
+}
+
+.mic-badge.mic-analyzing {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  animation: pulseStream 2s infinite ease-in-out;
+}
+
+.mic-badge.mic-suspended {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.mic-badge.mic-unavailable {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+.btn-enable-audio {
+  font-family: var(--font-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(255, 183, 197, 0.25), rgba(255, 110, 140, 0.35));
+  color: #ffccd5;
+  border: 1px solid rgba(255, 183, 197, 0.5);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-enable-audio:hover {
+  background: linear-gradient(135deg, rgba(255, 183, 197, 0.4), rgba(255, 110, 140, 0.5));
+  box-shadow: 0 0 12px rgba(255, 183, 197, 0.3);
+}
+
+.mic-status-text {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* Horizontal Wind Strength Meter */
+.wind-meter-panel {
+  background: rgba(7, 9, 14, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.wind-meter-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.meter-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: 0.04em;
+}
+
+.meter-value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffb7c5;
+  text-shadow: 0 0 10px rgba(255, 183, 197, 0.4);
+}
+
+.wind-meter-track {
+  width: 100%;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 9px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.6);
+}
+
+.wind-meter-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #60a5fa 0%, #34d399 35%, #f59e0b 70%, #ef4444 100%);
+  border-radius: 9px;
+  transition: width 0.08s ease-out;
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.5);
+}
+
+.wind-meter-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+/* Audio Metrics Grid */
+.audio-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.audio-metric-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.audio-metric-item .metric-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.audio-metric-item .metric-val {
+  font-family: var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.audio-safety-note {
+  margin-top: 14px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.02);
+  border-left: 2px solid rgba(52, 211, 153, 0.5);
+  padding: 6px 10px;
+  border-radius: 0 6px 6px 0;
+}
+
+/* ==========================================================================
    WebRTC Connection Card (MacBook)
    ========================================================================== */
 .webrtc-card {
