@@ -34,7 +34,34 @@
         </div>
       </section>
 
-      <!-- WebRTC Connection Section (Phase 3) -->
+      <!-- iPhone Camera Section (Phase 4) -->
+      <section class="camera-card">
+        <div class="camera-header">
+          <div class="camera-header-left">
+            <span class="camera-icon">📷</span>
+            <h2 class="camera-title">iPhone Camera</h2>
+          </div>
+          <span id="camera-status-badge" class="camera-badge camera-inactive">INACTIVE</span>
+        </div>
+
+        <div class="camera-preview-wrapper">
+          <video id="local-video" autoplay playsinline muted></video>
+          <div id="camera-placeholder" class="camera-placeholder">
+            <div class="placeholder-icon">📸</div>
+            <div class="placeholder-text">Camera Not Started</div>
+            <div class="placeholder-hint">Click "Start Camera" below, or click "Create Answer" to automatically activate</div>
+          </div>
+        </div>
+
+        <div id="camera-status" class="camera-status-info">Ready to activate camera</div>
+
+        <div class="camera-btn-group">
+          <button id="btn-start-camera" class="btn-primary" type="button">Start Camera</button>
+          <button id="btn-switch-camera" class="btn-secondary" type="button" disabled>Flip Camera</button>
+        </div>
+      </section>
+
+      <!-- WebRTC Connection Section (Phase 3 & 4) -->
       <section class="webrtc-card">
         <div class="webrtc-header">
           <h2 class="webrtc-title">WebRTC Connection</h2>
@@ -173,9 +200,10 @@
         </div>
 
         <div class="architecture-notice">
+          <p class="notice-title">💡 Architecture Note</p>
           <p class="notice-body">
             USB-C is primarily used to establish a network environment between devices.
-            Camera, Microphone, and Motion will later be transmitted via WebRTC.
+            Camera video and DataChannel messages are transmitted via WebRTC.
           </p>
         </div>
       </section>

@@ -39,14 +39,52 @@
           <div id="ar-status" class="ar-status-text">AR Renderer Ready</div>
         </section>
 
-        <!-- WebRTC Connection Section (Phase 3) -->
+        <!-- iPhone Camera Live Stream Section (Phase 4) -->
+        <section class="video-card">
+          <div class="video-header">
+            <div class="video-header-left">
+              <span class="video-icon">📹</span>
+              <h2 class="video-title">iPhone Camera Stream</h2>
+            </div>
+            <div class="video-status-wrap">
+              <span id="video-stream-badge" class="stream-badge stream-waiting">AWAITING STREAM</span>
+              <span id="video-status" class="video-status-text">Connect iPhone with Step 1 & 2 below to receive camera feed</span>
+            </div>
+          </div>
+
+          <div class="video-display-area">
+            <video id="remote-video" autoplay playsinline muted></video>
+            <div id="video-placeholder" class="video-placeholder">
+              <div class="placeholder-icon">🌸</div>
+              <div class="placeholder-title">iPhone Camera Feed</div>
+              <div class="placeholder-subtext">Follow steps below: generate Offer &rarr; paste into iPhone Safari &rarr; connect Answer</div>
+            </div>
+          </div>
+
+          <div class="video-details-row">
+            <div class="video-detail-item">
+              <span class="detail-label">Resolution</span>
+              <span id="video-res" class="detail-val">-</span>
+            </div>
+            <div class="video-detail-item">
+              <span class="detail-label">Stream Status</span>
+              <span id="video-track-state" class="detail-val">Waiting</span>
+            </div>
+            <div class="video-detail-item">
+              <span class="detail-label">Track Kind</span>
+              <span id="video-track-kind" class="detail-val">video</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- WebRTC Connection Section -->
         <section class="webrtc-card">
           <div class="webrtc-header">
             <h2 class="webrtc-title">
               <span>WebRTC Connection</span>
             </h2>
             <div class="webrtc-actions">
-              <span class="webrtc-badge">RTCDataChannel (sakura)</span>
+              <span class="webrtc-badge">WebRTC Video + RTCDataChannel</span>
               <button id="btn-reset-webrtc" class="btn-reset" type="button">Reset WebRTC</button>
             </div>
           </div>

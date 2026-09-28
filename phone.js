@@ -1,7 +1,8 @@
 /**
  * Sakura Breeze AR - iPhone Controller
  * class PhoneApp
- * Stage 3: Robust Native WebRTC JSON Signaling (iPhone Safari <-> MacBook Chrome)
+ * Stage 4: iPhone Camera Video Stream + Native WebRTC RTCDataChannel
+ * (iPhone Safari <-> MacBook Chrome)
  * Lifecycle-Hardened Implementation
  */
 
@@ -14,41 +15,53 @@ class PhoneApp {
     this.currentSessionActive = false;
     this.isCreatingAnswer = false;
 
+    // Camera state
+    this.localStream = null;
+    this.currentFacingMode = 'environment'; // Default to rear camera on iPhone
+
     // 1. Status elements
     this.statusBadge = document.getElementById('status-badge');
     this.statusElement = document.getElementById('connection-status');
     this.httpsWarning = document.getElementById('https-warning');
     this.errorBox = document.getElementById('error-diagnostics');
 
-    // 2. Diagnostics elements (Phase 2 preserved)
+    // 2. Camera elements (Phase 4)
+    this.localVideo = document.getElementById('local-video');
+    this.cameraStatusBadge = document.getElementById('camera-status-badge');
+    this.cameraStatus = document.getElementById('camera-status');
+    this.cameraPlaceholder = document.getElementById('camera-placeholder');
+    this.btnStartCamera = document.getElementById('btn-start-camera');
+    this.btnSwitchCamera = document.getElementById('btn-switch-camera');
+
+    // 3. Diagnostics elements (Phase 2 preserved)
     this.diagBrowser = document.getElementById('diag-browser');
     this.diagHttps = document.getElementById('diag-https');
     this.diagOnline = document.getElementById('diag-online');
 
-    // 3. Signaling Diagnostics elements
+    // 4. Signaling Diagnostics elements
     this.sigPayloadType = document.getElementById('sig-payload-type');
     this.sigSdpLength = document.getElementById('sig-sdp-length');
     this.sigFirstLine = document.getElementById('sig-first-line');
     this.sigLastLine = document.getElementById('sig-last-line');
     this.sigLineCount = document.getElementById('sig-line-count');
 
-    // 4. WebRTC Offer elements (Unified ID: offer-sdp)
+    // 5. WebRTC Offer elements (Unified ID: offer-sdp)
     this.offerTextarea = document.getElementById('offer-sdp');
     this.btnCreateAnswer = document.getElementById('btn-create-answer');
     this.btnClearOffer = document.getElementById('btn-clear-offer');
 
-    // 5. WebRTC Answer elements (Unified ID: answer-sdp)
+    // 6. WebRTC Answer elements (Unified ID: answer-sdp)
     this.answerTextarea = document.getElementById('answer-sdp');
     this.btnCopyAnswer = document.getElementById('btn-copy-answer');
     this.btnClearAnswer = document.getElementById('btn-clear-answer');
 
-    // 6. Reset button
+    // 7. Reset button
     this.btnResetWebRTC = document.getElementById('btn-reset-webrtc');
 
-    // 7. DataChannel test & message log
+    // 8. DataChannel test & message log
     this.messageLog = document.getElementById('datachannel-log');
 
-    // 8. Developer mode / Session Debug indicators
+    // 9. Developer mode / Session Debug indicators
     this.debugSessionId = document.getElementById('debug-session-id');
     this.debugSignalState = document.getElementById('debug-signal-state');
     this.debugLocalDesc = document.getElementById('debug-local-desc');
@@ -58,7 +71,7 @@ class PhoneApp {
     this.debugIceConnState = document.getElementById('debug-ice-conn-state');
     this.debugIceGatherState = document.getElementById('debug-ice-gather-state');
 
-    // 9. WebRTC connection instances
+    // 10. WebRTC connection instances
     this.pc = null;
     this.channel = null;
     this.diagnostics = null;
@@ -88,7 +101,15 @@ class PhoneApp {
       this.renderDiagnostics(this.diagnostics.getReport());
     }
 
-    // Bind all Event Listeners exactly once
+    // Bind Camera controls
+    if (this.btnStartCamera) {
+      this.btnStartCamera.addEventListener('click', () => this.startCamera());
+    }
+    if (this.btnSwitchCamera) {
+      this.btnSwitchCamera.addEventListener('click', () => this.switchCamera());
+    }
+
+    // Bind WebRTC controls
     if (this.btnCreateAnswer) {
       this.btnCreateAnswer.addEventListener('click', () => this.handleCreateAnswer());
     }
@@ -116,7 +137,7 @@ class PhoneApp {
     }
 
     this.updateDebugStates();
-    console.log('[PhoneApp] Initialized successfully with hardened lifecycle controls.');
+    console.log('[PhoneApp] Initialized successfully with Phase 4 Camera and DataChannel support.');
   }
 
   /**
@@ -134,7 +155,9 @@ class PhoneApp {
       statusElement: this.statusElement,
       statusBadge: this.statusBadge,
       errorBox: this.errorBox,
-      messageLog: this.messageLog
+      messageLog: this.messageLog,
+      localVideo: this.localVideo,
+      btnStartCamera: this.btnStartCamera
     };
 
     let allValid = true;
@@ -156,6 +179,119 @@ class PhoneApp {
     }
 
     return allValid;
+  }
+
+  /**
+   * Activates iPhone camera and binds stream to local video preview
+   */
+  async startCamera() {
+    this.clearError();
+    try {
+      if (this.cameraStatus) this.cameraStatus.textContent = 'Requesting camera access...';
+      if (this.btnStartCamera) this.btnStartCamera.disabled = true;
+
+      // Stop existing tracks if any
+      if (this.localStream) {
+        this.localStream.getTracks().forEach(t => t.stop());
+        this.localStream = null;
+      }
+
+      // Constraints: Strictly video only, no microphone per Phase 4 guidelines
+      const constraints = {
+        video: {
+          facingMode: this.currentFacingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (err) {
+        console.warn('[PhoneApp] Primary camera constraint fallback:', err);
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+      }
+
+      this.localStream = stream;
+
+      if (this.localVideo) {
+        this.localVideo.srcObject = stream;
+        this.localVideo.play().catch(e => console.warn('[PhoneApp] localVideo play caught:', e));
+      }
+
+      if (this.cameraPlaceholder) {
+        this.cameraPlaceholder.style.display = 'none';
+      }
+
+      if (this.cameraStatusBadge) {
+        this.cameraStatusBadge.className = 'camera-badge camera-active';
+        this.cameraStatusBadge.textContent = 'ACTIVE';
+      }
+
+      const videoTrack = stream.getVideoTracks()[0];
+      const settings = videoTrack && videoTrack.getSettings ? videoTrack.getSettings() : {};
+      const w = settings.width || 1280;
+      const h = settings.height || 720;
+      const modeText = this.currentFacingMode === 'user' ? 'Front' : 'Back';
+
+      if (this.cameraStatus) {
+        this.cameraStatus.textContent = `Camera Active (${modeText}, ~${w}x${h})`;
+      }
+      if (this.btnStartCamera) {
+        this.btnStartCamera.textContent = 'Camera Ready';
+        this.btnStartCamera.disabled = false;
+      }
+      if (this.btnSwitchCamera) {
+        this.btnSwitchCamera.disabled = false;
+      }
+
+      this.logMessage('SYSTEM', `Camera activated: ${modeText} camera (~${w}x${h}).`);
+      return stream;
+    } catch (err) {
+      console.error('[PhoneApp] Failed to start camera:', err);
+      this.handleError(
+        'CAMERA_ACCESS_DENIED',
+        err,
+        `Camera access error: ${err.message || 'Permission denied'}. Please allow camera access in Safari settings.`
+      );
+      if (this.cameraStatus) {
+        this.cameraStatus.textContent = 'Camera access denied or unavailable.';
+      }
+      if (this.cameraStatusBadge) {
+        this.cameraStatusBadge.className = 'camera-badge camera-failed';
+        this.cameraStatusBadge.textContent = 'ERROR';
+      }
+      if (this.btnStartCamera) {
+        this.btnStartCamera.disabled = false;
+        this.btnStartCamera.textContent = 'Retry Camera';
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Switches between environment (back) and user (front) camera
+   */
+  async switchCamera() {
+    this.currentFacingMode = this.currentFacingMode === 'environment' ? 'user' : 'environment';
+    const newStream = await this.startCamera();
+    if (newStream && this.pc) {
+      const newTrack = newStream.getVideoTracks()[0];
+      if (newTrack) {
+        const senders = this.pc.getSenders ? this.pc.getSenders() : [];
+        const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+        if (videoSender) {
+          try {
+            await videoSender.replaceTrack(newTrack);
+            console.log('[PhoneApp] Replaced video track on RTCRtpSender');
+          } catch (replaceErr) {
+            console.warn('[PhoneApp] replaceTrack warning:', replaceErr);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -331,7 +467,8 @@ class PhoneApp {
   }
 
   /**
-   * Applies Offer from MacBook, creates Answer, and outputs pristine JSON payload
+   * Applies Offer from MacBook, activates Camera track before answer, creates Answer,
+   * and outputs pristine JSON payload
    */
   async handleCreateAnswer() {
     this.clearError();
@@ -382,13 +519,23 @@ class PhoneApp {
     this.isCreatingAnswer = true;
     if (this.btnCreateAnswer) {
       this.btnCreateAnswer.disabled = true;
-      this.btnCreateAnswer.textContent = 'Gathering ICE...';
+      this.btnCreateAnswer.textContent = 'Preparing Camera & ICE...';
     }
 
     // Update Signaling Diagnostics for received Offer
     this.renderSignalingDiagnostics(offer.type, offer.sdp);
 
     try {
+      // CRITICAL Phase 4 requirement:
+      // Ensure Camera is active before createAnswer()
+      if (!this.localStream || !this.localStream.getVideoTracks().length || this.localStream.getVideoTracks()[0].readyState === 'ended') {
+        this.logMessage('SYSTEM', 'Activating camera stream before generating Answer...');
+        const stream = await this.startCamera();
+        if (!stream) {
+          throw new Error('Camera initialization failed. Please allow camera access.');
+        }
+      }
+
       // 2. Initialize fresh PeerConnection
       this.initPeerConnection();
       this.updateStatus('CONNECTING');
@@ -403,7 +550,27 @@ class PhoneApp {
       }
       this.updateDebugStates();
 
-      // 4. createAnswer
+      // 4. Attach iPhone Camera Track to PeerConnection BEFORE createAnswer!
+      const videoTrack = this.localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        const transceivers = this.pc.getTransceivers ? this.pc.getTransceivers() : [];
+        const videoTransceiver = transceivers.find(t =>
+          (t.receiver && t.receiver.track && t.receiver.track.kind === 'video') ||
+          (t.sender && (!t.sender.track || t.sender.track.kind === 'video'))
+        );
+
+        if (videoTransceiver && videoTransceiver.sender) {
+          await videoTransceiver.sender.replaceTrack(videoTrack);
+          videoTransceiver.direction = 'sendonly';
+          console.log(`[PhoneApp] Assigned video track to transceiver (direction: sendonly)`);
+        } else {
+          this.pc.addTrack(videoTrack, this.localStream);
+          console.log(`[PhoneApp] Added camera track via pc.addTrack`);
+        }
+        this.logMessage('SYSTEM', 'Camera video track attached to WebRTC session.');
+      }
+
+      // 5. createAnswer
       let answer;
       try {
         answer = await this.pc.createAnswer();
@@ -412,7 +579,7 @@ class PhoneApp {
         return;
       }
 
-      // 5. setLocalDescription
+      // 6. setLocalDescription
       try {
         await this.pc.setLocalDescription(answer);
       } catch (err) {
@@ -421,7 +588,7 @@ class PhoneApp {
       }
       this.updateDebugStates();
 
-      // 6. Wait for iceGatheringState === "complete"
+      // 7. Wait for iceGatheringState === "complete"
       try {
         await this.waitForIceGathering(this.pc);
       } catch (err) {
@@ -435,7 +602,7 @@ class PhoneApp {
         throw new Error('DOM_BINDING_ERROR: Answer textarea not found');
       }
 
-      // 7. Generate Answer payload directly from browser pc.localDescription without modifying SDP!
+      // 8. Generate Answer payload directly from browser pc.localDescription without modifying SDP!
       const payload = {
         type: this.pc.localDescription.type,
         sdp: this.pc.localDescription.sdp
@@ -447,9 +614,9 @@ class PhoneApp {
       // Update Signaling Diagnostics for generated Answer
       this.renderSignalingDiagnostics(payload.type, payload.sdp);
 
-      this.logMessage('SYSTEM', `[Session ${this.sessionId}] Answer created. Copy Answer Signaling JSON back to MacBook.`);
+      this.logMessage('SYSTEM', `[Session ${this.sessionId}] Answer created with Camera Track & DataChannel. Copy Answer Signaling JSON back to MacBook.`);
     } catch (err) {
-      this.handleError('UNKNOWN_ANSWER_ERROR', err, 'Unexpected error creating answer.');
+      this.handleError('UNKNOWN_ANSWER_ERROR', err, err.message || 'Unexpected error creating answer.');
     } finally {
       if (this.btnCreateAnswer) {
         this.btnCreateAnswer.disabled = false;
@@ -469,195 +636,201 @@ class PhoneApp {
         return;
       }
 
+      let timeoutId = null;
+
       const checkState = () => {
         if (pc.iceGatheringState === 'complete') {
           pc.removeEventListener('icegatheringstatechange', checkState);
+          if (timeoutId) clearTimeout(timeoutId);
           resolve();
         }
       };
 
       pc.addEventListener('icegatheringstatechange', checkState);
 
-      // Safe timeout (3.5s) to prevent indefinite hang on restricted networks
-      setTimeout(() => {
+      // Safe timeout in case of local network interface delays (5000ms max)
+      timeoutId = setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', checkState);
+        console.warn('[PhoneApp] ICE gathering wait timed out (proceeding with collected candidates).');
         resolve();
-      }, 3500);
+      }, 5000);
     });
   }
 
   /**
-   * Clipboard helper with iOS Safari fallback
+   * Copies text to clipboard with button feedback
    */
-  async copyToClipboard(text, btnElement, defaultLabel) {
-    if (!text) {
-      alert('No JSON content to copy.');
-      return;
-    }
-
-    let copied = false;
+  async copyToClipboard(text, btnElement, originalText) {
+    if (!text) return;
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        copied = true;
+      await navigator.clipboard.writeText(text);
+      if (btnElement) {
+        btnElement.textContent = 'Copied!';
+        setTimeout(() => {
+          btnElement.textContent = originalText;
+        }, 2000);
       }
-    } catch (_) {}
-
-    if (!copied) {
-      try {
-        const temp = document.createElement('textarea');
-        temp.value = text;
-        temp.style.position = 'fixed';
-        temp.style.opacity = '0';
-        document.body.appendChild(temp);
-        temp.focus();
-        temp.select();
-        copied = document.execCommand('copy');
-        document.body.removeChild(temp);
-      } catch (_) {}
-    }
-
-    if (btnElement) {
-      btnElement.textContent = copied ? 'Copied!' : 'Select & Copy';
-      setTimeout(() => {
-        btnElement.textContent = defaultLabel;
-      }, 2000);
+    } catch (_) {
+      // Fallback for non-secure contexts
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (btnElement) {
+        btnElement.textContent = 'Copied!';
+        setTimeout(() => {
+          btnElement.textContent = originalText;
+        }, 2000);
+      }
     }
   }
 
   /**
-   * Updates UI Connection Status
-   * Values: DISCONNECTED, CONNECTING, CONNECTED, FAILED
+   * Appends formatted message to activity log
    */
-  updateStatus(status) {
-    if (this.statusElement) {
-      this.statusElement.textContent = status;
-    }
-    if (this.statusBadge) {
-      this.statusBadge.className = `status-badge status-${status.toLowerCase()}`;
-    }
-  }
-
-  /**
-   * Updates Debug and Session states in real time
-   */
-  updateDebugStates() {
-    // Session ID
-    if (this.debugSessionId) {
-      this.debugSessionId.textContent = this.sessionId ? `${this.sessionId}` : '-';
-    }
-
-    // Signaling State
-    const signalState = this.pc ? this.pc.signalingState : 'stable';
-    if (this.debugSignalState) {
-      this.debugSignalState.textContent = signalState;
-    }
-
-    // Local & Remote Description Types
-    const localType = this.pc && this.pc.localDescription ? this.pc.localDescription.type : 'none';
-    if (this.debugLocalDesc) {
-      this.debugLocalDesc.textContent = localType;
-    }
-
-    const remoteType = this.pc && this.pc.remoteDescription ? this.pc.remoteDescription.type : 'none';
-    if (this.debugRemoteDesc) {
-      this.debugRemoteDesc.textContent = remoteType;
-    }
-
-    // DataChannel State
-    const dcState = this.channel ? this.channel.readyState : 'none';
-    if (this.debugDcState) {
-      this.debugDcState.textContent = dcState;
-    }
-
-    // PeerConnection Connection States
-    if (this.debugConnState) {
-      this.debugConnState.textContent = this.pc ? (this.pc.connectionState || 'new') : 'new';
-    }
-    if (this.debugIceConnState) {
-      this.debugIceConnState.textContent = this.pc ? (this.pc.iceConnectionState || 'new') : 'new';
-    }
-    if (this.debugIceGatherState) {
-      this.debugIceGatherState.textContent = this.pc ? (this.pc.iceGatheringState || 'new') : 'new';
-    }
-  }
-
-  /**
-   * Updates Signaling Diagnostics panel
-   */
-  renderSignalingDiagnostics(type, sdp) {
-    const diag = extractSdpDiagnostics(type, sdp);
-    if (this.sigPayloadType) this.sigPayloadType.textContent = diag.type;
-    if (this.sigSdpLength) this.sigSdpLength.textContent = `${diag.length} chars`;
-    if (this.sigFirstLine) this.sigFirstLine.textContent = diag.firstLine;
-    if (this.sigLastLine) this.sigLastLine.textContent = diag.lastLine;
-    if (this.sigLineCount) this.sigLineCount.textContent = `${diag.lineCount}`;
-  }
-
-  /**
-   * Dedicated Error Handler
-   */
-  handleError(code, error, userMessage, payload) {
-    this.updateStatus('FAILED');
-    console.error(`[PhoneApp] [${code}]`, error.name || 'Error', error.message || error);
-    if (payload && payload.sdp) {
-      const diag = extractSdpDiagnostics(payload.type, payload.sdp);
-      console.error('Payload Details:', {
-        type: payload.type,
-        sdpLength: diag.length,
-        firstLine: diag.firstLine,
-        lastLine: diag.lastLine,
-        lineCount: diag.lineCount
-      });
-    }
-
-    if (this.errorBox) {
-      this.errorBox.style.display = 'block';
-      this.errorBox.innerHTML = `<strong>[${escapeHtml(code)}]</strong> ${escapeHtml(userMessage || error.message)}`;
-    }
-    this.logMessage('ERROR', `[${code}] ${userMessage || error.message}`);
-    this.updateDebugStates();
-  }
-
-  clearError() {
-    if (this.errorBox) {
-      this.errorBox.style.display = 'none';
-      this.errorBox.innerHTML = '';
-    }
-  }
-
-  /**
-   * Logs activity into the on-screen log box
-   */
-  logMessage(type, message) {
+  logMessage(type, content) {
     if (!this.messageLog) return;
 
     const entry = document.createElement('div');
     entry.className = `log-entry log-${type.toLowerCase()}`;
 
     const time = new Date().toLocaleTimeString();
-    entry.innerHTML = `<span class="log-time">[${time}]</span> ${escapeHtml(message)}`;
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'log-time';
+    timeSpan.textContent = `[${time}] [${type}] `;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'log-text';
+    textSpan.textContent = content;
+
+    entry.appendChild(timeSpan);
+    entry.appendChild(textSpan);
 
     this.messageLog.appendChild(entry);
     this.messageLog.scrollTop = this.messageLog.scrollHeight;
   }
 
   /**
-   * NetworkDiagnostics integration (Phase 2 preserved)
+   * Updates Connection Status Badge
+   */
+  updateStatus(status) {
+    if (!this.statusElement || !this.statusBadge) return;
+
+    this.statusElement.textContent = status;
+    this.statusBadge.classList.remove('status-disconnected', 'status-connecting', 'status-connected', 'status-failed');
+
+    switch (status) {
+      case 'CONNECTED':
+        this.statusBadge.classList.add('status-connected');
+        break;
+      case 'CONNECTING':
+        this.statusBadge.classList.add('status-connecting');
+        break;
+      case 'FAILED':
+        this.statusBadge.classList.add('status-failed');
+        break;
+      case 'DISCONNECTED':
+      default:
+        this.statusBadge.classList.add('status-disconnected');
+        break;
+    }
+  }
+
+  /**
+   * Updates Developer Mode session indicators
+   */
+  updateDebugStates() {
+    if (this.debugSessionId) this.debugSessionId.textContent = this.sessionId;
+    if (this.debugSignalState) {
+      this.debugSignalState.textContent = this.pc ? this.pc.signalingState : 'closed';
+    }
+    if (this.debugLocalDesc) {
+      this.debugLocalDesc.textContent = this.pc && this.pc.localDescription ? this.pc.localDescription.type : 'none';
+    }
+    if (this.debugRemoteDesc) {
+      this.debugRemoteDesc.textContent = this.pc && this.pc.remoteDescription ? this.pc.remoteDescription.type : 'none';
+    }
+    if (this.debugDcState) {
+      this.debugDcState.textContent = this.channel ? this.channel.readyState : 'none';
+    }
+    if (this.debugConnState) {
+      this.debugConnState.textContent = this.pc ? this.pc.connectionState : 'new';
+    }
+    if (this.debugIceConnState) {
+      this.debugIceConnState.textContent = this.pc ? this.pc.iceConnectionState : 'new';
+    }
+    if (this.debugIceGatherState) {
+      this.debugIceGatherState.textContent = this.pc ? this.pc.iceGatheringState : 'new';
+    }
+  }
+
+  /**
+   * Renders Signaling Diagnostics panel
+   */
+  renderSignalingDiagnostics(type, sdp) {
+    if (!this.sigPayloadType) return;
+    this.sigPayloadType.textContent = type;
+
+    if (!sdp) {
+      if (this.sigSdpLength) this.sigSdpLength.textContent = '0 chars';
+      if (this.sigFirstLine) this.sigFirstLine.textContent = '-';
+      if (this.sigLastLine) this.sigLastLine.textContent = '-';
+      if (this.sigLineCount) this.sigLineCount.textContent = '0';
+      return;
+    }
+
+    const lines = sdp.split(/\r?\n/).filter(line => line.length > 0);
+    if (this.sigSdpLength) this.sigSdpLength.textContent = `${sdp.length} chars`;
+    if (this.sigFirstLine) this.sigFirstLine.textContent = lines[0] || '-';
+    if (this.sigLastLine) this.sigLastLine.textContent = lines[lines.length - 1] || '-';
+    if (this.sigLineCount) this.sigLineCount.textContent = lines.length;
+  }
+
+  /**
+   * Clears Error Diagnostics banner
+   */
+  clearError() {
+    if (this.errorBox) {
+      this.errorBox.style.display = 'none';
+      this.errorBox.textContent = '';
+    }
+  }
+
+  /**
+   * Displays distinct Error Code and diagnostic information
+   */
+  handleError(code, err, description, payload = null) {
+    console.error(`[PhoneApp] [${code}]`, err, {
+      description,
+      sessionId: this.sessionId,
+      signalingState: this.pc ? this.pc.signalingState : 'no-pc',
+      payload
+    });
+
+    if (this.errorBox) {
+      this.errorBox.style.display = 'block';
+      this.errorBox.innerHTML = `<strong>[${code}]</strong>: ${description}`;
+    }
+
+    this.logMessage('ERROR', `[${code}] ${description}`);
+    this.updateStatus('FAILED');
+    this.updateDebugStates();
+  }
+
+  /**
+   * Renders Network Diagnostics (Phase 2 preserved)
    */
   renderDiagnostics(report) {
-    if (!report) return;
-
-    if (this.diagBrowser) {
-      this.diagBrowser.textContent = report.browser;
-    }
+    if (this.diagBrowser) this.diagBrowser.textContent = report.browser;
     if (this.diagHttps) {
       this.diagHttps.textContent = report.httpsText;
-      this.diagHttps.className = `diag-value ${report.isHttps ? 'status-ok' : 'status-err'}`;
+      this.diagHttps.className = `diag-value ${report.isHttps ? 'status-ok' : 'status-warn'}`;
     }
     if (this.diagOnline) {
       this.diagOnline.textContent = report.onlineText;
-      this.diagOnline.className = `diag-value ${report.online ? 'status-ok' : 'status-err'}`;
+      this.diagOnline.className = `diag-value ${report.online ? 'status-ok' : 'status-warn'}`;
     }
     if (this.httpsWarning) {
       this.httpsWarning.style.display = report.isHttps ? 'none' : 'block';
@@ -665,42 +838,7 @@ class PhoneApp {
   }
 }
 
-function extractSdpDiagnostics(type, sdp) {
-  if (typeof sdp !== 'string' || !sdp) {
-    return {
-      type: type || 'none',
-      length: 0,
-      firstLine: '-',
-      lastLine: '-',
-      lineCount: 0
-    };
-  }
-  const lines = sdp.split(/\r\n|\r|\n/).filter(line => line.length > 0);
-  return {
-    type: type || 'none',
-    length: sdp.length,
-    firstLine: lines.length > 0 ? lines[0] : '-',
-    lastLine: lines.length > 0 ? lines[lines.length - 1] : '-',
-    lineCount: lines.length
-  };
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-// Safe DOM initialization exactly once
+// Instantiate on DOM load
 window.addEventListener('DOMContentLoaded', () => {
-  try {
-    if (!window.phoneApp) {
-      window.phoneApp = new PhoneApp();
-    }
-  } catch (err) {
-    console.error('[PhoneApp] Fatal initialization prevented:', err);
-  }
+  window.phoneApp = new PhoneApp();
 });
