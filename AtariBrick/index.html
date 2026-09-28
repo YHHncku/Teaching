@@ -1,0 +1,2649 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Atari Breakout - iPhone Motion Controller</title>
+    <meta name="description" content="An experimental embodied Atari Breakout controlled physically with an iPhone orientation and motion via WebRTC." />
+    <meta property="og:title" content="Atari Breakout - iPhone Motion Controller" />
+    <meta property="og:description" content="An experimental embodied Atari Breakout controlled physically with an iPhone orientation and motion via WebRTC." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <style>
+      /* ============================================================
+         ATARI RETRO AESTHETIC & RESET
+         ============================================================ */
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
+
+      :root {
+        --bg-navy: #07131f;
+        --bg-darker: #040b12;
+        --bg-card: rgba(11, 27, 43, 0.88);
+        --border-color: #1b3854;
+        --border-glow: #00e5ff;
+        --text-cyan: #00f0ff;
+        --text-amber: #ffd000;
+        --text-pink: #ff2a7a;
+        --text-green: #22e565;
+        --text-dim: #5c7f9f;
+        --text-bright: #e9f5ff;
+        --font-mono: 'Courier New', Courier, Consolas, Monaco, monospace;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        background-color: var(--bg-navy);
+        color: var(--text-bright);
+        font-family: var(--font-mono);
+        overflow: hidden;
+        touch-action: none;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* Subtle CRT Scanline overlay */
+      body::after {
+        content: " ";
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+        background-size: 100% 3px, 6px 100%;
+        pointer-events: none;
+        z-index: 999;
+      }
+
+      /* Screen shake animation */
+      .screen-shake {
+        animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+      }
+      @keyframes shake {
+        10%, 90% { transform: translate3d(-3px, 2px, 0); }
+        20%, 80% { transform: translate3d(4px, -3px, 0); }
+        30%, 50%, 70% { transform: translate3d(-6px, 4px, 0); }
+        40%, 60% { transform: translate3d(6px, -4px, 0); }
+      }
+
+      /* Common Button & Input Styles */
+      button {
+        font-family: var(--font-mono);
+        font-size: 13px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        font-weight: 700;
+        padding: 9px 16px;
+        border: 1px solid var(--border-color);
+        background: rgba(14, 34, 54, 0.9);
+        color: var(--text-cyan);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
+      }
+      button:hover:not(:disabled) {
+        background: rgba(0, 240, 255, 0.18);
+        border-color: var(--text-cyan);
+        box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+        color: #ffffff;
+      }
+      button:active:not(:disabled) {
+        transform: scale(0.97);
+      }
+      button:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        box-shadow: none;
+        border-color: #243545;
+      }
+      button.btn-accent {
+        background: rgba(255, 42, 122, 0.2);
+        border-color: var(--text-pink);
+        color: #fff;
+        box-shadow: 0 0 12px rgba(255, 42, 122, 0.35);
+      }
+      button.btn-accent:hover:not(:disabled) {
+        background: rgba(255, 42, 122, 0.35);
+        box-shadow: 0 0 20px rgba(255, 42, 122, 0.6);
+      }
+      button.btn-green {
+        background: rgba(34, 229, 101, 0.2);
+        border-color: var(--text-green);
+        color: #fff;
+        box-shadow: 0 0 12px rgba(34, 229, 101, 0.35);
+      }
+      button.btn-green:hover:not(:disabled) {
+        background: rgba(34, 229, 101, 0.35);
+        box-shadow: 0 0 20px rgba(34, 229, 101, 0.6);
+      }
+
+      textarea {
+        width: 100%;
+        background: #02070c;
+        border: 1px solid var(--border-color);
+        color: #79a8d2;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 8px;
+        border-radius: 4px;
+        resize: none;
+        outline: none;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      textarea:focus {
+        border-color: var(--text-cyan);
+        box-shadow: 0 0 8px rgba(0, 240, 255, 0.25);
+      }
+
+      /* Status Badge */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 3px;
+        font-size: 11px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        border: 1px solid currentColor;
+      }
+      .badge-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background-color: currentColor;
+        box-shadow: 0 0 6px currentColor;
+      }
+      .badge-offline { color: var(--text-dim); border-color: #25394f; }
+      .badge-standby { color: var(--text-amber); border-color: rgba(255, 208, 0, 0.4); }
+      .badge-connected { color: var(--text-green); border-color: rgba(34, 229, 101, 0.5); }
+
+      /* ============================================================
+         GAME MODE VIEW
+         ============================================================ */
+      #game-view {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: none;
+      }
+      #game-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      /* Game Mode Header / Top HUD */
+      #game-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        pointer-events: none;
+        z-index: 10;
+      }
+      #game-header > * {
+        pointer-events: auto;
+      }
+
+      .game-title-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .game-logo {
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: #fff;
+        text-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
+      }
+      .game-sublogo {
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        color: var(--text-cyan);
+      }
+
+      .game-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      /* WebRTC Connection Overlay Modal (Game Mode) */
+      .modal-drawer {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 420px;
+        max-width: calc(100vw - 40px);
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.2);
+        border-radius: 6px;
+        padding: 16px;
+        z-index: 100;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        transition: transform 0.25s ease, opacity 0.25s ease;
+      }
+      .modal-drawer.collapsed {
+        transform: translateY(120%);
+        pointer-events: none;
+        opacity: 0;
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .drawer-title {
+        font-size: 12px;
+        letter-spacing: 1px;
+        color: var(--text-cyan);
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+      .drawer-close {
+        background: transparent;
+        border: none;
+        color: var(--text-dim);
+        font-size: 16px;
+        padding: 2px 6px;
+        box-shadow: none;
+      }
+      .drawer-close:hover {
+        color: #fff;
+      }
+
+      .step-block {
+        margin-bottom: 12px;
+      }
+      .step-label {
+        font-size: 11px;
+        color: var(--text-bright);
+        margin-bottom: 6px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .step-badge {
+        color: var(--text-amber);
+        font-weight: bold;
+      }
+
+      /* Controller QR / URL Helper */
+      .phone-guide-box {
+        background: rgba(0, 240, 255, 0.05);
+        border: 1px dashed var(--border-color);
+        border-radius: 4px;
+        padding: 8px 10px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+
+      /* Connected Floater pill in Game Mode */
+      #connected-banner {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(6, 20, 32, 0.85);
+        border: 1px solid var(--text-green);
+        box-shadow: 0 0 16px rgba(34, 229, 101, 0.35);
+        border-radius: 20px;
+        padding: 6px 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 50;
+        font-size: 11px;
+        letter-spacing: 1.5px;
+        color: var(--text-green);
+        backdrop-filter: blur(8px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      #connected-banner.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      /* ============================================================
+         CONTROLLER MODE VIEW
+         ============================================================ */
+      #controller-view {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 16px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .ctrl-top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .ctrl-title {
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 1.5px;
+        color: #fff;
+        text-shadow: 0 0 8px var(--text-cyan);
+      }
+
+      /* Phone Wireframe Visualizer */
+      .ctrl-canvas-container {
+        position: relative;
+        width: 100%;
+        max-width: 320px;
+        height: 180px;
+        margin: 10px auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      #phone-vis-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      /* Controller Dashboard Controls */
+      .ctrl-dashboard {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 480px;
+        margin: 0 auto;
+        width: 100%;
+      }
+
+      .ctrl-btn-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      @media (max-width: 360px) {
+        .ctrl-btn-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .ctrl-meter-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 5px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .meter-title-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--text-cyan);
+      }
+      .meter-bar-bg {
+        width: 100%;
+        height: 8px;
+        background: #02080f;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+      }
+      .meter-bar-fill {
+        height: 100%;
+        width: 50%;
+        background: var(--text-cyan);
+        box-shadow: 0 0 8px var(--text-cyan);
+        transition: width 0.05s linear;
+      }
+      .meter-bar-center {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        background: #ffffff;
+        opacity: 0.6;
+        transform: translateX(-50%);
+      }
+
+      .gesture-badges {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 2px;
+      }
+      .gesture-pill {
+        border: 1px solid var(--border-color);
+        background: rgba(3, 11, 20, 0.7);
+        border-radius: 4px;
+        padding: 8px;
+        text-align: center;
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: var(--text-dim);
+        transition: all 0.2s ease;
+      }
+      .gesture-pill.active {
+        border-color: var(--text-amber);
+        color: var(--text-amber);
+        background: rgba(255, 208, 0, 0.15);
+        box-shadow: 0 0 12px rgba(255, 208, 0, 0.4);
+        font-weight: bold;
+      }
+      .gesture-pill.shake-active {
+        border-color: var(--text-pink);
+        color: var(--text-pink);
+        background: rgba(255, 42, 122, 0.2);
+        box-shadow: 0 0 14px rgba(255, 42, 122, 0.5);
+        font-weight: bold;
+      }
+
+      /* Controller WebRTC Pairing box */
+      .ctrl-pair-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .ctrl-pair-card.minimized {
+        display: none;
+      }
+
+      /* ============================================================
+         DEBUG OVERLAY
+         ============================================================ */
+      #debug-overlay {
+        position: fixed;
+        top: 60px;
+        right: 16px;
+        width: 280px;
+        background: rgba(3, 9, 15, 0.88);
+        border: 1px solid rgba(0, 240, 255, 0.3);
+        border-radius: 4px;
+        padding: 10px 12px;
+        font-size: 10px;
+        line-height: 1.5;
+        color: #92b8de;
+        z-index: 200;
+        pointer-events: none;
+        backdrop-filter: blur(6px);
+        display: none;
+      }
+      #debug-overlay.active {
+        display: block;
+      }
+      .dbg-row {
+        display: flex;
+        justify-content: space-between;
+      }
+      .dbg-val {
+        color: var(--text-cyan);
+        font-weight: bold;
+      }
+
+      /* ============================================================
+         MODE PICKER / FALLBACK BANNER
+         ============================================================ */
+      #mode-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(2, 6, 12, 0.94);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+      }
+      .mode-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-glow);
+        box-shadow: 0 0 30px rgba(0, 240, 255, 0.25);
+        border-radius: 8px;
+        max-width: 480px;
+        width: 100%;
+        padding: 24px;
+        text-align: center;
+      }
+      .mode-title {
+        font-size: 20px;
+        font-weight: 900;
+        letter-spacing: 2px;
+        color: #fff;
+        margin-bottom: 8px;
+        text-shadow: 0 0 12px var(--text-cyan);
+      }
+      .mode-desc {
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--text-dim);
+        margin-bottom: 22px;
+      }
+      .mode-options {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .mode-btn {
+        padding: 14px;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+
+      /* Audio Permission Hint */
+      .audio-hint {
+        font-size: 10px;
+        color: var(--text-dim);
+        margin-top: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ============================================================
+         ROOT CONTAINER FOR GAME MODE
+         ============================================================ -->
+    <div id="game-view">
+      <canvas id="game-canvas"></canvas>
+
+      <!-- Top arcade header -->
+      <header id="game-header">
+        <div class="game-title-group">
+          <div class="game-logo">BREAKOUT</div>
+          <div class="game-sublogo">// MOTION EMBODIED</div>
+        </div>
+
+        <div class="game-actions">
+          <div id="game-status-badge" class="badge badge-offline">
+            <span class="badge-dot"></span>
+            <span id="game-status-text">KEYBOARD / MOUSE</span>
+          </div>
+          <button id="btn-toggle-pair" title="Connect iPhone as motion controller">
+            CONNECT PHONE
+          </button>
+          <button id="btn-toggle-debug" style="padding: 9px 10px;" title="Toggle telemetry HUD (D)">
+            DEBUG
+          </button>
+          <button id="btn-toggle-audio" style="padding: 9px 10px;" title="Toggle sound (M)">
+            SND: ON
+          </button>
+        </div>
+      </header>
+
+      <!-- WebRTC Manual Pairing Drawer (Game Mode) -->
+      <div id="game-pair-drawer" class="modal-drawer collapsed">
+        <div class="drawer-header">
+          <div class="drawer-title">CONNECT IPHONE CONTROLLER</div>
+          <button id="btn-close-pair" class="drawer-close">&times;</button>
+        </div>
+
+        <div class="phone-guide-box">
+          <div style="margin-bottom: 4px; color: var(--text-amber); font-weight: bold;">
+            1. OPEN ON IPHONE:
+          </div>
+          <div style="word-break: break-all; color: var(--text-cyan); margin-bottom: 6px;" id="controller-url-text">
+            ...
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button id="btn-copy-ctrl-url" style="flex: 1; padding: 6px 10px; font-size: 10px;">
+              COPY PHONE LINK
+            </button>
+            <button id="btn-open-ctrl-tab" style="padding: 6px 10px; font-size: 10px;">
+              OPEN TAB
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 1: Create and Copy Offer -->
+        <div class="step-block">
+          <div class="step-label">
+            <span><span class="step-badge">STEP 1:</span> CREATE OFFER ON MAC</span>
+            <button id="btn-copy-offer" style="padding: 3px 8px; font-size: 10px;" disabled>
+              COPY OFFER
+            </button>
+          </div>
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <button id="btn-create-offer" class="btn-accent" style="flex: 1;">
+              CREATE OFFER
+            </button>
+          </div>
+          <textarea id="mac-offer-text" rows="3" placeholder="Click 'CREATE OFFER' to generate signaling payload..." readonly></textarea>
+        </div>
+
+        <!-- Step 2: Paste Answer from iPhone -->
+        <div class="step-block">
+          <div class="step-label">
+            <span><span class="step-badge">STEP 2:</span> PASTE ANSWER FROM IPHONE</span>
+            <button id="btn-paste-answer" style="padding: 3px 8px; font-size: 10px;">
+              PASTE
+            </button>
+          </div>
+          <textarea id="mac-answer-text" rows="3" placeholder="Paste Answer JSON copied from iPhone..."></textarea>
+          <div style="margin-top: 6px;">
+            <button id="btn-apply-answer" class="btn-green" style="width: 100%;" disabled>
+              APPLY ANSWER
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Persistent Connected Floater -->
+      <div id="connected-banner">
+        <span class="badge-dot" style="background: var(--text-green);"></span>
+        <span>IPHONE CONTROLLER LINKED</span>
+        <button id="btn-reconnect" style="padding: 3px 8px; font-size: 9px; margin-left: 6px; border-color: #1b3854;">
+          OPTIONS
+        </button>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         ROOT CONTAINER FOR CONTROLLER MODE (IPHONE)
+         ============================================================ -->
+    <div id="controller-view">
+      <!-- Controller Top Bar -->
+      <div class="ctrl-top-bar">
+        <div class="ctrl-title">PADDLE CONTROLLER</div>
+        <div id="ctrl-status-badge" class="badge badge-offline">
+          <span class="badge-dot"></span>
+          <span id="ctrl-status-text">WAITING FOR OFFER</span>
+        </div>
+      </div>
+
+      <!-- 3D Phone Wireframe Visualizer -->
+      <div class="ctrl-canvas-container">
+        <canvas id="phone-vis-canvas"></canvas>
+      </div>
+
+      <!-- Controller Action Dashboard -->
+      <div class="ctrl-dashboard">
+        <!-- Sensor Permission and Calibration Buttons -->
+        <div class="ctrl-btn-row">
+          <button id="btn-enable-sensors" class="btn-accent">
+            ENABLE SENSORS
+          </button>
+          <button id="btn-calibrate" class="btn-green" disabled>
+            CALIBRATE FLAT
+          </button>
+        </div>
+
+        <!-- Grip Mode and Neutral Adjustment -->
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-toggle-grip" style="flex: 1; padding: 7px 10px; font-size: 11px;">
+            GRIP: HORIZONTAL TRAY
+          </button>
+          <button id="btn-ctrl-pair-toggle" style="padding: 7px 12px; font-size: 11px;">
+            PAIRING SETUP
+          </button>
+        </div>
+
+        <!-- Live Tilt Meter -->
+        <div class="ctrl-meter-card">
+          <div class="meter-title-row">
+            <span>PADDLE STEERING TILT</span>
+            <span id="tilt-degrees-val">0.0°</span>
+          </div>
+          <div class="meter-bar-bg">
+            <div class="meter-bar-center"></div>
+            <div id="tilt-meter-fill" class="meter-bar-fill"></div>
+          </div>
+        </div>
+
+        <!-- Gestures Indicator Cards -->
+        <div class="gesture-badges">
+          <div id="pill-flip" class="gesture-pill">
+            <div style="font-weight: bold; margin-bottom: 2px;">FLIP TO START</div>
+            <div id="pill-flip-sub" style="font-size: 9px;">HOLD FLAT FACE-UP</div>
+          </div>
+          <div id="pill-shake" class="gesture-pill">
+            <div style="font-weight: bold; margin-bottom: 2px;">SHAKE TO END</div>
+            <div id="pill-shake-sub" style="font-size: 9px;">VIGOROUS SHAKE</div>
+          </div>
+        </div>
+
+        <!-- Controller Pairing Drawer / Panel -->
+        <div id="ctrl-pair-card" class="ctrl-pair-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; color: var(--text-amber); font-weight: bold;">
+              WEBRTC MANUAL PAIRING
+            </span>
+            <button id="btn-ctrl-close-pair" style="background: none; border: none; font-size: 14px; padding: 0 4px; box-shadow: none;">
+              &times;
+            </button>
+          </div>
+
+          <div style="font-size: 10px; color: var(--text-dim);">
+            1. Paste Offer generated on Mac & tap Connect:
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-ctrl-paste-offer" style="font-size: 10px; padding: 6px 10px;">
+              PASTE OFFER
+            </button>
+            <button id="btn-ctrl-connect" class="btn-accent" style="flex: 1; font-size: 10px; padding: 6px 10px;">
+              CONNECT / ANSWER
+            </button>
+          </div>
+          <textarea id="ctrl-offer-input" rows="3" placeholder="Paste Mac Offer JSON here..."></textarea>
+
+          <div style="font-size: 10px; color: var(--text-dim); margin-top: 4px;">
+            2. Copy Answer back to Mac:
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-ctrl-copy-answer" class="btn-green" style="flex: 1; font-size: 10px; padding: 6px 10px;" disabled>
+              COPY ANSWER
+            </button>
+          </div>
+          <textarea id="ctrl-answer-output" rows="3" placeholder="Answer will generate here..." readonly></textarea>
+        </div>
+      </div>
+
+      <!-- Bottom hints -->
+      <div style="text-align: center; font-size: 10px; color: var(--text-dim); margin-top: 8px;">
+        HOLD PHONE FLAT WITH BOTH HANDS LIKE A TRAY
+      </div>
+    </div>
+
+    <!-- ============================================================
+         DEBUG HUD OVERLAY
+         ============================================================ -->
+    <div id="debug-overlay">
+      <div style="font-weight: bold; color: #fff; margin-bottom: 6px; border-bottom: 1px solid #1b3854; padding-bottom: 2px;">
+        TELEMETRY HUD
+      </div>
+      <div class="dbg-row"><span>FPS:</span><span id="dbg-fps" class="dbg-val">60</span></div>
+      <div class="dbg-row"><span>WebRTC:</span><span id="dbg-webrtc-state" class="dbg-val">new</span></div>
+      <div class="dbg-row"><span>Signaling:</span><span id="dbg-signaling" class="dbg-val">stable</span></div>
+      <div class="dbg-row"><span>DataChannel:</span><span id="dbg-dc-state" class="dbg-val">closed</span></div>
+      <div class="dbg-row"><span>Active Input:</span><span id="dbg-input-mode" class="dbg-val">DESKTOP</span></div>
+      <div class="dbg-row"><span>Orientation α/β/γ:</span><span id="dbg-orientation" class="dbg-val">0 / 0 / 0</span></div>
+      <div class="dbg-row"><span>Rel Beta / Gamma:</span><span id="dbg-rel-angles" class="dbg-val">0 / 0</span></div>
+      <div class="dbg-row"><span>Accel X/Y/Z:</span><span id="dbg-accel" class="dbg-val">0.0 / 0.0 / 0.0</span></div>
+      <div class="dbg-row"><span>Accel Mag:</span><span id="dbg-accel-mag" class="dbg-val">0.0 m/s²</span></div>
+      <div class="dbg-row"><span>Raw / Smoothed X:</span><span id="dbg-paddle-x" class="dbg-val">0.50 / 0.50</span></div>
+      <div class="dbg-row"><span>Pose:</span><span id="dbg-pose" class="dbg-val">FACE UP</span></div>
+      <div class="dbg-row"><span>Flip Hold Time:</span><span id="dbg-flip-hold" class="dbg-val">0 ms</span></div>
+      <div class="dbg-row"><span>Shake Score:</span><span id="dbg-shake-score" class="dbg-val">0</span></div>
+    </div>
+
+    <!-- ============================================================
+         STARTUP MODE SELECTOR MODAL
+         ============================================================ -->
+    <div id="mode-modal">
+      <div class="mode-card">
+        <div class="mode-title">ATARI BREAKOUT</div>
+        <div style="font-size: 11px; letter-spacing: 2px; color: var(--text-cyan); margin-bottom: 12px;">
+          EMBODIED MOTION EXPERIMENT
+        </div>
+        <p class="mode-desc">
+          Play classic Breakout on your Mac screen while controlling the paddle with an iPhone held horizontally in both hands like a tray.
+          Flip the phone to launch, shake vigorously to reset.
+        </p>
+
+        <div class="mode-options">
+          <button id="btn-select-game" class="btn-accent mode-btn">
+            RUN GAME MODE (MACBOOK DISPLAY)
+          </button>
+          <button id="btn-select-controller" class="mode-btn">
+            RUN CONTROLLER MODE (IPHONE)
+          </button>
+        </div>
+
+        <div class="audio-hint">
+          Audio effects synthesized via Web Audio API. Tap any button to initialize.
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         CORE APPLICATION JAVASCRIPT
+         ============================================================ -->
+    <script>
+      // ============================================================
+      // TUNING PARAMETERS
+      // ============================================================
+      const TUNING = {
+        // Paddle Steering
+        TILT_RANGE: 24.0,           // Degrees tilt for full edge-to-edge paddle sweep (±24°)
+        TILT_DEADZONE: 1.2,         // Deadzone in degrees around neutral position to prevent micro-jitter
+        PADDLE_SMOOTHING: 0.14,     // Exponential lerp smoothing factor (0.12 - 0.18 recommended)
+        ACCEL_IMPULSE_WEIGHT: 0.035,// Transient impulse from lateral accelerometer movement (no drift)
+
+        // Shake Gesture Detection
+        SHAKE_THRESHOLD: 13.0,      // Acceleration threshold (m/s²) beyond baseline gravity
+        SHAKE_WINDOW: 850,          // Rolling window (ms) to detect deliberate shaking
+        SHAKE_PEAKS_REQUIRED: 3,    // Number of distinct acceleration reversal peaks needed
+        SHAKE_COOLDOWN: 2000,       // Cooldown (ms) after shake detected
+
+        // Flip Gesture Detection
+        FLIP_HOLD_TIME: 360,        // Milliseconds the phone must remain face-down to confirm flip
+        FLIP_COOLDOWN: 1600,        // Cooldown (ms) after flip triggers ball launch
+        FLIP_ANGLE_THRESHOLD: 115,  // Absolute degrees on roll or pitch defining face-down
+
+        // Sensor Sampling & Comms
+        SENSOR_SEND_RATE: 30,       // Frequency of sensor packets transmitted over WebRTC (Hz)
+
+        // Breakout Gameplay Physics
+        BALL_SPEED_INITIAL: 6.8,    // Starting ball speed (px per frame at normalized 1000px height)
+        BALL_SPEED_MAX: 12.5,       // Maximum capped ball speed as bricks break
+        BALL_SPEED_INCREMENT: 0.15, // Speed boost per brick destroyed
+        PADDLE_WIDTH_RATIO: 0.15,   // Paddle width relative to game field width
+        PADDLE_HEIGHT_PX: 14,       // Paddle thickness
+        PADDLE_Y_OFFSET_PX: 38,     // Distance of paddle above bottom border
+        BALL_RADIUS_PX: 8,          // Ball radius
+        MAX_BOUNCE_ANGLE: 68 * (Math.PI / 180), // Max reflection angle (radians) to avoid horizontal traps
+      };
+
+      // ============================================================
+      // 8-BIT AUDIO SYNTHESIZER (WEB AUDIO API)
+      // ============================================================
+      class RetroAudio {
+        constructor() {
+          this.ctx = null;
+          this.enabled = true;
+        }
+
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) {
+              this.ctx = new AudioCtx();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        }
+
+        playTone(freq, type = 'square', duration = 0.08, endFreq = null, volume = 0.15) {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, now);
+            if (endFreq) {
+              osc.frequency.exponentialRampToValueAtTime(Math.max(10, endFreq), now + duration);
+            }
+
+            gain.gain.setValueAtTime(volume, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + duration);
+          } catch (e) {
+            // Audio error catch
+          }
+        }
+
+        playPaddleHit() {
+          this.playTone(240, 'square', 0.08, 180, 0.2);
+        }
+
+        playWallBounce() {
+          this.playTone(380, 'square', 0.05, 340, 0.12);
+        }
+
+        playBrickHit(rowIdx = 0) {
+          // Classic Atari ascending pitches for higher rows
+          const baseFreqs = [740, 680, 620, 560, 480, 420, 360, 300];
+          const freq = baseFreqs[rowIdx % baseFreqs.length] || 500;
+          this.playTone(freq, 'triangle', 0.09, freq * 1.25, 0.22);
+        }
+
+        playFlipStart() {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+          const notes = [330, 440, 550, 880];
+          notes.forEach((freq, idx) => {
+            setTimeout(() => {
+              this.playTone(freq, 'square', 0.1, freq * 1.05, 0.18);
+            }, idx * 60);
+          });
+        }
+
+        playLifeLost() {
+          this.playTone(180, 'sawtooth', 0.45, 45, 0.25);
+        }
+
+        playShakeReset() {
+          this.playTone(160, 'sawtooth', 0.35, 30, 0.3);
+        }
+
+        playVictory() {
+          const notes = [440, 554, 659, 880, 1108];
+          notes.forEach((freq, idx) => {
+            setTimeout(() => {
+              this.playTone(freq, 'square', 0.15, freq, 0.18);
+            }, idx * 100);
+          });
+        }
+      }
+
+      const audio = new RetroAudio();
+
+      // ============================================================
+      // WEBRTC CONNECTION MANAGER (MANUAL SDP PAIRING)
+      // ============================================================
+      class WebRTCManager {
+        constructor({ onOpen, onClose, onMessage, onStateChange }) {
+          this.onOpen = onOpen;
+          this.onClose = onClose;
+          this.onMessage = onMessage;
+          this.onStateChange = onStateChange;
+
+          this.pc = null;
+          this.dc = null;
+          this.isInitiator = false;
+
+          this.config = {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+            ],
+          };
+        }
+
+        initPeerConnection(isInitiator) {
+          this.close();
+          this.isInitiator = isInitiator;
+
+          try {
+            this.pc = new RTCPeerConnection(this.config);
+
+            this.pc.onconnectionstatechange = () => {
+              this.notifyState();
+              if (this.pc.connectionState === 'disconnected' || this.pc.connectionState === 'failed') {
+                if (this.onClose) this.onClose();
+              }
+            };
+
+            this.pc.onsignalingstatechange = () => {
+              this.notifyState();
+            };
+
+            this.pc.oniceconnectionstatechange = () => {
+              this.notifyState();
+            };
+
+            if (this.isInitiator) {
+              // Create unreliable low-latency data channel for fast motion data
+              this.dc = this.pc.createDataChannel('motion-channel', {
+                ordered: false,
+                maxRetransmits: 0,
+              });
+              this.setupDataChannel(this.dc);
+            } else {
+              this.pc.ondatachannel = (event) => {
+                this.dc = event.channel;
+                this.setupDataChannel(this.dc);
+              };
+            }
+          } catch (err) {
+            console.error('PeerConnection init failed:', err);
+          }
+        }
+
+        setupDataChannel(channel) {
+          channel.onopen = () => {
+            this.notifyState();
+            if (this.onOpen) this.onOpen();
+          };
+
+          channel.onclose = () => {
+            this.notifyState();
+            if (this.onClose) this.onClose();
+          };
+
+          channel.onerror = (err) => {
+            console.warn('DataChannel error:', err);
+          };
+
+          channel.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (this.onMessage) this.onMessage(data);
+            } catch (e) {
+              console.warn('Bad message payload:', event.data);
+            }
+          };
+        }
+
+        // Wait for ICE gathering to complete before outputting SDP
+        waitForIceGathering() {
+          return new Promise((resolve) => {
+            if (!this.pc) return resolve();
+            if (this.pc.iceGatheringState === 'complete') {
+              resolve();
+              return;
+            }
+
+            const checkState = () => {
+              if (this.pc.iceGatheringState === 'complete') {
+                this.pc.removeEventListener('icegatheringstatechange', checkState);
+                resolve();
+              }
+            };
+
+            this.pc.addEventListener('icegatheringstatechange', checkState);
+
+            // Timeout safety fallback in case STUN takes too long
+            setTimeout(() => {
+              this.pc.removeEventListener('icegatheringstatechange', checkState);
+              resolve();
+            }, 2000);
+          });
+        }
+
+        async createOffer() {
+          this.initPeerConnection(true);
+          const offer = await this.pc.createOffer();
+          await this.pc.setLocalDescription(offer);
+          await this.waitForIceGathering();
+          return JSON.stringify(this.pc.localDescription);
+        }
+
+        async handleOfferAndCreateAnswer(offerJsonString) {
+          this.initPeerConnection(false);
+          const offerDesc = JSON.parse(offerJsonString);
+          await this.pc.setRemoteDescription(new RTCSessionDescription(offerDesc));
+
+          const answer = await this.pc.createAnswer();
+          await this.pc.setLocalDescription(answer);
+          await this.waitForIceGathering();
+          return JSON.stringify(this.pc.localDescription);
+        }
+
+        async applyAnswer(answerJsonString) {
+          if (!this.pc) {
+            throw new Error('No active connection. Create an offer first.');
+          }
+
+          if (this.pc.signalingState !== 'have-local-offer') {
+            throw new Error(`Cannot apply answer in signaling state: '${this.pc.signalingState}'. Offer must be created first.`);
+          }
+
+          const answerDesc = JSON.parse(answerJsonString);
+          await this.pc.setRemoteDescription(new RTCSessionDescription(answerDesc));
+        }
+
+        send(payload) {
+          if (this.dc && this.dc.readyState === 'open') {
+            this.dc.send(JSON.stringify(payload));
+            return true;
+          }
+          return false;
+        }
+
+        isConnected() {
+          return this.dc && this.dc.readyState === 'open';
+        }
+
+        notifyState() {
+          if (this.onStateChange) {
+            this.onStateChange({
+              connectionState: this.pc ? this.pc.connectionState : 'closed',
+              signalingState: this.pc ? this.pc.signalingState : 'closed',
+              iceState: this.pc ? this.pc.iceConnectionState : 'closed',
+              dcState: this.dc ? this.dc.readyState : 'closed',
+            });
+          }
+        }
+
+        close() {
+          if (this.dc) {
+            try { this.dc.close(); } catch (e) {}
+            this.dc = null;
+          }
+          if (this.pc) {
+            try { this.pc.close(); } catch (e) {}
+            this.pc = null;
+          }
+          this.notifyState();
+        }
+      }
+
+      // ============================================================
+      // SENSOR & GESTURE DETECTOR (CONTROLLER ENGINE)
+      // ============================================================
+      class ControllerSensorEngine {
+        constructor({ onSensorUpdate, onGestureDetected, onStatusChange }) {
+          this.onSensorUpdate = onSensorUpdate;
+          this.onGestureDetected = onGestureDetected;
+          this.onStatusChange = onStatusChange;
+
+          this.sensorsActive = false;
+          this.isCalibrated = false;
+          this.gripMode = 'landscape'; // 'landscape' or 'portrait'
+
+          // Raw readings
+          this.alpha = 0;
+          this.beta = 0;
+          this.gamma = 0;
+
+          this.ax = 0;
+          this.ay = 0;
+          this.az = 0;
+
+          this.gx = 0;
+          this.gy = 0;
+          this.gz = 0;
+
+          // Neutral calibration
+          this.neutralBeta = 0;
+          this.neutralGamma = 0;
+          this.neutralGz = -9.8;
+
+          // Processed relative values
+          this.relBeta = 0;
+          this.relGamma = 0;
+          this.steeringTilt = 0;
+          this.normalizedX = 0.5;
+
+          // Flip detection state
+          this.pose = 'FACE_UP'; // 'FACE_UP', 'FACE_DOWN', 'SIDE'
+          this.faceDownStartTime = 0;
+          this.lastFlipTriggerTime = 0;
+
+          // Shake detection state
+          this.recentAccels = [];
+          this.shakeScore = 0;
+          this.lastShakeTriggerTime = 0;
+          this.prevSampleTime = 0;
+          this.prevAccMag = 0;
+
+          this.sendIntervalId = null;
+        }
+
+        async requestPermissions() {
+          let granted = false;
+
+          // iOS 13+ DeviceOrientation
+          if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            try {
+              const res = await DeviceOrientationEvent.requestPermission();
+              granted = (res === 'granted');
+            } catch (err) {
+              console.warn('Orientation permission rejected:', err);
+            }
+          } else {
+            granted = true; // Non-iOS / modern Android / Desktop
+          }
+
+          // iOS 13+ DeviceMotion
+          if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+            try {
+              const res2 = await DeviceMotionEvent.requestPermission();
+              granted = granted && (res2 === 'granted');
+            } catch (err) {
+              console.warn('Motion permission rejected:', err);
+            }
+          }
+
+          if (granted) {
+            this.startListeners();
+            this.sensorsActive = true;
+            this.calibrateNeutral();
+          }
+
+          return granted;
+        }
+
+        startListeners() {
+          window.addEventListener('deviceorientation', (e) => this.handleOrientation(e), true);
+          window.addEventListener('devicemotion', (e) => this.handleMotion(e), true);
+
+          // Sensor packet broadcast loop (~30Hz)
+          if (this.sendIntervalId) clearInterval(this.sendIntervalId);
+          this.sendIntervalId = setInterval(() => {
+            this.broadcastTick();
+          }, 1000 / TUNING.SENSOR_SEND_RATE);
+        }
+
+        handleOrientation(e) {
+          if (e.beta === null || e.gamma === null) return;
+          this.alpha = e.alpha || 0;
+          this.beta = e.beta || 0;
+          this.gamma = e.gamma || 0;
+
+          this.calculateRelativeOrientation();
+          this.evaluateFlipGesture();
+        }
+
+        handleMotion(e) {
+          // Acceleration excluding gravity if available, or compute delta
+          if (e.acceleration && e.acceleration.x !== null) {
+            this.ax = e.acceleration.x || 0;
+            this.ay = e.acceleration.y || 0;
+            this.az = e.acceleration.z || 0;
+          }
+
+          if (e.accelerationIncludingGravity) {
+            this.gx = e.accelerationIncludingGravity.x || 0;
+            this.gy = e.accelerationIncludingGravity.y || 0;
+            this.gz = e.accelerationIncludingGravity.z || 0;
+          }
+
+          this.evaluateShakeGesture();
+        }
+
+        calibrateNeutral() {
+          this.neutralBeta = this.beta;
+          this.neutralGamma = this.gamma;
+          this.neutralGz = this.gz || -9.8;
+          this.isCalibrated = true;
+          this.calculateRelativeOrientation();
+
+          if (this.onStatusChange) {
+            this.onStatusChange({ isCalibrated: true, neutralBeta: this.neutralBeta, neutralGamma: this.neutralGamma });
+          }
+        }
+
+        calculateRelativeOrientation() {
+          // Relatives
+          this.relBeta = this.beta - this.neutralBeta;
+          this.relGamma = this.gamma - this.neutralGamma;
+
+          // When held like a tray:
+          // In 'landscape' tray grip: left/right tilt rolls around the phone's beta axis (or gamma depending on exact hold)
+          // In 'portrait' tray grip: left/right tilt rolls around gamma axis
+          let rawTilt = 0;
+          if (this.gripMode === 'landscape') {
+            rawTilt = this.relBeta;
+          } else {
+            rawTilt = this.relGamma;
+          }
+
+          // Apply deadzone around zero
+          let deadzonedTilt = 0;
+          if (Math.abs(rawTilt) > TUNING.TILT_DEADZONE) {
+            deadzonedTilt = rawTilt > 0 ? (rawTilt - TUNING.TILT_DEADZONE) : (rawTilt + TUNING.TILT_DEADZONE);
+          }
+
+          this.steeringTilt = deadzonedTilt;
+
+          // Map [-TILT_RANGE, +TILT_RANGE] to [0.0, 1.0]
+          let mapped = 0.5 + (deadzonedTilt / (TUNING.TILT_RANGE * 2));
+          this.normalizedX = Math.max(0.0, Math.min(1.0, mapped));
+        }
+
+        evaluateFlipGesture() {
+          const now = performance.now();
+
+          // On mobile: Face-down is indicated when pitch (beta) or roll (gamma) passes ±115 degrees,
+          // or gravity Z component inverts relative to calibrated flat orientation.
+          const isFaceDownAngle = Math.abs(this.beta) > TUNING.FLIP_ANGLE_THRESHOLD || Math.abs(this.gamma) > TUNING.FLIP_ANGLE_THRESHOLD;
+          const isFaceDownGravity = (this.neutralGz < 0 && this.gz > 4.5) || (this.neutralGz > 0 && this.gz < -4.5);
+          const isFaceDown = isFaceDownAngle || isFaceDownGravity;
+
+          if (isFaceDown) {
+            this.pose = 'FACE_DOWN';
+            if (this.faceDownStartTime === 0) {
+              this.faceDownStartTime = now;
+            } else {
+              const holdDuration = now - this.faceDownStartTime;
+              if (holdDuration >= TUNING.FLIP_HOLD_TIME && (now - this.lastFlipTriggerTime > TUNING.FLIP_COOLDOWN)) {
+                this.lastFlipTriggerTime = now;
+                this.faceDownStartTime = 0;
+                this.triggerGesture('flip');
+              }
+            }
+          } else {
+            this.pose = 'FACE_UP';
+            this.faceDownStartTime = 0;
+          }
+        }
+
+        evaluateShakeGesture() {
+          const now = performance.now();
+          if (now - this.lastShakeTriggerTime < TUNING.SHAKE_COOLDOWN) {
+            return;
+          }
+
+          // Calculate acceleration magnitude
+          let mag = 0;
+          if (this.ax !== 0 || this.ay !== 0 || this.az !== 0) {
+            mag = Math.hypot(this.ax, this.ay, this.az);
+          } else if (this.gx !== 0 || this.gy !== 0) {
+            // Fallback: magnitude of delta from gravity
+            const totalG = Math.hypot(this.gx, this.gy, this.gz);
+            mag = Math.abs(totalG - 9.8);
+          }
+
+          // Maintain rolling window of samples
+          this.recentAccels.push({ t: now, mag });
+          const cutoff = now - TUNING.SHAKE_WINDOW;
+          while (this.recentAccels.length > 0 && this.recentAccels[0].t < cutoff) {
+            this.recentAccels.shift();
+          }
+
+          // Count distinct acceleration peaks above threshold
+          let peaks = 0;
+          let inPeak = false;
+          for (let i = 1; i < this.recentAccels.length - 1; i++) {
+            const m = this.recentAccels[i].mag;
+            if (m > TUNING.SHAKE_THRESHOLD) {
+              if (!inPeak && m > this.recentAccels[i - 1].mag && m >= this.recentAccels[i + 1].mag) {
+                peaks++;
+                inPeak = true;
+              }
+            } else {
+              inPeak = false;
+            }
+          }
+
+          this.shakeScore = peaks;
+
+          if (peaks >= TUNING.SHAKE_PEAKS_REQUIRED) {
+            this.lastShakeTriggerTime = now;
+            this.recentAccels = [];
+            this.shakeScore = 0;
+            this.triggerGesture('shake');
+          }
+        }
+
+        triggerGesture(type) {
+          if (this.onGestureDetected) {
+            this.onGestureDetected(type);
+          }
+        }
+
+        broadcastTick() {
+          if (!this.sensorsActive) return;
+
+          const packet = {
+            type: 'sensor',
+            alpha: Math.round(this.alpha * 10) / 10,
+            beta: Math.round(this.beta * 10) / 10,
+            gamma: Math.round(this.gamma * 10) / 10,
+            relBeta: Math.round(this.relBeta * 10) / 10,
+            relGamma: Math.round(this.relGamma * 10) / 10,
+            tilt: Math.round(this.steeringTilt * 10) / 10,
+            normX: Math.round(this.normalizedX * 1000) / 1000,
+            ax: Math.round(this.ax * 100) / 100,
+            ay: Math.round(this.ay * 100) / 100,
+            az: Math.round(this.az * 100) / 100,
+            pose: this.pose,
+            timestamp: Date.now(),
+          };
+
+          if (this.onSensorUpdate) {
+            this.onSensorUpdate(packet);
+          }
+        }
+
+        getDebugInfo() {
+          return {
+            alpha: this.alpha.toFixed(1),
+            beta: this.beta.toFixed(1),
+            gamma: this.gamma.toFixed(1),
+            relBeta: this.relBeta.toFixed(1),
+            relGamma: this.relGamma.toFixed(1),
+            tilt: this.steeringTilt.toFixed(1),
+            normX: this.normalizedX.toFixed(2),
+            ax: this.ax.toFixed(2),
+            ay: this.ay.toFixed(2),
+            az: this.az.toFixed(2),
+            mag: Math.hypot(this.ax, this.ay, this.az).toFixed(1),
+            pose: this.pose,
+            flipHold: this.faceDownStartTime ? Math.round(performance.now() - this.faceDownStartTime) : 0,
+            shakeScore: this.shakeScore,
+          };
+        }
+      }
+
+      // ============================================================
+      // 3D PHONE WIREFRAME VISUALIZER (CONTROLLER SCREEN CANVAS)
+      // ============================================================
+      class PhoneVisualizer {
+        constructor(canvas) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext('2d');
+          this.resize();
+          window.addEventListener('resize', () => this.resize());
+        }
+
+        resize() {
+          const rect = this.canvas.parentElement.getBoundingClientRect();
+          this.width = rect.width || 300;
+          this.height = rect.height || 180;
+          this.canvas.width = this.width * (window.devicePixelRatio || 1);
+          this.canvas.height = this.height * (window.devicePixelRatio || 1);
+          this.ctx.resetTransform();
+          this.ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+        }
+
+        render(beta, gamma, pose, isCalibrated) {
+          const ctx = this.ctx;
+          const w = this.width;
+          const h = this.height;
+
+          ctx.clearRect(0, 0, w, h);
+
+          // Center coordinate system
+          ctx.save();
+          ctx.translate(w / 2, h / 2);
+
+          // Perspective transformation representing phone tray
+          const radGamma = (gamma || 0) * (Math.PI / 180);
+          const radBeta = (beta || 0) * (Math.PI / 180);
+
+          ctx.rotate(radGamma * 0.85);
+
+          // Simulated 3D isometric pitch scale
+          const pitchScale = Math.cos(radBeta * 0.6);
+          ctx.scale(1, Math.max(0.2, pitchScale));
+
+          // Base Tray Phone Dimensions
+          const phoneW = 140;
+          const phoneH = 80;
+          const r = 10;
+
+          // Tray glow & fill
+          const isFaceDown = pose === 'FACE_DOWN';
+          const strokeColor = isFaceDown ? '#ff2a7a' : (isCalibrated ? '#00f0ff' : '#ffd000');
+          const fillColor = isFaceDown ? 'rgba(255, 42, 122, 0.15)' : 'rgba(0, 240, 255, 0.1)';
+
+          ctx.fillStyle = fillColor;
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = strokeColor;
+          ctx.shadowBlur = 10;
+
+          // Draw Rounded Rect Phone Body
+          ctx.beginPath();
+          ctx.roundRect(-phoneW / 2, -phoneH / 2, phoneW, phoneH, r);
+          ctx.fill();
+          ctx.stroke();
+
+          // Screen bezel
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(-phoneW / 2 + 8, -phoneH / 2 + 6, phoneW - 16, phoneH - 12, 6);
+          ctx.stroke();
+
+          // Home/Camera notches
+          ctx.fillStyle = strokeColor;
+          ctx.beginPath();
+          ctx.arc(-phoneW / 2 + 4, 0, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Center Level Indicator / Crosshairs
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.beginPath();
+          ctx.moveTo(-15, 0); ctx.lineTo(15, 0);
+          ctx.moveTo(0, -10); ctx.lineTo(0, 10);
+          ctx.stroke();
+
+          // Pose label on screen
+          ctx.font = '10px Courier New, monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = isFaceDown ? '#ff2a7a' : '#ffffff';
+          ctx.fillText(pose, 0, 0);
+
+          ctx.restore();
+        }
+      }
+
+      // ============================================================
+      // PARTICLE SYSTEM (GEOMETRIC BRICK EXPLOSIONS & MOTIONS)
+      // ============================================================
+      class ParticleSystem {
+        constructor() {
+          this.particles = [];
+        }
+
+        spawnBrickExplosion(x, y, color, count = 8) {
+          for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 / count) * i + (Math.random() - 0.5) * 0.5;
+            const speed = 2.0 + Math.random() * 4.5;
+            this.particles.push({
+              x,
+              y,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed - 1.2,
+              color,
+              size: 3 + Math.random() * 3,
+              alpha: 1.0,
+              decay: 0.025 + Math.random() * 0.025,
+              rotation: Math.random() * Math.PI,
+              vRot: (Math.random() - 0.5) * 0.2,
+            });
+          }
+        }
+
+        update() {
+          for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.12; // Gravity
+            p.vx *= 0.98;
+            p.alpha -= p.decay;
+            p.rotation += p.vRot;
+
+            if (p.alpha <= 0) {
+              this.particles.splice(i, 1);
+            }
+          }
+        }
+
+        draw(ctx) {
+          ctx.save();
+          for (const p of this.particles) {
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 6;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation);
+            // Draw clean square shard
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.restore();
+          }
+          ctx.restore();
+        }
+      }
+
+      // ============================================================
+      // ATARI BREAKOUT GAME ENGINE
+      // ============================================================
+      class BreakoutGame {
+        constructor(canvas, onShakeDetected) {
+          this.canvas = canvas;
+          this.ctx = canvas.getContext('2d');
+          this.onShakeDetected = onShakeDetected;
+
+          this.particles = new ParticleSystem();
+
+          // Responsive sizing
+          this.width = window.innerWidth;
+          this.height = window.innerHeight;
+          this.dpr = window.devicePixelRatio || 1;
+
+          // Game state
+          this.state = 'READY'; // 'READY', 'PLAYING', 'LIFE_LOST', 'GAME_OVER', 'VICTORY'
+          this.score = 0;
+          this.lives = 3;
+          this.highScore = parseInt(localStorage.getItem('breakout_hi') || '0', 10);
+
+          // Paddle properties
+          this.paddle = {
+            targetX: 0.5,
+            smoothedX: 0.5,
+            prevX: 0.5,
+            vx: 0,
+            w: 140,
+            h: TUNING.PADDLE_HEIGHT_PX,
+            y: 0,
+            trail: [],
+          };
+
+          // Ball properties
+          this.ball = {
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0,
+            speed: TUNING.BALL_SPEED_INITIAL,
+            r: TUNING.BALL_RADIUS_PX,
+            trail: [],
+          };
+
+          // Bricks grid
+          this.bricks = [];
+          this.brickRows = 7;
+          this.brickCols = 12;
+          this.totalBricks = 0;
+          this.remainingBricks = 0;
+
+          // Screen shake & visual impacts
+          this.shakeIntensity = 0;
+          this.bannerMessage = '';
+          this.bannerSubmessage = '';
+          this.bannerTimer = 0;
+
+          // Input modes
+          this.controllerActive = false;
+          this.mouseActive = false;
+          this.keyLeft = false;
+          this.keyRight = false;
+
+          // Diagnostics
+          this.fps = 60;
+          this.frameCount = 0;
+          this.lastFpsUpdate = performance.now();
+
+          this.resize();
+          this.initBricks();
+          this.resetBallOnPaddle();
+
+          window.addEventListener('resize', () => this.resize());
+          this.setupKeyboard();
+          this.setupMouse();
+        }
+
+        resize() {
+          this.width = window.innerWidth;
+          this.height = window.innerHeight;
+          this.dpr = window.devicePixelRatio || 1;
+
+          this.canvas.width = this.width * this.dpr;
+          this.canvas.height = this.height * this.dpr;
+          this.ctx.resetTransform();
+          this.ctx.scale(this.dpr, this.dpr);
+
+          // Scale paddle width responsively
+          this.paddle.w = Math.max(90, Math.min(220, this.width * TUNING.PADDLE_WIDTH_RATIO));
+          this.paddle.y = this.height - TUNING.PADDLE_Y_OFFSET_PX;
+
+          this.initBricks();
+          if (this.state === 'READY') {
+            this.resetBallOnPaddle();
+          }
+        }
+
+        initBricks() {
+          this.bricks = [];
+          // Atari Rainbow Palette (from top row to bottom)
+          const colors = [
+            '#ff2a7a', // Neon Pink
+            '#ff4d2e', // Red-Orange
+            '#ff9214', // Vibrant Orange
+            '#ffd000', // Yellow
+            '#22e565', // Neon Green
+            '#00e5ff', // Cyan
+            '#2979ff', // Arcade Blue
+            '#a838ff', // Electric Purple
+          ];
+
+          const marginX = Math.max(20, this.width * 0.05);
+          const marginTop = Math.max(70, this.height * 0.12);
+          const gridWidth = this.width - marginX * 2;
+          const gap = 4;
+          const brickW = (gridWidth - gap * (this.brickCols - 1)) / this.brickCols;
+          const brickH = Math.max(14, Math.min(26, this.height * 0.03));
+
+          this.totalBricks = 0;
+
+          for (let r = 0; r < this.brickRows; r++) {
+            const rowColor = colors[r % colors.length];
+            const points = (this.brickRows - r) * 10;
+
+            for (let c = 0; c < this.brickCols; c++) {
+              const x = marginX + c * (brickW + gap);
+              const y = marginTop + r * (brickH + gap);
+
+              this.bricks.push({
+                x,
+                y,
+                w: brickW,
+                h: brickH,
+                color: rowColor,
+                points,
+                row: r,
+                alive: true,
+              });
+              this.totalBricks++;
+            }
+          }
+          this.remainingBricks = this.totalBricks;
+        }
+
+        resetBallOnPaddle() {
+          const paddlePx = this.paddle.smoothedX * (this.width - this.paddle.w);
+          this.ball.x = paddlePx + this.paddle.w / 2;
+          this.ball.y = this.paddle.y - this.ball.r - 2;
+          this.ball.vx = 0;
+          this.ball.vy = 0;
+          this.ball.speed = TUNING.BALL_SPEED_INITIAL;
+          this.ball.trail = [];
+        }
+
+        launchBall() {
+          if (this.state !== 'READY') return;
+          this.state = 'PLAYING';
+          audio.playFlipStart();
+
+          // Angle launch towards center or slightly randomized
+          const angle = (Math.random() * 0.5 - 0.25) * Math.PI - Math.PI / 2;
+          this.ball.vx = Math.sin(angle) * this.ball.speed;
+          this.ball.vy = -Math.cos(angle) * this.ball.speed;
+        }
+
+        handleShakeTrigger() {
+          audio.playShakeReset();
+          this.shakeIntensity = 22;
+          this.state = 'READY';
+          this.bannerMessage = 'SHAKE DETECTED';
+          this.bannerSubmessage = 'RESETTING GAME TO READY';
+          this.bannerTimer = 120;
+          this.resetBallOnPaddle();
+        }
+
+        setupKeyboard() {
+          window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') {
+              this.keyLeft = true;
+              this.controllerActive = false;
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd') {
+              this.keyRight = true;
+              this.controllerActive = false;
+            }
+            if (e.code === 'Space') {
+              e.preventDefault();
+              if (this.state === 'READY') {
+                this.launchBall();
+              }
+            }
+            if (e.key === 'Escape') {
+              this.handleShakeTrigger();
+            }
+            if (e.key === 'd' || e.key === 'D') {
+              document.getElementById('debug-overlay').classList.toggle('active');
+            }
+            if (e.key === 'm' || e.key === 'M') {
+              audio.enabled = !audio.enabled;
+              document.getElementById('btn-toggle-audio').textContent = `SND: ${audio.enabled ? 'ON' : 'OFF'}`;
+            }
+          });
+
+          window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') this.keyLeft = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') this.keyRight = false;
+          });
+        }
+
+        setupMouse() {
+          window.addEventListener('mousemove', (e) => {
+            if (!this.controllerActive) {
+              const norm = (e.clientX - this.paddle.w / 2) / (this.width - this.paddle.w);
+              this.paddle.targetX = Math.max(0, Math.min(1, norm));
+            }
+          });
+
+          window.addEventListener('click', () => {
+            audio.init();
+            if (this.state === 'READY') {
+              this.launchBall();
+            }
+          });
+        }
+
+        applyControllerSensor(packet) {
+          this.controllerActive = true;
+
+          // Target X directly from calibrated steering tilt
+          let target = packet.normX;
+
+          // Add transient impulse from horizontal acceleration (ax) without long term drift
+          if (packet.ax) {
+            target += packet.ax * TUNING.ACCEL_IMPULSE_WEIGHT;
+          }
+
+          this.paddle.targetX = Math.max(0, Math.min(1, target));
+        }
+
+        update() {
+          // FPS Counter
+          this.frameCount++;
+          const now = performance.now();
+          if (now - this.lastFpsUpdate >= 500) {
+            this.fps = Math.round((this.frameCount * 1000) / (now - this.lastFpsUpdate));
+            this.frameCount = 0;
+            this.lastFpsUpdate = now;
+          }
+
+          // Fallback keyboard navigation when controller not steering
+          if (!this.controllerActive) {
+            if (this.keyLeft) {
+              this.paddle.targetX = Math.max(0, this.paddle.targetX - 0.025);
+            }
+            if (this.keyRight) {
+              this.paddle.targetX = Math.min(1, this.paddle.targetX + 0.025);
+            }
+          }
+
+          // Paddle smoothing (exponential low-pass lerp filter)
+          const prevSmooth = this.paddle.smoothedX;
+          this.paddle.smoothedX += (this.paddle.targetX - this.paddle.smoothedX) * TUNING.PADDLE_SMOOTHING;
+          this.paddle.vx = (this.paddle.smoothedX - prevSmooth) * (this.width - this.paddle.w);
+
+          // Update paddle trail on fast movements
+          const currentPaddlePx = this.paddle.smoothedX * (this.width - this.paddle.w);
+          if (Math.abs(this.paddle.vx) > 3.0) {
+            this.paddle.trail.push({ x: currentPaddlePx, alpha: 0.4 });
+          }
+          for (let i = this.paddle.trail.length - 1; i >= 0; i--) {
+            this.paddle.trail[i].alpha -= 0.08;
+            if (this.paddle.trail[i].alpha <= 0) {
+              this.paddle.trail.splice(i, 1);
+            }
+          }
+
+          // Screen shake decay
+          if (this.shakeIntensity > 0) {
+            this.shakeIntensity *= 0.9;
+            if (this.shakeIntensity < 0.1) this.shakeIntensity = 0;
+          }
+
+          // Particles update
+          this.particles.update();
+
+          // Ball logic
+          if (this.state === 'READY') {
+            this.resetBallOnPaddle();
+          } else if (this.state === 'PLAYING') {
+            this.updateBallPhysics();
+          }
+
+          if (this.bannerTimer > 0) {
+            this.bannerTimer--;
+          }
+        }
+
+        updateBallPhysics() {
+          const ball = this.ball;
+          const paddleX = this.paddle.smoothedX * (this.width - this.paddle.w);
+          const paddleW = this.paddle.w;
+          const paddleY = this.paddle.y;
+          const paddleH = this.paddle.h;
+
+          // Ball trail
+          ball.trail.push({ x: ball.x, y: ball.y, alpha: 0.6 });
+          if (ball.trail.length > 7) ball.trail.shift();
+          for (const t of ball.trail) {
+            t.alpha *= 0.85;
+          }
+
+          // Move ball
+          ball.x += ball.vx;
+          ball.y += ball.vy;
+
+          // Wall Collisions
+          // Left Wall
+          if (ball.x - ball.r <= 0) {
+            ball.x = ball.r;
+            ball.vx = Math.abs(ball.vx);
+            audio.playWallBounce();
+          }
+          // Right Wall
+          if (ball.x + ball.r >= this.width) {
+            ball.x = this.width - ball.r;
+            ball.vx = -Math.abs(ball.vx);
+            audio.playWallBounce();
+          }
+          // Top Wall
+          if (ball.y - ball.r <= 0) {
+            ball.y = ball.r;
+            ball.vy = Math.abs(ball.vy);
+            audio.playWallBounce();
+          }
+
+          // Paddle Collision
+          if (
+            ball.y + ball.r >= paddleY &&
+            ball.y - ball.r <= paddleY + paddleH &&
+            ball.x >= paddleX - ball.r &&
+            ball.x <= paddleX + paddleW + ball.r &&
+            ball.vy > 0
+          ) {
+            audio.playPaddleHit();
+            ball.y = paddleY - ball.r;
+
+            // Bounce angle depends on hit location relative to paddle center
+            const hitOffset = (ball.x - (paddleX + paddleW / 2)) / (paddleW / 2);
+            const clampedOffset = Math.max(-1, Math.min(1, hitOffset));
+
+            // Deflect angle (0 is straight up, ±MAX_BOUNCE_ANGLE)
+            const bounceAngle = clampedOffset * TUNING.MAX_BOUNCE_ANGLE;
+
+            // Add paddle velocity impulse to bounce
+            const speed = Math.hypot(ball.vx, ball.vy);
+            ball.vx = Math.sin(bounceAngle) * speed + (this.paddle.vx * 0.15);
+            ball.vy = -Math.cos(bounceAngle) * speed;
+
+            // Re-normalize ball speed
+            const newSpeed = Math.hypot(ball.vx, ball.vy);
+            ball.vx = (ball.vx / newSpeed) * ball.speed;
+            ball.vy = (ball.vy / newSpeed) * ball.speed;
+
+            // Micro particle puff
+            this.particles.spawnBrickExplosion(ball.x, paddleY, '#ffffff', 4);
+          }
+
+          // Brick Collisions
+          for (const brick of this.bricks) {
+            if (!brick.alive) continue;
+
+            if (
+              ball.x + ball.r > brick.x &&
+              ball.x - ball.r < brick.x + brick.w &&
+              ball.y + ball.r > brick.y &&
+              ball.y - ball.r < brick.y + brick.h
+            ) {
+              brick.alive = false;
+              this.remainingBricks--;
+              this.score += brick.points;
+              if (this.score > this.highScore) {
+                this.highScore = this.score;
+                localStorage.setItem('breakout_hi', this.highScore.toString());
+              }
+
+              audio.playBrickHit(brick.row);
+              this.particles.spawnBrickExplosion(brick.x + brick.w / 2, brick.y + brick.h / 2, brick.color, 8);
+
+              // Slightly boost speed
+              ball.speed = Math.min(TUNING.BALL_SPEED_MAX, ball.speed + TUNING.BALL_SPEED_INCREMENT);
+
+              // Determine bounce direction from closest edge
+              const overlapLeft = (ball.x + ball.r) - brick.x;
+              const overlapRight = (brick.x + brick.w) - (ball.x - ball.r);
+              const overlapTop = (ball.y + ball.r) - brick.y;
+              const overlapBottom = (brick.y + brick.h) - (ball.y - ball.r);
+
+              const minOverlapX = Math.min(overlapLeft, overlapRight);
+              const minOverlapY = Math.min(overlapTop, overlapBottom);
+
+              if (minOverlapX < minOverlapY) {
+                ball.vx = -ball.vx;
+              } else {
+                ball.vy = -ball.vy;
+              }
+
+              // Victory check
+              if (this.remainingBricks <= 0) {
+                this.state = 'VICTORY';
+                audio.playVictory();
+                this.bannerMessage = 'STAGE CLEARED!';
+                this.bannerSubmessage = 'HOLD PHONE FLAT & FLIP TO REPLAY';
+                this.bannerTimer = 9999;
+              }
+              break;
+            }
+          }
+
+          // Bottom Gutter: Ball Lost
+          if (ball.y - ball.r > this.height) {
+            audio.playLifeLost();
+            this.lives--;
+            this.shakeIntensity = 12;
+
+            if (this.lives > 0) {
+              this.state = 'READY';
+              this.bannerMessage = `BALL LOST! (${this.lives} LIVES LEFT)`;
+              this.bannerSubmessage = 'HOLD FLAT & FLIP PHONE TO LAUNCH';
+              this.bannerTimer = 160;
+              this.resetBallOnPaddle();
+            } else {
+              this.state = 'GAME_OVER';
+              this.bannerMessage = 'GAME OVER';
+              this.bannerSubmessage = 'SHAKE TO RESET GAME';
+              this.bannerTimer = 9999;
+              this.resetBallOnPaddle();
+            }
+          }
+        }
+
+        draw() {
+          const ctx = this.ctx;
+          const w = this.width;
+          const h = this.height;
+
+          ctx.save();
+
+          // Apply screen shake translation
+          if (this.shakeIntensity > 0) {
+            const rx = (Math.random() - 0.5) * this.shakeIntensity;
+            const ry = (Math.random() - 0.5) * this.shakeIntensity;
+            ctx.translate(rx, ry);
+          }
+
+          // Dark navy background
+          ctx.fillStyle = '#07131f';
+          ctx.fillRect(0, 0, w, h);
+
+          // Subtle Atari arena border
+          ctx.strokeStyle = '#122b44';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(4, 4, w - 8, h - 8);
+
+          // Draw Bricks
+          for (const brick of this.bricks) {
+            if (!brick.alive) continue;
+
+            ctx.fillStyle = brick.color;
+            ctx.shadowColor = brick.color;
+            ctx.shadowBlur = 8;
+
+            ctx.beginPath();
+            ctx.roundRect(brick.x, brick.y, brick.w, brick.h, 3);
+            ctx.fill();
+
+            // Inner subtle specular highlight
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+            ctx.fillRect(brick.x + 2, brick.y + 2, brick.w - 4, 2);
+          }
+
+          // Draw Particles
+          this.particles.draw(ctx);
+
+          // Draw Paddle Motion Trail
+          for (const t of this.paddle.trail) {
+            ctx.fillStyle = `rgba(0, 240, 255, ${t.alpha * 0.4})`;
+            ctx.beginPath();
+            ctx.roundRect(t.x, this.paddle.y, this.paddle.w, this.paddle.h, 4);
+            ctx.fill();
+          }
+
+          // Draw Paddle
+          const paddlePx = this.paddle.smoothedX * (this.width - this.paddle.w);
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 12;
+
+          ctx.beginPath();
+          ctx.roundRect(paddlePx, this.paddle.y, this.paddle.w, this.paddle.h, 4);
+          ctx.fill();
+
+          // Paddle center alignment marker
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#00f0ff';
+          ctx.fillRect(paddlePx + this.paddle.w / 2 - 2, this.paddle.y + 2, 4, this.paddle.h - 4);
+
+          // Draw Ball Trail
+          for (const t of this.ball.trail) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${t.alpha * 0.35})`;
+            ctx.shadowColor = '#ffffff';
+            ctx.shadowBlur = 4;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, this.ball.r * 0.75, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Draw Ball
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowColor = '#ffffff';
+          ctx.shadowBlur = 14;
+          ctx.beginPath();
+          ctx.arc(this.ball.x, this.ball.y, this.ball.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          // Draw HUD (Score, Lives, High Score)
+          this.drawHUD(ctx);
+
+          // Draw Center Prompts / Banners
+          this.drawPrompts(ctx);
+
+          ctx.restore();
+        }
+
+        drawHUD(ctx) {
+          ctx.save();
+          ctx.font = '700 14px "Courier New", monospace';
+          ctx.fillStyle = '#92b8de';
+          ctx.textBaseline = 'top';
+
+          // Score (Left)
+          ctx.textAlign = 'left';
+          ctx.fillText(`SCORE: ${this.score.toString().padStart(4, '0')}`, 20, 20);
+
+          // High Score (Center)
+          ctx.textAlign = 'center';
+          ctx.fillText(`HI: ${this.highScore.toString().padStart(4, '0')}`, this.width / 2, 20);
+
+          // Lives (Right)
+          ctx.textAlign = 'right';
+          const livesText = '♥ '.repeat(this.lives);
+          ctx.fillStyle = '#ff2a7a';
+          ctx.fillText(livesText, this.width - 20, 20);
+
+          ctx.restore();
+        }
+
+        drawPrompts(ctx) {
+          const w = this.width;
+          const h = this.height;
+
+          if (this.state === 'READY') {
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Pulsing glow
+            const pulse = 0.7 + Math.sin(performance.now() * 0.005) * 0.3;
+
+            ctx.font = '900 20px "Courier New", monospace';
+            ctx.fillStyle = `rgba(255, 208, 0, ${pulse})`;
+            ctx.shadowColor = '#ffd000';
+            ctx.shadowBlur = 12;
+            ctx.fillText('HOLD THE PHONE FLAT', w / 2, h * 0.58);
+
+            ctx.font = '700 15px "Courier New", monospace';
+            ctx.fillStyle = '#00f0ff';
+            ctx.shadowColor = '#00f0ff';
+            ctx.shadowBlur = 8;
+            ctx.fillText('FLIP IT OVER TO START', w / 2, h * 0.58 + 30);
+
+            ctx.font = '11px "Courier New", monospace';
+            ctx.fillStyle = '#5c7f9f';
+            ctx.shadowBlur = 0;
+            ctx.fillText('(DESKTOP FALLBACK: PRESS SPACE TO LAUNCH, ARROWS/MOUSE TO MOVE)', w / 2, h * 0.58 + 62);
+
+            ctx.restore();
+          }
+
+          if (this.bannerTimer > 0 && this.bannerMessage) {
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            ctx.fillStyle = 'rgba(4, 11, 18, 0.75)';
+            ctx.fillRect(w / 2 - 250, h * 0.44 - 36, 500, 72);
+            ctx.strokeStyle = '#ff2a7a';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(w / 2 - 250, h * 0.44 - 36, 500, 72);
+
+            ctx.font = '900 20px "Courier New", monospace';
+            ctx.fillStyle = '#ff2a7a';
+            ctx.shadowColor = '#ff2a7a';
+            ctx.shadowBlur = 10;
+            ctx.fillText(this.bannerMessage, w / 2, h * 0.44 - 8);
+
+            ctx.font = '12px "Courier New", monospace';
+            ctx.fillStyle = '#ffd000';
+            ctx.shadowBlur = 0;
+            ctx.fillText(this.bannerSubmessage, w / 2, h * 0.44 + 18);
+
+            ctx.restore();
+          }
+        }
+      }
+
+      // ============================================================
+      // APPLICATION CONTROLLER & MODE COORDINATOR
+      // ============================================================
+      (function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+        const debugParam = urlParams.get('debug');
+
+        // Mode DOM Elements
+        const modeModal = document.getElementById('mode-modal');
+        const gameView = document.getElementById('game-view');
+        const controllerView = document.getElementById('controller-view');
+        const debugOverlay = document.getElementById('debug-overlay');
+
+        if (debugParam === '1') {
+          debugOverlay.classList.add('active');
+        }
+
+        // WebRTC & Sensor Instances
+        let rtc = null;
+        let sensorEngine = null;
+        let breakoutGame = null;
+        let phoneVis = null;
+
+        // Mode Switching
+        function initGameMode() {
+          modeModal.style.display = 'none';
+          controllerView.style.display = 'none';
+          gameView.style.display = 'block';
+
+          const canvas = document.getElementById('game-canvas');
+          breakoutGame = new BreakoutGame(canvas);
+
+          // WebRTC Setup for Game Mode (as Initiator/Host)
+          rtc = new WebRTCManager({
+            onOpen: () => {
+              updateGameConnectionBadge('CONNECTED', 'badge-connected');
+              document.getElementById('connected-banner').classList.add('active');
+              document.getElementById('game-pair-drawer').classList.add('collapsed');
+            },
+            onClose: () => {
+              updateGameConnectionBadge('STANDBY', 'badge-standby');
+              document.getElementById('connected-banner').classList.remove('active');
+            },
+            onMessage: (msg) => {
+              if (msg.type === 'sensor') {
+                breakoutGame.applyControllerSensor(msg);
+                updateDebugHUD(msg);
+              } else if (msg.type === 'gesture') {
+                if (msg.gesture === 'flip') {
+                  breakoutGame.launchBall();
+                } else if (msg.gesture === 'shake') {
+                  breakoutGame.handleShakeTrigger();
+                }
+              }
+            },
+            onStateChange: (state) => {
+              updateDebugWebRTC(state);
+            },
+          });
+
+          // Display Controller URL in pairing guide
+          const ctrlUrl = `${window.location.origin}${window.location.pathname}?mode=controller`;
+          document.getElementById('controller-url-text').textContent = ctrlUrl;
+
+          setupGameUIEvents();
+          requestAnimationFrame(gameLoop);
+        }
+
+        function initControllerMode() {
+          modeModal.style.display = 'none';
+          gameView.style.display = 'none';
+          controllerView.style.display = 'flex';
+
+          const visCanvas = document.getElementById('phone-vis-canvas');
+          phoneVis = new PhoneVisualizer(visCanvas);
+
+          // WebRTC Setup for Controller Mode (as Answerer)
+          rtc = new WebRTCManager({
+            onOpen: () => {
+              updateCtrlConnectionBadge('CONNECTED', 'badge-connected');
+              document.getElementById('ctrl-pair-card').classList.add('minimized');
+            },
+            onClose: () => {
+              updateCtrlConnectionBadge('STANDBY', 'badge-standby');
+            },
+            onMessage: (msg) => {
+              // Bidirectional messaging if needed
+            },
+            onStateChange: (state) => {
+              updateDebugWebRTC(state);
+            },
+          });
+
+          // Sensor Engine Setup
+          sensorEngine = new ControllerSensorEngine({
+            onSensorUpdate: (packet) => {
+              if (rtc && rtc.isConnected()) {
+                rtc.send(packet);
+              }
+              // Update Phone 3D Canvas visualizer
+              phoneVis.render(packet.beta, packet.gamma, packet.pose, sensorEngine.isCalibrated);
+
+              // Update Tilt meter UI
+              const meterFill = document.getElementById('tilt-meter-fill');
+              meterFill.style.width = `${Math.round(packet.normX * 100)}%`;
+              document.getElementById('tilt-degrees-val').textContent = `${packet.tilt > 0 ? '+' : ''}${packet.tilt.toFixed(1)}°`;
+
+              // Update pose pill
+              const pillFlip = document.getElementById('pill-flip');
+              const pillFlipSub = document.getElementById('pill-flip-sub');
+              if (packet.pose === 'FACE_DOWN') {
+                pillFlip.classList.add('active');
+                pillFlipSub.textContent = 'FACE-DOWN (HOLDING...)';
+              } else {
+                pillFlip.classList.remove('active');
+                pillFlipSub.textContent = 'HOLD FLAT FACE-UP';
+              }
+            },
+            onGestureDetected: (gesture) => {
+              if (rtc && rtc.isConnected()) {
+                rtc.send({ type: 'gesture', gesture });
+              }
+
+              if (gesture === 'flip') {
+                audio.playFlipStart();
+                flashGesturePill('pill-flip', 'FLIPPED!');
+              } else if (gesture === 'shake') {
+                audio.playShakeReset();
+                flashGesturePill('pill-shake', 'SHAKE TRIGGERED!');
+              }
+            },
+            onStatusChange: (status) => {
+              if (status.isCalibrated) {
+                document.getElementById('btn-calibrate').textContent = 'CALIBRATED OK';
+              }
+            },
+          });
+
+          setupControllerUIEvents();
+          requestAnimationFrame(controllerRenderLoop);
+        }
+
+        // ============================================================
+        // GAME UI EVENTS & WEBRTC OFFER/ANSWER FLOW
+        // ============================================================
+        function setupGameUIEvents() {
+          const btnTogglePair = document.getElementById('btn-toggle-pair');
+          const pairDrawer = document.getElementById('game-pair-drawer');
+          const btnClosePair = document.getElementById('btn-close-pair');
+          const btnCreateOffer = document.getElementById('btn-create-offer');
+          const macOfferText = document.getElementById('mac-offer-text');
+          const btnCopyOffer = document.getElementById('btn-copy-offer');
+          const macAnswerText = document.getElementById('mac-answer-text');
+          const btnPasteAnswer = document.getElementById('btn-paste-answer');
+          const btnApplyAnswer = document.getElementById('btn-apply-answer');
+          const btnCopyCtrlUrl = document.getElementById('btn-copy-ctrl-url');
+          const btnOpenCtrlTab = document.getElementById('btn-open-ctrl-tab');
+          const btnReconnect = document.getElementById('btn-reconnect');
+          const btnToggleDebug = document.getElementById('btn-toggle-debug');
+          const btnToggleAudio = document.getElementById('btn-toggle-audio');
+
+          btnTogglePair.onclick = () => {
+            pairDrawer.classList.toggle('collapsed');
+          };
+          btnClosePair.onclick = () => {
+            pairDrawer.classList.add('collapsed');
+          };
+          btnReconnect.onclick = () => {
+            pairDrawer.classList.remove('collapsed');
+          };
+
+          btnToggleDebug.onclick = () => {
+            debugOverlay.classList.toggle('active');
+          };
+          btnToggleAudio.onclick = () => {
+            audio.enabled = !audio.enabled;
+            btnToggleAudio.textContent = `SND: ${audio.enabled ? 'ON' : 'OFF'}`;
+          };
+
+          btnCopyCtrlUrl.onclick = async () => {
+            const url = document.getElementById('controller-url-text').textContent;
+            await navigator.clipboard.writeText(url);
+            btnCopyCtrlUrl.textContent = 'COPIED!';
+            setTimeout(() => { btnCopyCtrlUrl.textContent = 'COPY PHONE LINK'; }, 1500);
+          };
+
+          btnOpenCtrlTab.onclick = () => {
+            const url = document.getElementById('controller-url-text').textContent;
+            window.open(url, '_blank');
+          };
+
+          btnCreateOffer.onclick = async () => {
+            try {
+              btnCreateOffer.disabled = true;
+              btnCreateOffer.textContent = 'GENERATING OFFER...';
+              const offerJson = await rtc.createOffer();
+              macOfferText.value = offerJson;
+              btnCopyOffer.disabled = false;
+              btnApplyAnswer.disabled = false;
+              btnCreateOffer.textContent = 'OFFER READY';
+              updateGameConnectionBadge('OFFER GENERATED', 'badge-standby');
+            } catch (err) {
+              console.error(err);
+              btnCreateOffer.disabled = false;
+              btnCreateOffer.textContent = 'CREATE OFFER (RETRY)';
+            }
+          };
+
+          btnCopyOffer.onclick = async () => {
+            await navigator.clipboard.writeText(macOfferText.value);
+            btnCopyOffer.textContent = 'COPIED!';
+            setTimeout(() => { btnCopyOffer.textContent = 'COPY OFFER'; }, 1500);
+          };
+
+          btnPasteAnswer.onclick = async () => {
+            try {
+              const text = await navigator.clipboard.readText();
+              if (text) {
+                macAnswerText.value = text;
+              }
+            } catch (e) {
+              macAnswerText.focus();
+            }
+          };
+
+          btnApplyAnswer.onclick = async () => {
+            const answerStr = macAnswerText.value.trim();
+            if (!answerStr) {
+              alert('Please paste the Answer JSON from the iPhone first.');
+              return;
+            }
+
+            try {
+              btnApplyAnswer.disabled = true;
+              btnApplyAnswer.textContent = 'APPLYING...';
+              await rtc.applyAnswer(answerStr);
+              btnApplyAnswer.textContent = 'ANSWER APPLIED';
+            } catch (err) {
+              alert(`Error applying answer: ${err.message}`);
+              btnApplyAnswer.disabled = false;
+              btnApplyAnswer.textContent = 'APPLY ANSWER';
+            }
+          };
+        }
+
+        // ============================================================
+        // CONTROLLER UI EVENTS & WEBRTC FLOW
+        // ============================================================
+        function setupControllerUIEvents() {
+          const btnEnableSensors = document.getElementById('btn-enable-sensors');
+          const btnCalibrate = document.getElementById('btn-calibrate');
+          const btnToggleGrip = document.getElementById('btn-toggle-grip');
+          const btnCtrlPairToggle = document.getElementById('btn-ctrl-pair-toggle');
+          const ctrlPairCard = document.getElementById('ctrl-pair-card');
+          const btnCtrlClosePair = document.getElementById('btn-ctrl-close-pair');
+          const btnCtrlPasteOffer = document.getElementById('btn-ctrl-paste-offer');
+          const btnCtrlConnect = document.getElementById('btn-ctrl-connect');
+          const ctrlOfferInput = document.getElementById('ctrl-offer-input');
+          const btnCtrlCopyAnswer = document.getElementById('btn-ctrl-copy-answer');
+          const ctrlAnswerOutput = document.getElementById('ctrl-answer-output');
+
+          btnEnableSensors.onclick = async () => {
+            audio.init();
+            const ok = await sensorEngine.requestPermissions();
+            if (ok) {
+              btnEnableSensors.textContent = 'SENSORS ACTIVE';
+              btnEnableSensors.classList.remove('btn-accent');
+              btnCalibrate.disabled = false;
+            } else {
+              alert('Motion permissions were denied or not supported on this device.');
+            }
+          };
+
+          btnCalibrate.onclick = () => {
+            sensorEngine.calibrateNeutral();
+          };
+
+          btnToggleGrip.onclick = () => {
+            if (sensorEngine.gripMode === 'landscape') {
+              sensorEngine.gripMode = 'portrait';
+              btnToggleGrip.textContent = 'GRIP: VERTICAL TRAY';
+            } else {
+              sensorEngine.gripMode = 'landscape';
+              btnToggleGrip.textContent = 'GRIP: HORIZONTAL TRAY';
+            }
+          };
+
+          btnCtrlPairToggle.onclick = () => {
+            ctrlPairCard.classList.toggle('minimized');
+          };
+          btnCtrlClosePair.onclick = () => {
+            ctrlPairCard.classList.add('minimized');
+          };
+
+          btnCtrlPasteOffer.onclick = async () => {
+            try {
+              const text = await navigator.clipboard.readText();
+              if (text) {
+                ctrlOfferInput.value = text;
+              }
+            } catch (e) {
+              ctrlOfferInput.focus();
+            }
+          };
+
+          btnCtrlConnect.onclick = async () => {
+            const offerStr = ctrlOfferInput.value.trim();
+            if (!offerStr) {
+              alert('Please paste the Offer from the Mac first.');
+              return;
+            }
+
+            try {
+              btnCtrlConnect.disabled = true;
+              btnCtrlConnect.textContent = 'CREATING ANSWER...';
+              const answerJson = await rtc.handleOfferAndCreateAnswer(offerStr);
+              ctrlAnswerOutput.value = answerJson;
+              btnCtrlCopyAnswer.disabled = false;
+              btnCtrlConnect.textContent = 'ANSWER READY';
+              updateCtrlConnectionBadge('ANSWER READY', 'badge-standby');
+            } catch (err) {
+              alert(`Error answering offer: ${err.message}`);
+              btnCtrlConnect.disabled = false;
+              btnCtrlConnect.textContent = 'CONNECT / ANSWER';
+            }
+          };
+
+          btnCtrlCopyAnswer.onclick = async () => {
+            await navigator.clipboard.writeText(ctrlAnswerOutput.value);
+            btnCtrlCopyAnswer.textContent = 'COPIED TO CLIPBOARD!';
+            setTimeout(() => { btnCtrlCopyAnswer.textContent = 'COPY ANSWER'; }, 1500);
+          };
+        }
+
+        function flashGesturePill(pillId, text) {
+          const pill = document.getElementById(pillId);
+          pill.classList.add('shake-active');
+          const orig = pill.firstElementChild.textContent;
+          pill.firstElementChild.textContent = text;
+          setTimeout(() => {
+            pill.classList.remove('shake-active');
+            pill.firstElementChild.textContent = orig;
+          }, 800);
+        }
+
+        // Status badge updates
+        function updateGameConnectionBadge(text, cls) {
+          const badge = document.getElementById('game-status-badge');
+          const badgeText = document.getElementById('game-status-text');
+          badge.className = `badge ${cls}`;
+          badgeText.textContent = text;
+        }
+
+        function updateCtrlConnectionBadge(text, cls) {
+          const badge = document.getElementById('ctrl-status-badge');
+          const badgeText = document.getElementById('ctrl-status-text');
+          badge.className = `badge ${cls}`;
+          badgeText.textContent = text;
+        }
+
+        function updateDebugWebRTC(state) {
+          const elConn = document.getElementById('dbg-webrtc-state');
+          const elSig = document.getElementById('dbg-signaling');
+          const elDc = document.getElementById('dbg-dc-state');
+          if (elConn) elConn.textContent = state.connectionState;
+          if (elSig) elSig.textContent = state.signalingState;
+          if (elDc) elDc.textContent = state.dcState;
+        }
+
+        function updateDebugHUD(packet) {
+          const elInput = document.getElementById('dbg-input-mode');
+          const elOrient = document.getElementById('dbg-orientation');
+          const elRel = document.getElementById('dbg-rel-angles');
+          const elAccel = document.getElementById('dbg-accel');
+          const elMag = document.getElementById('dbg-accel-mag');
+          const elPaddle = document.getElementById('dbg-paddle-x');
+          const elPose = document.getElementById('dbg-pose');
+
+          if (elInput) elInput.textContent = 'IPHONE WEBRTC';
+          if (elOrient) elOrient.textContent = `${packet.alpha}° / ${packet.beta}° / ${packet.gamma}°`;
+          if (elRel) elRel.textContent = `β: ${packet.relBeta}° / γ: ${packet.relGamma}° (tilt: ${packet.tilt}°)`;
+          if (elAccel) elAccel.textContent = `${packet.ax} / ${packet.ay} / ${packet.az}`;
+          if (elMag) elMag.textContent = `${Math.hypot(packet.ax, packet.ay, packet.az).toFixed(1)} m/s²`;
+          if (elPaddle && breakoutGame) {
+            elPaddle.textContent = `${breakoutGame.paddle.targetX.toFixed(2)} / ${breakoutGame.paddle.smoothedX.toFixed(2)}`;
+          }
+          if (elPose) elPose.textContent = packet.pose;
+        }
+
+        // Render Loops
+        function gameLoop() {
+          if (breakoutGame) {
+            breakoutGame.update();
+            breakoutGame.draw();
+            const elFps = document.getElementById('dbg-fps');
+            if (elFps) elFps.textContent = breakoutGame.fps;
+          }
+          requestAnimationFrame(gameLoop);
+        }
+
+        function controllerRenderLoop() {
+          if (sensorEngine && phoneVis) {
+            const dbg = sensorEngine.getDebugInfo();
+            const elFlip = document.getElementById('dbg-flip-hold');
+            const elShake = document.getElementById('dbg-shake-score');
+            if (elFlip) elFlip.textContent = `${dbg.flipHold} ms`;
+            if (elShake) elShake.textContent = dbg.shakeScore;
+          }
+          requestAnimationFrame(controllerRenderLoop);
+        }
+
+        // Startup mode routing
+        if (mode === 'controller') {
+          initControllerMode();
+        } else if (mode === 'game') {
+          initGameMode();
+        } else {
+          // Show selector modal
+          document.getElementById('btn-select-game').onclick = () => {
+            initGameMode();
+          };
+          document.getElementById('btn-select-controller').onclick = () => {
+            initControllerMode();
+          };
+        }
+      })();
+    </script>
+  </body>
+</html>
