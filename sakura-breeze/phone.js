@@ -209,17 +209,33 @@ class PhoneApp {
       this.btnCreateAnswer.textContent = 'Gathering ICE...';
       this.logMessage('SYSTEM', 'Applying remote Offer and gathering ICE candidates...');
 
-      // Handle raw SDP string or JSON object
-      let sdp = rawOffer;
-      try {
-        const parsed = JSON.parse(rawOffer);
-        if (parsed.sdp) sdp = parsed.sdp;
-      } catch (_) {}
+// Handle raw SDP string or JSON object
+let sdp = rawOffer;
 
-      await this.pc.setRemoteDescription(new RTCSessionDescription({
-        type: 'offer',
-        sdp: sdp
-      }));
+try {
+  const parsed = JSON.parse(rawOffer);
+  if (parsed.sdp) {
+    sdp = parsed.sdp;
+  }
+} catch (_) {
+  // Raw SDP is expected in manual copy/paste mode
+}
+
+// Normalize line endings for Safari WebRTC SDP parser
+sdp = sdp
+  .replace(/\r\n/g, '\n')
+  .replace(/\r/g, '\n')
+  .split('\n')
+  .map(line => line.trim())
+  .filter(line => line.length > 0)
+  .join('\r\n') + '\r\n';
+
+console.log('[PhoneApp] Normalized Offer SDP:', sdp);
+
+await this.pc.setRemoteDescription({
+  type: 'offer',
+  sdp: sdp
+});
       this.updateDebugStates();
 
       const answer = await this.pc.createAnswer();
