@@ -89,32 +89,30 @@
         40%, 60% { transform: translate3d(7px, -4px, 0); }
       }
 
-      /* ============================================================
-         LARGE, HIGH-CONTRAST RETRO BUTTONS & INPUTS
-         ============================================================ */
+      /* Common Button & Input Styles (scaled to ~70%) */
       button {
         font-family: var(--font-mono);
-        font-size: 18px; /* LARGE for 1.5-2m distance readability */
-        letter-spacing: 1.5px;
+        font-size: 13px; /* 70% of 18px */
+        letter-spacing: 1.2px;
         text-transform: uppercase;
         font-weight: 800;
-        padding: 14px 24px;
+        padding: 10px 18px;
         border: 2px solid var(--border-color);
         background: rgba(12, 30, 48, 0.95);
         color: var(--text-cyan);
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.15s ease;
-        box-shadow: 0 0 12px rgba(0, 240, 255, 0.18);
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.18);
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 8px;
       }
       button:hover:not(:disabled) {
         background: rgba(0, 240, 255, 0.22);
         border-color: var(--text-cyan);
-        box-shadow: 0 0 20px rgba(0, 240, 255, 0.45);
+        box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);
         color: #ffffff;
         transform: translateY(-1px);
       }
@@ -132,33 +130,33 @@
         background: rgba(255, 0, 127, 0.25);
         border-color: var(--text-pink);
         color: #ffffff;
-        box-shadow: 0 0 16px rgba(255, 0, 127, 0.35);
+        box-shadow: 0 0 12px rgba(255, 0, 127, 0.35);
       }
       button.btn-accent:hover:not(:disabled) {
         background: rgba(255, 0, 127, 0.45);
-        box-shadow: 0 0 26px rgba(255, 0, 127, 0.65);
+        box-shadow: 0 0 20px rgba(255, 0, 127, 0.65);
       }
 
       button.btn-green {
         background: rgba(0, 245, 118, 0.2);
         border-color: var(--text-green);
         color: #ffffff;
-        box-shadow: 0 0 16px rgba(0, 245, 118, 0.35);
+        box-shadow: 0 0 12px rgba(0, 245, 118, 0.35);
       }
       button.btn-green:hover:not(:disabled) {
         background: rgba(0, 245, 118, 0.4);
-        box-shadow: 0 0 26px rgba(0, 245, 118, 0.65);
+        box-shadow: 0 0 20px rgba(0, 245, 118, 0.65);
       }
 
       button.btn-amber {
         background: rgba(255, 190, 11, 0.2);
         border-color: var(--text-amber);
         color: #ffffff;
-        box-shadow: 0 0 16px rgba(255, 190, 11, 0.35);
+        box-shadow: 0 0 12px rgba(255, 190, 11, 0.35);
       }
       button.btn-amber:hover:not(:disabled) {
         background: rgba(255, 190, 11, 0.4);
-        box-shadow: 0 0 26px rgba(255, 190, 11, 0.65);
+        box-shadow: 0 0 20px rgba(255, 190, 11, 0.65);
       }
 
       textarea {
@@ -167,8 +165,8 @@
         border: 2px solid var(--border-color);
         color: #92bce6;
         font-family: var(--font-mono);
-        font-size: 13px;
-        padding: 10px;
+        font-size: 11px;
+        padding: 8px;
         border-radius: 6px;
         resize: none;
         outline: none;
@@ -177,28 +175,28 @@
       }
       textarea:focus {
         border-color: var(--text-cyan);
-        box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.35);
       }
 
       /* Status Badge */
       .badge {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
+        gap: 6px;
+        padding: 6px 12px;
         border-radius: 4px;
-        font-size: 15px;
-        letter-spacing: 1.5px;
+        font-size: 12px; /* 70% of 15px */
+        letter-spacing: 1.2px;
         text-transform: uppercase;
         font-weight: 800;
         border: 2px solid currentColor;
       }
       .badge-dot {
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
         background-color: currentColor;
-        box-shadow: 0 0 8px currentColor;
+        box-shadow: 0 0 6px currentColor;
       }
       .badge-offline { color: var(--text-dim); border-color: #27405e; }
       .badge-standby { color: var(--text-amber); border-color: rgba(255, 190, 11, 0.6); }
@@ -247,26 +245,26 @@
         gap: 2px;
       }
       .game-logo {
-        font-size: clamp(28px, 4vw, 42px);
+        font-size: clamp(20px, 2.8vw, 30px); /* 70% of 28-42px */
         font-weight: 900;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
         color: #ffffff;
-        text-shadow: 0 0 18px rgba(0, 240, 255, 0.85);
+        text-shadow: 0 0 14px rgba(0, 240, 255, 0.85);
       }
       .game-sublogo {
-        font-size: 14px;
+        font-size: 11px; /* 70% of 14px */
         font-weight: 700;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         color: var(--text-cyan);
       }
 
       .game-actions {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
       }
 
-      /* CENTERED LARGE ANNOUNCEMENT BANNER (READY, PAUSED, GAME OVER) */
+      /* CENTERED ANNOUNCEMENT BANNER (READY, PAUSED, GAME OVER - scaled to ~70%) */
       #game-banner-overlay {
         position: absolute;
         inset: 0;
@@ -280,21 +278,21 @@
         padding: 20px;
       }
       .banner-main-title {
-        font-size: clamp(48px, 8vw, 76px);
+        font-size: clamp(34px, 5.6vw, 54px); /* 70% of 48-76px */
         font-weight: 900;
-        letter-spacing: 4px;
+        letter-spacing: 3px;
         color: #ffffff;
-        text-shadow: 0 0 30px rgba(0, 240, 255, 0.9), 0 0 60px rgba(0, 240, 255, 0.4);
-        margin-bottom: 12px;
+        text-shadow: 0 0 24px rgba(0, 240, 255, 0.9), 0 0 45px rgba(0, 240, 255, 0.4);
+        margin-bottom: 10px;
         text-transform: uppercase;
       }
       .banner-sub-title {
-        font-size: clamp(22px, 3.2vw, 32px);
+        font-size: clamp(16px, 2.2vw, 22px); /* 70% of 22-32px */
         font-weight: 800;
-        letter-spacing: 2.5px;
+        letter-spacing: 2px;
         color: var(--text-amber);
-        text-shadow: 0 0 16px rgba(255, 190, 11, 0.7);
-        margin-bottom: 20px;
+        text-shadow: 0 0 12px rgba(255, 190, 11, 0.7);
+        margin-bottom: 16px;
         text-transform: uppercase;
       }
 
@@ -303,20 +301,20 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
-        margin-top: 14px;
+        gap: 14px;
+        margin-top: 10px;
       }
       .tap-dot {
-        width: 22px;
-        height: 22px;
+        width: 16px;
+        height: 16px;
         border-radius: 50%;
-        border: 3px solid var(--text-cyan);
+        border: 2px solid var(--text-cyan);
         background: transparent;
         transition: all 0.15s ease;
       }
       .tap-dot.active {
         background: var(--text-cyan);
-        box-shadow: 0 0 18px var(--text-cyan);
+        box-shadow: 0 0 14px var(--text-cyan);
         transform: scale(1.2);
       }
 
@@ -456,33 +454,35 @@
         pointer-events: auto;
       }
 
-      /* MINI PHONE DEBUG VISUALIZATION (BOTTOM-RIGHT) */
+      /* PROMINENT PHONE CONTROLLER VISUALIZATION (BOTTOM-RIGHT: 30-35vw, max 420px) */
       #phone-widget {
         position: fixed;
-        bottom: 24px;
-        right: 24px;
-        width: 250px;
-        background: rgba(6, 18, 30, 0.9);
-        border: 2px solid var(--border-color);
+        bottom: 20px;
+        right: 20px;
+        width: clamp(280px, 32vw, 420px);
+        background: rgba(6, 18, 30, 0.88);
+        border: 2px solid var(--border-glow);
         border-radius: 8px;
-        padding: 12px;
+        padding: 14px;
         z-index: 30;
-        backdrop-filter: blur(8px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 240, 255, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
       .widget-title {
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 800;
         color: var(--text-cyan);
         letter-spacing: 1.5px;
-        margin-bottom: 8px;
         display: flex;
         justify-content: space-between;
         align-items: center;
       }
       #widget-canvas {
         width: 100%;
-        height: 70px;
+        height: 110px; /* Taller canvas for visually prominent phone illustration */
         display: block;
         background: #02070e;
         border: 1px solid var(--border-color);
@@ -492,9 +492,16 @@
         display: flex;
         justify-content: space-between;
         font-size: 11px;
-        font-weight: bold;
+        font-weight: 800;
         color: var(--text-dim);
-        margin-top: 6px;
+      }
+      .widget-footer-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 6px;
+        border-top: 1px solid rgba(26, 60, 94, 0.6);
+        font-size: 11px;
       }
 
       /* ============================================================
@@ -539,14 +546,14 @@
         50% { transform: rotate(-90deg); }
       }
       .rotate-title {
-        font-size: 26px;
+        font-size: 18px; /* 70% of 26px */
         font-weight: 900;
         color: var(--text-amber);
-        letter-spacing: 2px;
-        margin-bottom: 12px;
+        letter-spacing: 1.5px;
+        margin-bottom: 10px;
       }
       .rotate-desc {
-        font-size: 16px;
+        font-size: 12px; /* 70% of 16px */
         color: var(--text-bright);
         line-height: 1.5;
         max-width: 420px;
@@ -556,22 +563,22 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        padding-bottom: 12px;
+        gap: 10px;
+        padding-bottom: 10px;
         border-bottom: 2px solid var(--border-color);
       }
       .ctrl-title {
-        font-size: 20px;
+        font-size: 14px; /* 70% of 20px */
         font-weight: 900;
-        letter-spacing: 2px;
+        letter-spacing: 1.5px;
         color: #ffffff;
-        text-shadow: 0 0 10px var(--text-cyan);
+        text-shadow: 0 0 8px var(--text-cyan);
       }
 
       .ctrl-main-body {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
         max-width: 680px;
         width: 100%;
         margin: 0 auto;
@@ -582,24 +589,24 @@
         background: var(--bg-card);
         border: 2px solid var(--border-color);
         border-radius: 8px;
-        padding: 12px 18px;
+        padding: 10px 14px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
       }
       .ctrl-meter-header {
         display: flex;
         justify-content: space-between;
-        font-size: 16px;
+        font-size: 12px; /* 70% of 16px */
         font-weight: 800;
         color: var(--text-cyan);
       }
       .meter-bar-bg {
         width: 100%;
-        height: 18px;
+        height: 14px;
         background: #020810;
         border: 2px solid var(--border-color);
-        border-radius: 9px;
+        border-radius: 7px;
         overflow: hidden;
         position: relative;
       }
@@ -607,7 +614,7 @@
         height: 100%;
         width: 50%;
         background: var(--text-cyan);
-        box-shadow: 0 0 12px var(--text-cyan);
+        box-shadow: 0 0 10px var(--text-cyan);
         transition: width 0.05s linear;
       }
       .meter-bar-center {
@@ -615,7 +622,7 @@
         top: 0;
         bottom: 0;
         left: 50%;
-        width: 3px;
+        width: 2px;
         background: #ffffff;
         opacity: 0.7;
         transform: translateX(-50%);
@@ -625,44 +632,44 @@
       .ctrl-gesture-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
+        gap: 10px;
       }
       .ctrl-gesture-card {
         border: 2px solid var(--border-color);
         background: rgba(3, 12, 22, 0.85);
         border-radius: 8px;
-        padding: 12px;
+        padding: 10px;
         text-align: center;
         transition: all 0.15s ease;
       }
       .ctrl-gesture-card.flash-active {
         border-color: var(--text-green);
         background: rgba(0, 245, 118, 0.3);
-        box-shadow: 0 0 24px rgba(0, 245, 118, 0.6);
+        box-shadow: 0 0 20px rgba(0, 245, 118, 0.6);
         transform: scale(1.02);
       }
       .ctrl-gesture-card.flash-shake {
         border-color: var(--text-amber);
         background: rgba(255, 190, 11, 0.3);
-        box-shadow: 0 0 24px rgba(255, 190, 11, 0.6);
+        box-shadow: 0 0 20px rgba(255, 190, 11, 0.6);
         transform: scale(1.02);
       }
       .ctrl-gesture-main {
-        font-size: 16px;
+        font-size: 13px; /* 70% of 16px */
         font-weight: 900;
         color: #ffffff;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
       }
       .ctrl-gesture-sub {
-        font-size: 12px;
+        font-size: 10px;
         font-weight: 700;
         color: var(--text-dim);
       }
 
-      /* Controller Mobile Touch Action Buttons: Minimum 56px height */
+      /* Controller Mobile Touch Action Buttons: Minimum 48px height */
       .ctrl-touch-btn {
-        min-height: 56px;
-        font-size: 18px;
+        min-height: 48px;
+        font-size: 13px;
       }
 
       /* Pairing Accordion on Phone */
@@ -670,10 +677,10 @@
         background: var(--bg-card);
         border: 2px solid var(--border-color);
         border-radius: 8px;
-        padding: 14px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
       }
       .ctrl-pair-card.hidden {
         display: none;
@@ -684,15 +691,15 @@
          ============================================================ */
       #debug-overlay {
         position: fixed;
-        top: 80px;
-        right: 20px;
+        top: 70px;
+        right: 16px;
         width: 320px;
-        background: rgba(2, 7, 14, 0.92);
+        background: rgba(2, 7, 14, 0.94);
         border: 2px solid var(--border-glow);
         border-radius: 6px;
-        padding: 12px 14px;
-        font-size: 12px;
-        line-height: 1.6;
+        padding: 10px 12px;
+        font-size: 11px;
+        line-height: 1.5;
         color: #9ac2ec;
         z-index: 250;
         pointer-events: none;
@@ -712,7 +719,7 @@
       }
 
       /* ============================================================
-         STARTUP MODE SELECTOR MODAL
+         STARTUP MODE SELECTOR MODAL (Scaled to ~70%)
          ============================================================ */
       #mode-modal {
         position: fixed;
@@ -722,48 +729,48 @@
         align-items: center;
         justify-content: center;
         z-index: 1000;
-        padding: 24px;
+        padding: 20px;
       }
       .mode-card {
         background: var(--bg-card);
         border: 2px solid var(--border-glow);
-        box-shadow: 0 0 40px rgba(0, 240, 255, 0.35);
-        border-radius: 10px;
-        max-width: 540px;
+        box-shadow: 0 0 35px rgba(0, 240, 255, 0.3);
+        border-radius: 8px;
+        max-width: 460px;
         width: 100%;
-        padding: 30px;
+        padding: 22px;
         text-align: center;
       }
       .mode-title {
-        font-size: clamp(32px, 5vw, 44px);
+        font-size: clamp(24px, 3.8vw, 32px); /* 70% of 32-44px */
         font-weight: 900;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
         color: #ffffff;
-        margin-bottom: 8px;
-        text-shadow: 0 0 16px var(--text-cyan);
+        margin-bottom: 6px;
+        text-shadow: 0 0 12px var(--text-cyan);
       }
       .mode-subtitle {
-        font-size: 16px;
-        letter-spacing: 2px;
+        font-size: 12px; /* 70% of 16px */
+        letter-spacing: 1.5px;
         font-weight: 800;
         color: var(--text-cyan);
-        margin-bottom: 16px;
+        margin-bottom: 12px;
       }
       .mode-desc {
-        font-size: 15px;
-        line-height: 1.6;
+        font-size: 12px; /* 70% of 15px */
+        line-height: 1.5;
         color: var(--text-dim);
-        margin-bottom: 26px;
+        margin-bottom: 20px;
       }
       .mode-options {
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 10px;
       }
       .mode-btn {
-        padding: 18px;
-        font-size: 18px;
-        min-height: 60px;
+        padding: 12px;
+        font-size: 13px; /* 70% of 18px */
+        min-height: 48px;
       }
     </style>
   </head>
@@ -789,13 +796,16 @@
             <span class="badge-dot"></span>
             <span id="game-status-text">KEYBOARD / MOUSE</span>
           </div>
+          <button id="btn-manual-start" class="btn-green" title="Start Game (Space / Triple-Tap)">
+            START GAME
+          </button>
           <button id="btn-toggle-pair" class="btn-cyan" title="Connect iPhone motion controller">
             CONNECT PHONE
           </button>
-          <button id="btn-toggle-debug" style="padding: 14px 18px;" title="Toggle Telemetry HUD (D)">
+          <button id="btn-toggle-debug" style="padding: 10px 14px;" title="Toggle Telemetry HUD (D)">
             DEBUG
           </button>
-          <button id="btn-toggle-audio" style="padding: 14px 18px;" title="Toggle sound (M)">
+          <button id="btn-toggle-audio" style="padding: 10px 14px;" title="Toggle sound (M)">
             SND: ON
           </button>
         </div>
@@ -876,17 +886,25 @@
         </button>
       </div>
 
-      <!-- Phone Visualizer Widget (Bottom-Right) -->
+      <!-- Prominent Phone Visualizer Widget (Bottom-Right: 30-35vw, max 420px) -->
       <div id="phone-widget">
         <div class="widget-title">
-          <span>IPHONE TILT</span>
-          <span id="widget-tilt-val">0.0°</span>
+          <span>IPHONE EMBODIED CONTROLLER</span>
+          <span id="widget-tilt-val" style="color: #ffffff; background: #0b2238; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);">0.0°</span>
         </div>
-        <canvas id="widget-canvas"></canvas>
+        <canvas id="widget-canvas" width="380" height="110"></canvas>
         <div class="widget-meter-labels">
-          <span>◀ LEFT</span>
-          <span>CENTER</span>
-          <span>RIGHT ▶</span>
+          <span>◀ TILT LEFT</span>
+          <span style="color: var(--text-cyan);">HORIZONTAL TRAY</span>
+          <span>TILT RIGHT ▶</span>
+        </div>
+        <div class="widget-footer-row">
+          <span id="widget-status-msg" style="color: var(--text-amber); font-weight: bold;">
+            READY: TAP BACK 3× TO START
+          </span>
+          <button id="btn-widget-start" style="padding: 4px 10px; font-size: 11px;">
+            LAUNCH
+          </button>
         </div>
       </div>
     </div>
@@ -1370,6 +1388,7 @@
         BALL_SPEED_INC: 0.12,         // Speed increase per brick
         PADDLE_WIDTH_RATIO: 0.22,     // Generous paddle width (22% of game width for physical play)
         PADDLE_HEIGHT_PX: 16,         // Paddle thickness
+        PADDLE_Y_OFFSET_PX: 42,       // Height of paddle above canvas bottom
         BALL_RADIUS_PX: 9,            // Ball radius
         MAX_BOUNCE_ANGLE: 68 * (Math.PI / 180), // Prevent nearly horizontal infinite bounce
       };
@@ -1949,20 +1968,29 @@
         }
 
         resetBallToPaddle() {
-          const paddleWidth = this.width * TUNING.PADDLE_WIDTH_RATIO;
+          const paddleWidth = Math.max(100, this.width * TUNING.PADDLE_WIDTH_RATIO);
+          if (!Number.isFinite(this.paddleNormalizedX)) this.paddleNormalizedX = 0.5;
           const paddleX = this.paddleNormalizedX * (this.width - paddleWidth);
-          const paddleY = this.height - TUNING.PADDLE_Y_OFFSET_PX;
+          const paddleY = this.height - (TUNING.PADDLE_Y_OFFSET_PX || 42);
+
+          this.paddleWidth = paddleWidth;
+          this.paddleX = paddleX;
+          this.paddleY = paddleY;
 
           this.ballX = paddleX + paddleWidth / 2;
-          this.ballY = paddleY - TUNING.BALL_RADIUS_PX - 2;
+          this.ballY = paddleY - (TUNING.BALL_RADIUS_PX || 9) - 4;
           this.ballVx = 0;
           this.ballVy = 0;
           this.ballSpeed = TUNING.BALL_SPEED;
+          this.ballActive = false;
           this.ballTrail = [];
         }
 
-        launchBall() {
-          if (this.state !== 'READY' && this.state !== 'GAME_OVER') return;
+        startGame() {
+          if (this.state !== 'READY' && this.state !== 'GAME_OVER') {
+            return;
+          }
+
           if (this.state === 'GAME_OVER') {
             this.lives = 3;
             this.score = 0;
@@ -1971,13 +1999,40 @@
 
           this.state = 'PLAYING';
           this.tapCount = 0;
-          this.notifyState();
-          audio.playStartLaunch();
+          this.ballActive = true;
 
-          // Launch slightly randomized upwards trajectory
-          const angle = -Math.PI / 2 + (Math.random() * 0.4 - 0.2);
-          this.ballVx = Math.cos(angle) * this.ballSpeed;
-          this.ballVy = Math.sin(angle) * this.ballSpeed;
+          // Ensure paddle exists with valid finite numbers
+          const paddleWidth = Math.max(100, this.width * TUNING.PADDLE_WIDTH_RATIO);
+          if (!Number.isFinite(this.paddleNormalizedX)) this.paddleNormalizedX = 0.5;
+          const paddleX = this.paddleNormalizedX * (this.width - paddleWidth);
+          const paddleY = this.height - (TUNING.PADDLE_Y_OFFSET_PX || 42);
+
+          this.paddleWidth = paddleWidth;
+          this.paddleX = paddleX;
+          this.paddleY = paddleY;
+
+          // Place ball directly above paddle center
+          this.ballX = paddleX + paddleWidth / 2;
+          this.ballY = paddleY - (TUNING.BALL_RADIUS_PX || 9) - 4;
+
+          // Assign valid non-zero upward velocity (-30° to +30°)
+          const angle = (Math.random() * 60 - 30) * (Math.PI / 180);
+          const speed = TUNING.BALL_SPEED || 7.2;
+          this.ballSpeed = speed;
+          this.ballVx = Math.sin(angle) * speed;
+          this.ballVy = -Math.cos(angle) * speed;
+
+          // Absolute safety checks against 0 or NaN
+          if (!Number.isFinite(this.ballVx) || Math.abs(this.ballVx) < 0.2) this.ballVx = 2.0;
+          if (!Number.isFinite(this.ballVy) || this.ballVy >= 0) this.ballVy = -speed;
+
+          audio.playStartLaunch();
+          this.notifyState();
+          debugLogEvent('GAME STARTED');
+        }
+
+        launchBall() {
+          this.startGame();
         }
 
         togglePause() {
@@ -1986,10 +2041,12 @@
             audio.playPause();
             this.triggerScreenShake(200);
             this.notifyState();
+            debugLogEvent('GAME PAUSED');
           } else if (this.state === 'PAUSED') {
             this.state = 'PLAYING';
             audio.playResume();
             this.notifyState();
+            debugLogEvent('GAME RESUMED');
           }
         }
 
@@ -2006,19 +2063,26 @@
         }
 
         updateFromController(controllerX, ax = 0) {
+          // Strictly reject NaN or non-finite controller data
+          if (!Number.isFinite(controllerX)) return;
+
           // Map -1..1 to 0..1
           let target = (controllerX + 1.0) / 2.0;
 
           // Transient lateral acceleration impulse (no positional drift)
-          if (Math.abs(ax) > 1.2) {
+          if (Number.isFinite(ax) && Math.abs(ax) > 1.2) {
             target -= (ax * TUNING.ACCEL_IMPULSE_WEIGHT);
           }
 
-          this.targetPaddleX = Math.max(0.0, Math.min(1.0, target));
+          if (Number.isFinite(target)) {
+            this.targetPaddleX = Math.max(0.0, Math.min(1.0, target));
+          }
         }
 
         updateFallback(mouseOrKeyNormalized) {
-          this.targetPaddleX = Math.max(0.0, Math.min(1.0, mouseOrKeyNormalized));
+          if (Number.isFinite(mouseOrKeyNormalized)) {
+            this.targetPaddleX = Math.max(0.0, Math.min(1.0, mouseOrKeyNormalized));
+          }
         }
 
         notifyState() {
@@ -2027,29 +2091,50 @@
               state: this.state,
               score: this.score,
               lives: this.lives,
-              tapCount: this.tapCount
+              tapCount: this.tapCount,
+              ballActive: this.ballActive
             });
           }
         }
 
         update(dt) {
+          // Defensive check against NaN
+          if (!Number.isFinite(this.targetPaddleX)) this.targetPaddleX = 0.5;
+          if (!Number.isFinite(this.paddleNormalizedX)) this.paddleNormalizedX = 0.5;
+
           // Smooth paddle with exponential low-pass filter
           this.paddleNormalizedX += (this.targetPaddleX - this.paddleNormalizedX) * TUNING.PADDLE_SMOOTHING;
+          this.paddleNormalizedX = Math.max(0.0, Math.min(1.0, this.paddleNormalizedX));
 
-          const paddleWidth = this.width * TUNING.PADDLE_WIDTH_RATIO;
+          const paddleWidth = Math.max(100, this.width * TUNING.PADDLE_WIDTH_RATIO);
           const paddleX = this.paddleNormalizedX * (this.width - paddleWidth);
-          const paddleY = this.height - TUNING.PADDLE_Y_OFFSET_PX;
+          const paddleY = this.height - (TUNING.PADDLE_Y_OFFSET_PX || 42);
+
+          this.paddleWidth = paddleWidth;
+          this.paddleX = paddleX;
+          this.paddleY = paddleY;
 
           // Store paddle trail for subtle motion blur
           this.paddleTrail.push({ x: paddleX, y: paddleY, w: paddleWidth, alpha: 0.35 });
           if (this.paddleTrail.length > 5) this.paddleTrail.shift();
 
+          // In READY state: ball follows paddle horizontally
           if (this.state === 'READY') {
             this.ballX = paddleX + paddleWidth / 2;
-            this.ballY = paddleY - TUNING.BALL_RADIUS_PX - 2;
+            this.ballY = paddleY - (TUNING.BALL_RADIUS_PX || 9) - 4;
+            this.ballVx = 0;
+            this.ballVy = 0;
           }
 
           if (this.state === 'PLAYING') {
+            // Ensure ball coordinates are valid numbers
+            if (!Number.isFinite(this.ballX) || !Number.isFinite(this.ballY)) {
+              this.ballX = paddleX + paddleWidth / 2;
+              this.ballY = paddleY - (TUNING.BALL_RADIUS_PX || 9) - 4;
+              this.ballVx = 2.0;
+              this.ballVy = -(TUNING.BALL_SPEED || 7.2);
+            }
+
             // Ball physics
             this.ballX += this.ballVx;
             this.ballY += this.ballVy;
@@ -2216,21 +2301,23 @@
           // Draw Paddle Motion Trail
           for (let i = 0; i < this.paddleTrail.length; i++) {
             const t = this.paddleTrail[i];
-            ctx.fillStyle = `rgba(0, 240, 255, ${t.alpha * (i / this.paddleTrail.length)})`;
-            this.drawRoundedRect(ctx, t.x, t.y, t.w, TUNING.PADDLE_HEIGHT_PX, 4);
-            ctx.fill();
+            if (Number.isFinite(t.x) && Number.isFinite(t.y)) {
+              ctx.fillStyle = `rgba(0, 240, 255, ${t.alpha * (i / this.paddleTrail.length)})`;
+              this.drawRoundedRect(ctx, t.x, t.y, t.w || 120, TUNING.PADDLE_HEIGHT_PX || 16, 4);
+              ctx.fill();
+            }
           }
 
-          // Draw Main Paddle
-          const paddleWidth = this.width * TUNING.PADDLE_WIDTH_RATIO;
-          const paddleX = this.paddleNormalizedX * (this.width - paddleWidth);
-          const paddleY = this.height - TUNING.PADDLE_Y_OFFSET_PX;
+          // Draw Main Paddle (guaranteed to NEVER disappear)
+          const paddleWidth = Math.max(100, this.width * TUNING.PADDLE_WIDTH_RATIO);
+          const paddleX = Number.isFinite(this.paddleX) ? this.paddleX : (this.width - paddleWidth) / 2;
+          const paddleY = Number.isFinite(this.paddleY) ? this.paddleY : (this.height - (TUNING.PADDLE_Y_OFFSET_PX || 42));
 
           ctx.save();
           ctx.shadowColor = '#00f0ff';
           ctx.shadowBlur = 18;
           ctx.fillStyle = '#ffffff';
-          this.drawRoundedRect(ctx, paddleX, paddleY, paddleWidth, TUNING.PADDLE_HEIGHT_PX, 4);
+          this.drawRoundedRect(ctx, paddleX, paddleY, paddleWidth, TUNING.PADDLE_HEIGHT_PX || 16, 4);
           ctx.fill();
 
           // Cyan core highlight
@@ -2241,19 +2328,24 @@
           // Draw Ball Trail
           for (let i = 0; i < this.ballTrail.length; i++) {
             const t = this.ballTrail[i];
-            ctx.fillStyle = `rgba(255, 255, 255, ${t.alpha * 0.35})`;
-            ctx.beginPath();
-            ctx.arc(t.x, t.y, TUNING.BALL_RADIUS_PX * (0.4 + 0.6 * (i / this.ballTrail.length)), 0, Math.PI * 2);
-            ctx.fill();
+            if (Number.isFinite(t.x) && Number.isFinite(t.y)) {
+              ctx.fillStyle = `rgba(255, 255, 255, ${t.alpha * 0.35})`;
+              ctx.beginPath();
+              ctx.arc(t.x, t.y, (TUNING.BALL_RADIUS_PX || 9) * (0.4 + 0.6 * (i / this.ballTrail.length)), 0, Math.PI * 2);
+              ctx.fill();
+            }
           }
 
-          // Draw Large White Ball
+          // Draw Large White Ball (guaranteed to NEVER disappear)
+          const bx = Number.isFinite(this.ballX) ? this.ballX : (paddleX + paddleWidth / 2);
+          const by = Number.isFinite(this.ballY) ? this.ballY : (paddleY - (TUNING.BALL_RADIUS_PX || 9) - 4);
+
           ctx.save();
           ctx.shadowColor = '#ffffff';
           ctx.shadowBlur = 14;
           ctx.fillStyle = '#ffffff';
           ctx.beginPath();
-          ctx.arc(this.ballX, this.ballY, TUNING.BALL_RADIUS_PX, 0, Math.PI * 2);
+          ctx.arc(bx, by, TUNING.BALL_RADIUS_PX || 9, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
 
@@ -2461,71 +2553,170 @@
         }
       }
 
-      function handleControllerMessage(msg) {
-        if (msg.type === 'sensor') {
-          game.updateFromController(msg.controllerX, msg.ax);
-          updatePhoneWidget(msg.controllerX, msg.tilt);
+      // Unified Event Logger for Gesture Diagnostics
+      function debugLogEvent(msg) {
+        console.log(`[ATARI-MOTION] ${msg}`);
+        const hudState = document.getElementById('dbg-gamestate');
+        if (hudState && isDebug) {
+          hudState.textContent = msg;
+        }
+      }
 
-          if (isDebug) {
-            document.getElementById('dbg-ctrl-x').textContent = msg.controllerX.toFixed(2);
-            document.getElementById('dbg-raw-orient').textContent = `${msg.alpha} / ${msg.beta} / ${msg.gamma}`;
-            document.getElementById('dbg-orient-angle').textContent = `${msg.screenAngle}°`;
-            document.getElementById('dbg-accel-mag').textContent = `${Math.hypot(msg.ax, msg.ay, msg.az).toFixed(1)} m/s²`;
-          }
-        } else if (msg.type === 'gesture') {
-          if (msg.gesture === 'tripleTap') {
-            game.launchBall();
-          } else if (msg.gesture === 'tapStep') {
-            game.setTapProgress(msg.count);
-          } else if (msg.gesture === 'shake') {
-            game.togglePause();
-          }
+      // Authoritative Top-Level Game Start Function
+      function startGame() {
+        if (game) {
+          game.startGame();
+        }
+      }
+
+      // Unified Gesture Dispatcher
+      function handleGesture(gestureName, data = {}) {
+        if (gestureName === 'tripleTap') {
+          debugLogEvent('TRIPLE TAP RECEIVED');
+          startGame();
+        } else if (gestureName === 'tapStep') {
+          if (game) game.setTapProgress(data.count || 1);
+        } else if (gestureName === 'shake') {
+          debugLogEvent('SHAKE RECEIVED');
+          if (game) game.togglePause();
+        }
+      }
+
+      // Separate Sensor Input from Game State
+      function updateControllerState(msg) {
+        if (!Number.isFinite(msg.controllerX)) return;
+
+        if (game) {
+          game.updateFromController(msg.controllerX, msg.ax);
+        }
+        updatePhoneWidget(msg.controllerX, msg.tilt);
+
+        if (isDebug) {
+          document.getElementById('dbg-ctrl-x').textContent = msg.controllerX.toFixed(2);
+          document.getElementById('dbg-raw-orient').textContent = `${msg.alpha} / ${msg.beta} / ${msg.gamma}`;
+          document.getElementById('dbg-orient-angle').textContent = `${msg.screenAngle}°`;
+          document.getElementById('dbg-accel-mag').textContent = `${Math.hypot(msg.ax, msg.ay, msg.az).toFixed(1)} m/s²`;
+        }
+      }
+
+      function handleControllerMessage(msg) {
+        switch (msg.type) {
+          case 'sensor':
+            updateControllerState(msg);
+            break;
+          case 'gesture':
+            handleGesture(msg.gesture, msg);
+            break;
         }
       }
 
       function updatePhoneWidget(ctrlX, tilt) {
         widgetTiltVal.textContent = `${tilt > 0 ? '+' : ''}${tilt}°`;
+        const widgetStatus = document.getElementById('widget-status-msg');
+        if (widgetStatus && game) {
+          if (game.state === 'READY') {
+            widgetStatus.textContent = game.tapCount > 0 ? `TAP PROGRESS: (${game.tapCount}/3)` : 'READY: TAP BACK 3×';
+            widgetStatus.style.color = 'var(--text-amber)';
+          } else if (game.state === 'PLAYING') {
+            widgetStatus.textContent = 'GAME ACTIVE: TILT TO STEER';
+            widgetStatus.style.color = 'var(--text-green)';
+          } else if (game.state === 'PAUSED') {
+            widgetStatus.textContent = 'PAUSED: SHAKE TO RESUME';
+            widgetStatus.style.color = 'var(--text-pink)';
+          } else if (game.state === 'GAME_OVER') {
+            widgetStatus.textContent = 'GAME OVER: TAP 3× OR LAUNCH';
+            widgetStatus.style.color = 'var(--text-pink)';
+          }
+        }
+
         const ctx = widgetCanvas.getContext('2d');
         const w = widgetCanvas.width;
         const h = widgetCanvas.height;
         ctx.clearRect(0, 0, w, h);
 
-        // Center line
+        // Center dashed vertical guide
         ctx.strokeStyle = '#1a3c5e';
         ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
         ctx.beginPath();
-        ctx.moveTo(w / 2, 0);
-        ctx.lineTo(w / 2, h);
+        ctx.moveTo(w / 2, 4);
+        ctx.lineTo(w / 2, h - 22);
         ctx.stroke();
+        ctx.setLineDash([]);
 
-        // Phone wireframe rotating
+        // Large, visually prominent phone wireframe rotating with tilt
         ctx.save();
-        ctx.translate(w / 2, h / 2);
+        ctx.translate(w / 2, h / 2 - 8);
         ctx.rotate((tilt * Math.PI) / 180);
 
+        // Phone body (proportional 140x54)
         ctx.strokeStyle = '#00f0ff';
-        ctx.lineWidth = 2;
-        ctx.fillStyle = 'rgba(0, 240, 255, 0.15)';
-        ctx.strokeRect(-55, -20, 110, 40);
-        ctx.fillRect(-55, -20, 110, 40);
+        ctx.lineWidth = 2.5;
+        ctx.fillStyle = 'rgba(0, 240, 255, 0.12)';
+        ctx.shadowColor = 'rgba(0, 240, 255, 0.5)';
+        ctx.shadowBlur = 8;
+        ctx.strokeRect(-70, -27, 140, 54);
+        ctx.fillRect(-70, -27, 140, 54);
 
-        // Screen notch
+        // Phone screen inset
+        ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-62, -22, 124, 44);
+
+        // Screen center badge
+        ctx.fillStyle = '#ffbe0b';
+        ctx.font = 'bold 9px var(--font-mono)';
+        ctx.textAlign = 'center';
+        ctx.fillText('IPHONE TRAY', 0, 3);
+
+        // Top notch bar
         ctx.fillStyle = '#00f0ff';
-        ctx.fillRect(-4, -18, 8, 3);
+        ctx.fillRect(-8, -26, 16, 3);
         ctx.restore();
 
-        // Horizontal ball pointer
-        const pointerX = ((ctrlX + 1) / 2) * w;
-        ctx.fillStyle = '#ffbe0b';
+        // Horizontal bottom meter track
+        const trackY = h - 10;
+        ctx.strokeStyle = '#1b3c5e';
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(pointerX, h - 8, 5, 0, Math.PI * 2);
+        ctx.moveTo(20, trackY);
+        ctx.lineTo(w - 20, trackY);
+        ctx.stroke();
+
+        // Center tick
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(w / 2 - 1, trackY - 4, 2, 8);
+
+        // Dynamic horizontal pointer ball
+        const pointerX = 20 + ((ctrlX + 1.0) / 2.0) * (w - 40);
+        ctx.save();
+        ctx.fillStyle = '#ffbe0b';
+        ctx.shadowColor = '#ffbe0b';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(pointerX, trackY, 6, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
       }
 
       function setupGameListeners() {
         btnTogglePair.onclick = () => gamePairDrawer.classList.toggle('collapsed');
         btnClosePair.onclick = () => gamePairDrawer.classList.add('collapsed');
         btnReopenPair.onclick = () => gamePairDrawer.classList.remove('collapsed');
+
+        // Manual Start buttons (Desktop & Widget)
+        const btnManualStart = document.getElementById('btn-manual-start');
+        if (btnManualStart) {
+          btnManualStart.onclick = () => {
+            startGame();
+          };
+        }
+        const btnWidgetStart = document.getElementById('btn-widget-start');
+        if (btnWidgetStart) {
+          btnWidgetStart.onclick = () => {
+            startGame();
+          };
+        }
 
         btnCopyCtrlLink.onclick = async () => {
           const url = `${window.location.origin}${window.location.pathname}?mode=controller`;
@@ -2600,9 +2791,10 @@
             game.updateFallback(Math.min(1, game.targetPaddleX + 0.08));
           } else if (e.code === 'Space') {
             e.preventDefault();
-            game.launchBall();
+            // SPACEBAR calls the SAME authoritative startGame via handleGesture
+            handleGesture('tripleTap');
           } else if (e.code === 'KeyP') {
-            game.togglePause();
+            handleGesture('shake');
           } else if (e.code === 'KeyD') {
             isDebug = !isDebug;
             debugOverlay.classList.toggle('active', isDebug);
@@ -2620,6 +2812,7 @@
         const dt = (now - lastTime) / 1000;
         lastTime = now;
 
+        // Permanent gameLoop cycle
         game.update(dt);
         game.render();
 
@@ -2656,7 +2849,11 @@
           onGesture: (gesture) => {
             if (gesture.type === 'tripleTap') {
               flashGestureCard(cardTripleTap, 'flash-active', 'START!');
-              if (webrtc) webrtc.send({ type: 'gesture', gesture: 'tripleTap' });
+              debugLogEvent('TRIPLE TAP DETECTED');
+              if (webrtc) {
+                webrtc.send({ type: 'gesture', gesture: 'tripleTap' });
+                debugLogEvent('START MESSAGE SENT');
+              }
               if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
             } else if (gesture.type === 'tapStep') {
               cardTapSub.textContent = `TAP DETECTED (${gesture.count}/3)`;
@@ -2664,6 +2861,7 @@
               if (navigator.vibrate) navigator.vibrate(40);
             } else if (gesture.type === 'shake') {
               flashGestureCard(cardShake, 'flash-shake', 'SHAKE TOGGLE!');
+              debugLogEvent('SHAKE DETECTED');
               if (webrtc) webrtc.send({ type: 'gesture', gesture: 'shake' });
               if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
             }
