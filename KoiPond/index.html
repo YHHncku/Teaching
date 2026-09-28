@@ -461,22 +461,245 @@
       background: rgba(255, 255, 255, 0.14);
     }
 
-    /* Debug HUD */
-    #debug-hud {
-      position: absolute;
-      bottom: 60px;
-      left: 28px;
-      z-index: 15;
-      font-family: monospace;
-      font-size: 11px;
-      line-height: 1.5;
-      color: #bae6fd;
-      background: rgba(6, 18, 26, 0.8);
-      padding: 10px 14px;
-      border: 1px solid rgba(186, 230, 253, 0.2);
-      border-radius: 6px;
+    /* Artistic Hand-Tracking Debug Monitor (Bottom-Right Observation Window) */
+    .debug-panel {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 25vw;
+      min-width: 280px;
+      max-width: 370px;
+      z-index: 25;
+      background: rgba(8, 22, 34, 0.78);
+      border: 1px solid rgba(160, 210, 235, 0.22);
+      border-radius: 12px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 16px 40px rgba(2, 10, 18, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+      color: #d8edf7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+      user-select: none;
+    }
+
+    .debug-panel.collapsed {
+      opacity: 0;
+      transform: translateY(12px) scale(0.96);
       pointer-events: none;
+      visibility: hidden;
+    }
+
+    .debug-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 12px;
+      background: rgba(12, 32, 48, 0.55);
+      border-bottom: 1px solid rgba(160, 210, 235, 0.14);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+    }
+
+    .debug-status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .debug-breathe-dot {
+      width: 6.5px;
+      height: 6.5px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
+      animation: dbgBreathe 2.4s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    .debug-breathe-dot.active {
+      background: #34d399;
+      box-shadow: 0 0 10px rgba(52, 211, 153, 0.85);
+    }
+
+    .debug-breathe-dot.pinching {
+      background: #fb923c;
+      box-shadow: 0 0 10px rgba(251, 146, 60, 0.9);
+    }
+
+    .debug-breathe-dot.offline {
+      background: rgba(255, 255, 255, 0.3);
+      box-shadow: none;
+      animation: none;
+    }
+
+    @keyframes dbgBreathe {
+      0%, 100% {
+        opacity: 0.55;
+        transform: scale(0.92);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1.15);
+      }
+    }
+
+    .debug-status-text {
+      font-size: 10px;
+      font-weight: 500;
+      color: rgba(200, 230, 245, 0.88);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .debug-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .debug-badge {
+      font-size: 9.5px;
+      color: rgba(140, 195, 220, 0.6);
+      font-family: var(--font-serif);
+      letter-spacing: 0.08em;
+    }
+
+    .debug-toggle-btn {
+      background: transparent;
+      border: none;
+      color: rgba(180, 220, 240, 0.7);
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 0 4px;
+      transition: color 0.2s;
+    }
+
+    .debug-toggle-btn:hover {
+      color: #ffffff;
+    }
+
+    .debug-canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 175px;
+      background: rgba(4, 12, 18, 0.65);
+      overflow: hidden;
+      border-bottom: 1px solid rgba(160, 210, 235, 0.12);
+    }
+
+    #debug-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .debug-info-body {
+      padding: 8px 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 10px;
+      line-height: 1.5;
+      color: rgba(205, 235, 248, 0.84);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: rgba(6, 18, 28, 0.45);
+      max-height: 140px;
+      overflow-y: auto;
+    }
+
+    .dbg-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dbg-label {
+      color: rgba(140, 195, 220, 0.65);
+      letter-spacing: 0.04em;
+    }
+
+    .dbg-val {
+      color: #e0f2fe;
+      font-weight: 500;
+    }
+
+    .dbg-val.highlight {
+      color: #5eead4;
+    }
+
+    .dbg-val.vermilion {
+      color: #fb923c;
+      font-weight: 600;
+    }
+
+    .dbg-hand-card {
+      background: rgba(15, 36, 52, 0.45);
+      border: 1px solid rgba(160, 210, 235, 0.12);
+      border-radius: 6px;
+      padding: 5px 8px;
+      margin-top: 2px;
+    }
+
+    .dbg-hand-title {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: #7dd3fc;
+      margin-bottom: 2px;
+      letter-spacing: 0.05em;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Collapsed Mini Pill Button */
+    .debug-collapsed-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 25;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      font-size: 10.5px;
+      letter-spacing: 0.06em;
+      color: rgba(220, 240, 250, 0.88);
+      background: rgba(10, 26, 40, 0.78);
+      border: 1px solid rgba(160, 215, 240, 0.22);
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgba(2, 10, 18, 0.55);
+      transition: all 0.25s ease;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .debug-collapsed-btn:hover {
+      background: rgba(18, 44, 66, 0.88);
+      border-color: rgba(190, 235, 255, 0.4);
+      color: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .debug-collapsed-btn.hidden {
       display: none;
+    }
+
+    @media (max-width: 640px) {
+      .debug-panel {
+        width: 86vw;
+        max-width: 320px;
+        right: 12px;
+        bottom: 12px;
+      }
+      .debug-collapsed-btn {
+        right: 12px;
+        bottom: 12px;
+      }
     }
   </style>
 </head>
@@ -601,8 +824,33 @@
     </div>
   </div>
 
-  <!-- Debug HUD -->
-  <div id="debug-hud"></div>
+  <!-- Artistic Hand-Tracking Debug Monitor (Bottom-Right Observation Window) -->
+  <div id="debug-monitor" class="debug-panel">
+    <div class="debug-header">
+      <div class="debug-status-pill">
+        <span class="debug-breathe-dot" id="dbg-dot"></span>
+        <span class="debug-status-text" id="dbg-status">SEARCHING FOR HANDS</span>
+      </div>
+      <div class="debug-actions">
+        <span class="debug-badge">DEBUG · 観測</span>
+        <button class="debug-toggle-btn" id="dbg-collapse-btn" title="Toggle monitor [Key: D]">−</button>
+      </div>
+    </div>
+
+    <!-- Live Mirrored Camera Preview with Hand Landmarks Overlay (60–70% of panel) -->
+    <div class="debug-canvas-wrapper" id="dbg-canvas-wrapper">
+      <canvas id="debug-canvas"></canvas>
+    </div>
+
+    <!-- Readout Metrics Area (30–40% of panel) -->
+    <div class="debug-info-body" id="dbg-info-body"></div>
+  </div>
+
+  <!-- Collapsed Mini Pill Button -->
+  <button id="debug-collapsed-btn" class="debug-collapsed-btn hidden" title="Open Hand-Tracking Monitor [Key: D]">
+    <span class="debug-breathe-dot"></span>
+    <span>TRACK MONITOR [D]</span>
+  </button>
 
   <!-- Main Application Logic (p5.js + MediaPipe Tasks Vision) -->
   <script type="module">
@@ -1662,29 +1910,48 @@
         this.selectedDeviceId = null;
         this.availableDevices = [];
 
+        // Inference performance metrics
+        this.inferenceTimeMs = 0;
+        this.inferenceFps = 0;
+        this._lastInferenceTime = performance.now();
+        this._inferenceCount = 0;
+        this.lastResults = null;
+
         // Up to 2 hands tracked simultaneously
         this.hands = [
           {
             active: false,
             landmarks: [],
+            handedness: 'Right',
+            confidence: null,
             smoothedTips: {},
             prevTips: {},
             tipVelocities: {},
             lastRippleTimes: {},
             isPinching: false,
             pinchDistNorm: 1.0,
-            pinchCenter: { x: 0, y: 0 }
+            rawPinchDist: 0,
+            pinchCenter: { x: 0, y: 0 },
+            indexTipNorm: { x: 0, y: 0 },
+            indexTipPond: { x: 0, y: 0 },
+            speed: 0
           },
           {
             active: false,
             landmarks: [],
+            handedness: 'Left',
+            confidence: null,
             smoothedTips: {},
             prevTips: {},
             tipVelocities: {},
             lastRippleTimes: {},
             isPinching: false,
             pinchDistNorm: 1.0,
-            pinchCenter: { x: 0, y: 0 }
+            rawPinchDist: 0,
+            pinchCenter: { x: 0, y: 0 },
+            indexTipNorm: { x: 0, y: 0 },
+            indexTipPond: { x: 0, y: 0 },
+            speed: 0
           }
         ];
 
@@ -1880,6 +2147,16 @@
           this.lastVideoTime = this.video.currentTime;
           const startTimeMs = performance.now();
           const results = this.handLandmarker.detectForVideo(this.video, startTimeMs);
+          const endTimeMs = performance.now();
+
+          this.inferenceTimeMs = endTimeMs - startTimeMs;
+          this._inferenceCount++;
+          if (endTimeMs - this._lastInferenceTime >= 1000) {
+            this.inferenceFps = Math.round((this._inferenceCount * 1000) / (endTimeMs - this._lastInferenceTime));
+            this._inferenceCount = 0;
+            this._lastInferenceTime = endTimeMs;
+          }
+          this.lastResults = results;
 
           let detectedHands = results.landmarks || [];
 
@@ -1894,6 +2171,9 @@
               const d10 = Math.hypot(detectedHands[1][0].x - h0Wrist.x, detectedHands[1][0].y - h0Wrist.y);
               if (d01 + d10 < d00 + d11) {
                 detectedHands = [detectedHands[1], detectedHands[0]];
+                if (results.handedness && results.handedness.length === 2) {
+                  results.handedness = [results.handedness[1], results.handedness[0]];
+                }
               }
             }
           }
@@ -1932,6 +2212,15 @@
               const rawLandmarks = detectedHands[h];
               handState.landmarks = rawLandmarks;
 
+              // Handedness & confidence
+              if (results.handedness && results.handedness[h] && results.handedness[h][0]) {
+                handState.handedness = results.handedness[h][0].categoryName || (h === 0 ? 'Right' : 'Left');
+                handState.confidence = results.handedness[h][0].score != null ? results.handedness[h][0].score : null;
+              } else {
+                handState.handedness = h === 0 ? 'Right' : 'Left';
+                handState.confidence = null;
+              }
+
               // Hand reference scale (wrist #0 to middle finger knuckle #9)
               const wrist = rawLandmarks[0];
               const midKnuckle = rawLandmarks[9] || rawLandmarks[5];
@@ -1945,6 +2234,11 @@
                 // Coordinate conversion: HORIZONTALLY MIRRORED & aspect-ratio synchronized
                 const targetX = dx + (1 - rawTip.x) * dw;
                 const targetY = dy + rawTip.y * dh;
+
+                if (idx === 8) {
+                  handState.indexTipNorm = { x: rawTip.x, y: rawTip.y };
+                  handState.indexTipPond = { x: targetX, y: targetY };
+                }
 
                 if (!handState.smoothedTips[fingerName]) {
                   handState.smoothedTips[fingerName] = { x: targetX, y: targetY };
@@ -1995,7 +2289,9 @@
               const index = rawLandmarks[8];
               const rawPinchDist = Math.hypot(thumb.x - index.x, thumb.y - index.y);
               const normPinchDist = rawPinchDist / handScale;
+              handState.rawPinchDist = rawPinchDist;
               handState.pinchDistNorm = normPinchDist;
+              handState.speed = handState.tipVelocities['index'] ? handState.tipVelocities['index'].speed : 0;
 
               const midRawX = (thumb.x + index.x) * 0.5;
               const midRawY = (thumb.y + index.y) * 0.5;
@@ -2017,6 +2313,9 @@
             } else {
               handState.active = false;
               handState.isPinching = false;
+              handState.landmarks = [];
+              handState.confidence = null;
+              handState.speed = 0;
             }
           }
 
@@ -2053,6 +2352,7 @@
         // Mouse tracking for desktop fallback
         this.prevMouse = { x: 0, y: 0 };
         this.mouseSpeed = 0;
+        this.monitor = null;
       }
 
       initP5() {
@@ -2066,6 +2366,7 @@
             p.frameRate(60);
 
             this.createPondScene();
+            this.monitor = new HandTrackingMonitor(this);
 
             // Bind mouse & touch fallback
             canvas.mouseMoved = () => {
@@ -2194,10 +2495,10 @@
             }
 
             // ==========================================
-            // LAYER 9: Debug Visualization (when DEBUG = true)
+            // LAYER 9: Artistic Hand-Tracking Debug Monitor
             // ==========================================
-            if (DEBUG) {
-              this.drawDebug(p);
+            if (this.monitor) {
+              this.monitor.update(p, now);
             }
           };
         };
@@ -2462,43 +2763,354 @@
       }
 
       drawDebug(p) {
-        const hud = document.getElementById('debug-hud');
-        if (!hud) return;
-        hud.style.display = 'block';
+        // Maintained for backward compatibility; monitor handles visualization
+        if (this.monitor) {
+          this.monitor.renderTextMetrics();
+        }
+      }
+    }
 
-        let handInfo = '';
+    // ==========================================
+    // Artistic Hand-Tracking Debug Monitor
+    // ==========================================
+    class HandTrackingMonitor {
+      constructor(pond) {
+        this.pond = pond;
+        this.tracker = pond.tracker;
+        this.panelEl = document.getElementById('debug-monitor');
+        this.canvas = document.getElementById('debug-canvas');
+        this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+        this.infoBodyEl = document.getElementById('dbg-info-body');
+        this.statusTextEl = document.getElementById('dbg-status');
+        this.statusDotEl = document.getElementById('dbg-dot');
+        this.collapseBtn = document.getElementById('dbg-collapse-btn');
+        this.collapsedPill = document.getElementById('debug-collapsed-btn');
+
+        this.isCollapsed = false;
+        this.lastTextUpdate = 0;
+        this.textUpdateInterval = 120; // Throttled text updates (~8 times per second)
+        this.smoothedFps = 60;
+
+        this.initEvents();
+      }
+
+      initEvents() {
+        if (this.collapseBtn) {
+          this.collapseBtn.addEventListener('click', () => this.toggleCollapse());
+        }
+        if (this.collapsedPill) {
+          this.collapsedPill.addEventListener('click', () => this.toggleCollapse());
+        }
+
+        // Keyboard shortcut 'D' to toggle monitor
+        window.addEventListener('keydown', (e) => {
+          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) {
+            return;
+          }
+          if (e.key === 'd' || e.key === 'D') {
+            this.toggleCollapse();
+          }
+        });
+      }
+
+      toggleCollapse() {
+        this.isCollapsed = !this.isCollapsed;
+        if (this.panelEl) {
+          this.panelEl.classList.toggle('collapsed', this.isCollapsed);
+        }
+        if (this.collapsedPill) {
+          this.collapsedPill.classList.toggle('hidden', !this.isCollapsed);
+        }
+        if (this.collapseBtn) {
+          this.collapseBtn.textContent = this.isCollapsed ? '+' : '−';
+        }
+      }
+
+      resizeCanvasIfNeeded() {
+        const wrapper = document.getElementById('dbg-canvas-wrapper');
+        if (!wrapper || !this.canvas) return;
+        const rect = wrapper.getBoundingClientRect();
+        const w = Math.round(rect.width);
+        const h = Math.round(rect.height);
+        if (w > 0 && h > 0 && (this.canvas.width !== w || this.canvas.height !== h)) {
+          this.canvas.width = w;
+          this.canvas.height = h;
+        }
+      }
+
+      update(p, now) {
+        if (this.isCollapsed) return;
+
+        // Smooth FPS calculation
+        const currentFps = p.frameRate();
+        if (currentFps > 5) {
+          this.smoothedFps = this.smoothedFps * 0.9 + currentFps * 0.1;
+        }
+
+        // 1. Draw 60 FPS live camera preview and overlay on canvas
+        this.renderCanvas();
+
+        // 2. Throttled update of textual metrics (~8 times/sec)
+        if (now - this.lastTextUpdate > this.textUpdateInterval) {
+          this.lastTextUpdate = now;
+          this.renderTextMetrics();
+        }
+      }
+
+      renderCanvas() {
+        const canvas = this.canvas;
+        const ctx = this.ctx;
+        if (!canvas || !ctx) return;
+        this.resizeCanvasIfNeeded();
+
+        const cw = canvas.width;
+        const ch = canvas.height;
+        if (cw === 0 || ch === 0) return;
+
+        ctx.clearRect(0, 0, cw, ch);
+
+        const v = this.tracker.video;
+        if (!v || v.readyState < 2) {
+          ctx.fillStyle = 'rgba(8, 22, 34, 0.92)';
+          ctx.fillRect(0, 0, cw, ch);
+          ctx.fillStyle = 'rgba(145, 195, 220, 0.55)';
+          ctx.font = '11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('Awaiting camera stream...', cw * 0.5, ch * 0.5);
+          return;
+        }
+
+        // Calculate aspect-ratio preservation (object-fit: cover)
+        const vw = v.videoWidth || 1280;
+        const vh = v.videoHeight || 720;
+        const vRatio = vw / vh;
+        const cRatio = cw / ch;
+
+        let dw, dh, dx, dy;
+        if (cRatio > vRatio) {
+          dw = cw;
+          dh = cw / vRatio;
+          dx = 0;
+          dy = (ch - dh) * 0.5;
+        } else {
+          dh = ch;
+          dw = ch * vRatio;
+          dx = (cw - dw) * 0.5;
+          dy = 0;
+        }
+
+        // Mirror horizontally matching main pond representation
+        ctx.save();
+        ctx.translate(cw, 0);
+        ctx.scale(-1, 1);
+        ctx.filter = 'contrast(1.06) brightness(0.96) saturate(0.95)';
+        ctx.drawImage(v, dx, dy, dw, dh);
+        ctx.restore();
+
+        // Subtle gradient overlay for ink-wash mood
+        const grad = ctx.createLinearGradient(0, 0, 0, ch);
+        grad.addColorStop(0, 'rgba(8, 22, 34, 0.2)');
+        grad.addColorStop(0.7, 'rgba(8, 22, 34, 0.05)');
+        grad.addColorStop(1, 'rgba(8, 22, 34, 0.35)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, cw, ch);
+
+        // Coordinate transformation: normalized MediaPipe [0, 1] to mirrored canvas coords
+        const toCanvas = (vx, vy) => ({
+          x: dx + (1 - vx) * dw,
+          y: dy + vy * dh
+        });
+
+        const HAND_CONNECTIONS = [
+          [0, 1], [0, 5], [0, 17], [5, 9], [9, 13], [13, 17],
+          [1, 2], [2, 3], [3, 4],
+          [5, 6], [6, 7], [7, 8],
+          [9, 10], [10, 11], [11, 12],
+          [13, 14], [14, 15], [15, 16],
+          [17, 18], [18, 19], [19, 20]
+        ];
+        const tipIndices = [4, 8, 12, 16, 20];
+
+        // Draw detected hands
         for (let h = 0; h < 2; h++) {
           const hand = this.tracker.hands[h];
-          if (hand.active) {
-            handInfo += `<br>Hand ${h + 1}: Pinch=${hand.isPinching ? 'YES' : 'no'} (dist=${hand.pinchDistNorm.toFixed(2)})`;
-            p.push();
-            for (const [finger, pt] of Object.entries(hand.smoothedTips)) {
-              p.fill(finger === 'thumb' || finger === 'index' ? '#f43f5e' : '#38bdf8');
-              p.noStroke();
-              p.ellipse(pt.x, pt.y, 6, 6);
+          if (!hand || !hand.active || !hand.landmarks || hand.landmarks.length < 21) continue;
+
+          const raw = hand.landmarks;
+          const pts = raw.map(pt => toCanvas(pt.x, pt.y));
+
+          // 1. Draw Hand Skeleton Connections
+          ctx.strokeStyle = 'rgba(165, 225, 250, 0.42)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          for (const [i, j] of HAND_CONNECTIONS) {
+            if (pts[i] && pts[j]) {
+              ctx.moveTo(pts[i].x, pts[i].y);
+              ctx.lineTo(pts[j].x, pts[j].y);
             }
-            if (hand.smoothedTips.thumb && hand.smoothedTips.index) {
-              p.stroke(hand.isPinching ? '#22c55e' : '#f59e0b');
-              p.strokeWeight(1.5);
-              p.line(
-                hand.smoothedTips.thumb.x, hand.smoothedTips.thumb.y,
-                hand.smoothedTips.index.x, hand.smoothedTips.index.y
-              );
+          }
+          ctx.stroke();
+
+          // 2. Draw Thumb-to-Index Pinch Connection
+          if (pts[4] && pts[8]) {
+            ctx.save();
+            if (hand.isPinching) {
+              ctx.strokeStyle = 'rgba(251, 146, 60, 0.95)';
+              ctx.lineWidth = 2.2;
+              ctx.shadowColor = 'rgba(251, 146, 60, 0.8)';
+              ctx.shadowBlur = 6;
+            } else {
+              ctx.strokeStyle = 'rgba(125, 211, 252, 0.5)';
+              ctx.lineWidth = 1.2;
+              ctx.setLineDash([2, 2]);
             }
-            p.pop();
+            ctx.beginPath();
+            ctx.moveTo(pts[4].x, pts[4].y);
+            ctx.lineTo(pts[8].x, pts[8].y);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // 3. Draw Landmark Dots
+          for (let i = 0; i < pts.length; i++) {
+            const pt = pts[i];
+            const isTip = tipIndices.includes(i);
+            const isThumbOrIndex = (i === 4 || i === 8);
+
+            ctx.beginPath();
+            if (isTip) {
+              const r = isThumbOrIndex ? 4.8 : 4.0;
+              ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+              if (isThumbOrIndex && hand.isPinching) {
+                ctx.fillStyle = '#fb923c';
+              } else if (isThumbOrIndex) {
+                ctx.fillStyle = '#38bdf8';
+              } else {
+                ctx.fillStyle = '#bae6fd';
+              }
+            } else {
+              ctx.arc(pt.x, pt.y, 2.0, 0, Math.PI * 2);
+              ctx.fillStyle = 'rgba(235, 245, 252, 0.72)';
+            }
+            ctx.fill();
+          }
+
+          // 4. Draw Subtle Velocity Vectors from fingertips
+          if (hand.tipVelocities) {
+            ctx.strokeStyle = 'rgba(94, 234, 212, 0.65)';
+            ctx.lineWidth = 1.3;
+            for (const [fingerName, idx] of Object.entries(this.tracker.tipIndices)) {
+              const vel = hand.tipVelocities[fingerName];
+              if (vel && vel.speed > 1.2 && pts[idx]) {
+                const pt = pts[idx];
+                ctx.beginPath();
+                ctx.moveTo(pt.x, pt.y);
+                ctx.lineTo(pt.x + vel.vx * 2.2, pt.y + vel.vy * 2.2);
+                ctx.stroke();
+              }
+            }
+          }
+        }
+      }
+
+      renderTextMetrics() {
+        if (!this.infoBodyEl) return;
+
+        const activeHands = this.tracker.hands.filter(h => h.active);
+        const activeCount = activeHands.length;
+        const isAnyPinching = activeHands.some(h => h.isPinching);
+
+        // Header status indicator
+        if (this.statusTextEl && this.statusDotEl) {
+          if (!this.tracker.cameraActive) {
+            this.statusTextEl.textContent = 'CAMERA OFFLINE';
+            this.statusDotEl.className = 'debug-breathe-dot offline';
+          } else if (activeCount > 0) {
+            this.statusTextEl.textContent = `TRACKING · ${activeCount} ${activeCount === 1 ? 'HAND' : 'HANDS'}`;
+            this.statusDotEl.className = isAnyPinching ? 'debug-breathe-dot pinching' : 'debug-breathe-dot active';
+          } else {
+            this.statusTextEl.textContent = 'SEARCHING FOR HANDS';
+            this.statusDotEl.className = 'debug-breathe-dot';
           }
         }
 
-        hud.innerHTML = `
-          <strong>DEBUG HUD</strong><br>
-          FPS: ${Math.round(p.frameRate())}<br>
-          Wakes: ${this.waterDeform.wakes.length}<br>
-          Ripples: ${this.waterDeform.ripples.length}/${CONFIG.maxRipples}<br>
-          Food: ${this.pellets.length}/${CONFIG.maxPellets}<br>
-          Koi: ${this.koi.length}<br>
-          Camera: ${this.tracker.cameraActive ? 'Active (' + (this.tracker.selectedDeviceId ? this.tracker.selectedDeviceId.slice(0, 8) + '...' : 'default') + ')' : 'Offline'}<br>
-          Devices: ${this.tracker.availableDevices.length} found
-          ${handInfo}
+        // Camera name
+        const cameraSelect = document.getElementById('camera-select');
+        let camLabel = 'Default';
+        if (cameraSelect && cameraSelect.selectedIndex >= 0 && cameraSelect.options[cameraSelect.selectedIndex]) {
+          camLabel = cameraSelect.options[cameraSelect.selectedIndex].text;
+        }
+
+        let handsHtml = '';
+        if (activeCount === 0) {
+          handsHtml = `
+            <div class="dbg-row" style="color: rgba(140, 195, 220, 0.6); padding: 4px 0;">
+              <span>No hands detected</span>
+              <span>Raise hand in camera view</span>
+            </div>
+          `;
+        } else {
+          activeHands.forEach((hand, i) => {
+            const hNum = (i + 1).toString().padStart(2, '0');
+            const handSide = (hand.handedness || (i === 0 ? 'Right' : 'Left')).toUpperCase();
+            const confStr = hand.confidence != null ? `${(hand.confidence * 100).toFixed(0)}%` : '--';
+            const stateClass = hand.isPinching ? 'vermilion' : 'highlight';
+            const stateText = hand.isPinching ? 'PINCH' : 'OPEN';
+
+            handsHtml += `
+              <div class="dbg-hand-card">
+                <div class="dbg-hand-title">
+                  <span>HAND ${hNum} · ${handSide}</span>
+                  <span style="color: rgba(186, 230, 253, 0.7);">CONF ${confStr}</span>
+                </div>
+                <div class="dbg-row">
+                  <span class="dbg-label">PINCH</span>
+                  <span class="dbg-val ${stateClass}">
+                    ${hand.rawPinchDist.toFixed(3)} <span style="font-size: 8.5px; opacity: 0.7;">(norm ${hand.pinchDistNorm.toFixed(2)})</span> [${stateText}]
+                  </span>
+                </div>
+                <div class="dbg-row">
+                  <span class="dbg-label">INDEX NORM</span>
+                  <span class="dbg-val">${hand.indexTipNorm ? `${hand.indexTipNorm.x.toFixed(3)}, ${hand.indexTipNorm.y.toFixed(3)}` : '--'}</span>
+                </div>
+                <div class="dbg-row">
+                  <span class="dbg-label">INDEX POND</span>
+                  <span class="dbg-val">${hand.indexTipPond ? `${Math.round(hand.indexTipPond.x)}, ${Math.round(hand.indexTipPond.y)}` : '--'}</span>
+                </div>
+                <div class="dbg-row">
+                  <span class="dbg-label">SPEED / ENERGY</span>
+                  <span class="dbg-val">${hand.speed.toFixed(1)} px/f · ${(hand.speed * 0.05).toFixed(2)}</span>
+                </div>
+              </div>
+            `;
+          });
+        }
+
+        const visionFpsStr = this.tracker.inferenceFps > 0 ? `${this.tracker.inferenceFps} fps` : '--';
+        const inferenceMsStr = `${this.tracker.inferenceTimeMs.toFixed(0)} ms`;
+
+        this.infoBodyEl.innerHTML = `
+          <div class="dbg-row">
+            <span class="dbg-label">CAMERA</span>
+            <span class="dbg-val highlight" style="max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${camLabel}</span>
+          </div>
+          <div class="dbg-row">
+            <span class="dbg-label">FPS / VISION</span>
+            <span class="dbg-val">${Math.round(this.smoothedFps)} fps · ${inferenceMsStr} (${visionFpsStr})</span>
+          </div>
+          <div class="dbg-row">
+            <span class="dbg-label">THRESHOLDS</span>
+            <span class="dbg-val">Start ${CONFIG.hand.pinchStartThreshold} · Rel ${CONFIG.hand.pinchReleaseThreshold}</span>
+          </div>
+          ${handsHtml}
+          <div class="dbg-row" style="margin-top: 2px; padding-top: 3px; border-top: 1px solid rgba(160, 210, 235, 0.08);">
+            <span class="dbg-label">WATER</span>
+            <span class="dbg-val">
+              Rip ${this.pond.waterDeform.ripples.length}/${CONFIG.maxRipples} ·
+              Wakes ${this.pond.waterDeform.wakes.length} ·
+              Food ${this.pond.pellets.length}
+            </span>
+          </div>
         `;
       }
     }
