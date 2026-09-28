@@ -38,16 +38,22 @@
       <section class="webrtc-card">
         <div class="webrtc-header">
           <h2 class="webrtc-title">WebRTC Connection</h2>
-          <span class="webrtc-badge">iPhone Safari</span>
+          <div class="webrtc-actions">
+            <span class="webrtc-badge">iPhone Safari</span>
+            <button id="btn-reset-webrtc" class="btn-reset" type="button">Reset WebRTC</button>
+          </div>
         </div>
 
-        <!-- Step 1: Paste Offer -->
+        <!-- Dedicated Error Diagnostics Banner -->
+        <div id="error-diagnostics" class="error-box"></div>
+
+        <!-- Step 1: Paste Offer Signaling JSON -->
         <div class="webrtc-step">
-          <label for="offer-sdp" class="step-label">1. Paste Offer</label>
+          <label for="offer-json" class="step-label">1. Paste Offer Signaling JSON</label>
           <textarea
-            id="offer-sdp"
+            id="offer-json"
             class="sdp-textarea"
-            placeholder="Paste Offer SDP from MacBook here..."
+            placeholder='Paste Offer Signaling JSON (e.g. {"type":"offer","sdp":"..."}) from MacBook here...'
           ></textarea>
           <div class="btn-group">
             <button id="btn-create-answer" class="btn-primary" type="button">Create Answer</button>
@@ -55,18 +61,45 @@
           </div>
         </div>
 
-        <!-- Step 2: Answer -->
+        <!-- Step 2: Answer Signaling JSON -->
         <div class="webrtc-step">
-          <label for="answer-sdp" class="step-label">2. Answer (Local Description)</label>
+          <label for="answer-json" class="step-label">2. Answer Signaling JSON</label>
           <textarea
-            id="answer-sdp"
+            id="answer-json"
             class="sdp-textarea"
-            placeholder="Answer SDP will appear here after clicking 'Create Answer'..."
+            placeholder="Answer JSON will appear here after clicking 'Create Answer'..."
             readonly
           ></textarea>
           <div class="btn-group">
             <button id="btn-copy-answer" class="btn-secondary" type="button">Copy Answer</button>
             <button id="btn-clear-answer" class="btn-clear" type="button">Clear</button>
+          </div>
+        </div>
+
+        <!-- Signaling Diagnostics -->
+        <div class="signaling-diagnostics-panel">
+          <div class="sig-title">Signaling Diagnostics</div>
+          <div class="sig-grid">
+            <div class="sig-item">
+              <span class="sig-label">Payload Type</span>
+              <span id="sig-payload-type" class="sig-value">none</span>
+            </div>
+            <div class="sig-item">
+              <span class="sig-label">SDP Length</span>
+              <span id="sig-sdp-length" class="sig-value">0 chars</span>
+            </div>
+            <div class="sig-item">
+              <span class="sig-label">First Line</span>
+              <span id="sig-first-line" class="sig-value">-</span>
+            </div>
+            <div class="sig-item">
+              <span class="sig-label">Last Line</span>
+              <span id="sig-last-line" class="sig-value">-</span>
+            </div>
+            <div class="sig-item">
+              <span class="sig-label">SDP Lines</span>
+              <span id="sig-line-count" class="sig-value">0</span>
+            </div>
           </div>
         </div>
 

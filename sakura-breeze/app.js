@@ -1,7 +1,7 @@
 /**
  * Sakura Breeze AR - MacBook Main Screen
  * class MacApp
- * Stage 3: Pure WebRTC RTCDataChannel (MacBook Chrome <-> iPhone Safari)
+ * Stage 3: Robust Native WebRTC JSON Signaling (MacBook Chrome <-> iPhone Safari)
  */
 class MacApp {
   constructor() {
@@ -11,22 +11,33 @@ class MacApp {
     this.arStatusElement = document.getElementById('ar-status');
     this.httpsWarning = document.getElementById('https-warning');
     this.dcStateBadge = document.getElementById('dc-state-badge');
+    this.errorBox = document.getElementById('error-diagnostics');
 
     // Diagnostics elements (Phase 2 preserved)
     this.diagBrowser = document.getElementById('diag-browser');
     this.diagHttps = document.getElementById('diag-https');
     this.diagOnline = document.getElementById('diag-online');
 
+    // Signaling Diagnostics elements
+    this.sigPayloadType = document.getElementById('sig-payload-type');
+    this.sigSdpLength = document.getElementById('sig-sdp-length');
+    this.sigFirstLine = document.getElementById('sig-first-line');
+    this.sigLastLine = document.getElementById('sig-last-line');
+    this.sigLineCount = document.getElementById('sig-line-count');
+
     // WebRTC Offer elements
-    this.offerTextarea = document.getElementById('offer-sdp');
+    this.offerTextarea = document.getElementById('offer-json');
     this.btnCreateOffer = document.getElementById('btn-create-offer');
     this.btnCopyOffer = document.getElementById('btn-copy-offer');
     this.btnClearOffer = document.getElementById('btn-clear-offer');
 
     // WebRTC Answer elements
-    this.answerTextarea = document.getElementById('answer-sdp');
+    this.answerTextarea = document.getElementById('answer-json');
     this.btnConnect = document.getElementById('btn-connect');
     this.btnClearAnswer = document.getElementById('btn-clear-answer');
+
+    // Reset button
+    this.btnResetWebRTC = document.getElementById('btn-reset-webrtc');
 
     // DataChannel test & message log
     this.messageLog = document.getElementById('datachannel-log');
@@ -84,6 +95,7 @@ class MacApp {
     if (this.btnClearOffer) {
       this.btnClearOffer.addEventListener('click', () => {
         this.offerTextarea.value = '';
+        this.renderSignalingDiagnostics('none', '');
       });
     }
 
@@ -94,6 +106,10 @@ class MacApp {
       this.btnClearAnswer.addEventListener('click', () => {
         this.answerTextarea.value = '';
       });
+    }
+
+    if (this.btnResetWebRTC) {
+      this.btnResetWebRTC.addEventListener('click', () => this.resetWebRTC());
     }
 
     if (this.btnSendMsg) {
@@ -108,11 +124,51 @@ class MacApp {
     }
 
     this.updateDebugStates();
-    console.log('[MacApp] Initialized successfully. Ready for WebRTC.');
+    console.log('[MacApp] Initialized successfully with JSON signaling envelope.');
   }
 
   /**
-   * Initializes RTCPeerConnection and RTCDataChannel
+   * Resets WebRTC instances, clears payloads, and cleans UI state
+   */
+  resetWebRTC() {
+    console.log('[MacApp] Resetting WebRTC state...');
+    this.clearError();
+
+    // 1. Close DataChannel
+    if (this.channel) {
+      try {
+        this.channel.close();
+      } catch (_) {}
+      this.channel = null;
+    }
+
+    // 2. Close RTCPeerConnection
+    if (this.pc) {
+      try {
+        this.pc.close();
+      } catch (_) {}
+      this.pc = null;
+    }
+
+    // 3. Clear textareas
+    if (this.offerTextarea) this.offerTextarea.value = '';
+    if (this.answerTextarea) this.answerTextarea.value = '';
+
+    // 4. Clear signaling payload diagnostics
+    this.renderSignalingDiagnostics('none', '');
+
+    // 5. Reset status and badges
+    this.updateStatus('DISCONNECTED');
+    if (this.dcStateBadge) this.dcStateBadge.textContent = 'channel: sakura';
+    if (this.customMsgInput) this.customMsgInput.disabled = true;
+    if (this.btnSendMsg) this.btnSendMsg.disabled = true;
+
+    this.updateDebugStates();
+    this.logMessage('SYSTEM', 'WebRTC state reset. Ready for a fresh connection session.');
+  }
+
+  /**
+   * Initializes a fresh RTCPeerConnection and RTCDataChannel
    */
   initPeerConnection() {
     if (this.pc) {
@@ -122,6 +178,8 @@ class MacApp {
       } catch (e) {
         console.warn('[MacApp] Error closing prior peer connection:', e);
       }
+      this.pc = null;
+      this.channel = null;
     }
 
     // Local USB network - no STUN servers required
@@ -228,9 +286,10 @@ class MacApp {
   }
 
   /**
-   * Generates Offer and waits for ICE gathering to complete before displaying full SDP
+   * Generates Offer, waits for ICE gathering to complete, outputs pristine JSON payload
    */
   async handleCreateOffer() {
+    this.clearError();
     try {
       this.initPeerConnection();
       this.updateStatus('CONNECTING');
@@ -238,72 +297,111 @@ class MacApp {
       this.btnCreateOffer.textContent = 'Gathering ICE...';
       this.logMessage('SYSTEM', 'Creating Offer and gathering local ICE candidates...');
 
-      const offer = await this.pc.createOffer();
-      await this.pc.setLocalDescription(offer);
+      let offer;
+      try {
+        offer = await this.pc.createOffer();
+      } catch (err) {
+        this.handleError('CREATE_OFFER_FAILED', err, 'Failed to create local offer.');
+        return;
+      }
+
+      try {
+        await this.pc.setLocalDescription(offer);
+      } catch (err) {
+        this.handleError('SET_LOCAL_DESCRIPTION_FAILED', err, 'Failed to set local description.');
+        return;
+      }
       this.updateDebugStates();
 
       // Wait until iceGatheringState === "complete"
-      await this.waitForIceGathering(this.pc);
+      try {
+        await this.waitForIceGathering(this.pc);
+      } catch (err) {
+        this.handleError('ICE_GATHERING_FAILED', err, 'ICE candidate gathering failed.');
+        return;
+      }
       this.updateDebugStates();
 
-      // Display complete SDP
-      this.offerTextarea.value = this.pc.localDescription.sdp;
-      this.btnCreateOffer.disabled = false;
-      this.btnCreateOffer.textContent = 'Create Offer';
-      this.logMessage('SYSTEM', 'Offer created with complete ICE candidates. Copy Offer to iPhone.');
+      // Directly use browser generated pc.localDescription without modifying SDP!
+      const payload = {
+        type: this.pc.localDescription.type,
+        sdp: this.pc.localDescription.sdp
+      };
+
+      // Output JSON string
+      const jsonString = JSON.stringify(payload);
+      this.offerTextarea.value = jsonString;
+
+      // Update Signaling Diagnostics
+      this.renderSignalingDiagnostics(payload.type, payload.sdp);
+
+      this.logMessage('SYSTEM', 'Offer created. Copy Offer Signaling JSON to iPhone.');
     } catch (err) {
-      console.error('[MacApp] createOffer failed:', err);
-      this.updateStatus('FAILED');
+      this.handleError('UNKNOWN_OFFER_ERROR', err, 'Unexpected error creating offer.');
+    } finally {
       this.btnCreateOffer.disabled = false;
       this.btnCreateOffer.textContent = 'Create Offer';
-      this.logMessage('ERROR', `Create Offer failed: ${err.message}`);
     }
   }
 
   /**
-   * Applies Answer SDP from iPhone
+   * Applies Answer Signaling JSON from iPhone
    */
   async handleConnect() {
-    const rawAnswer = this.answerTextarea.value.trim();
-    if (!rawAnswer) {
-      alert('Please paste the Answer SDP from iPhone into Step 2 first.');
+    this.clearError();
+    const raw = this.answerTextarea.value.trim();
+    if (!raw) {
+      this.handleError('INVALID_PAYLOAD', new Error('Empty payload'), 'Please paste the Answer Signaling JSON from iPhone.');
       return;
     }
 
     if (!this.pc || !this.pc.localDescription) {
-      alert('Please click "Create Offer" before connecting with an Answer.');
+      this.handleError('INVALID_PAYLOAD', new Error('Missing local offer'), 'Please click "Create Offer" before connecting with an Answer.');
       return;
     }
 
+    // 1. JSON Parse
+    let answer;
+    try {
+      answer = JSON.parse(raw);
+    } catch (err) {
+      this.handleError('JSON_PARSE_FAILED', err, 'Failed to parse JSON string. Ensure you copied the full JSON from iPhone.');
+      return;
+    }
+
+    // 2. Validate payload
+    if (!answer || answer.type !== 'answer') {
+      this.handleError('INVALID_PAYLOAD', new Error('Invalid type'), 'Invalid signaling payload: expected type="answer".');
+      return;
+    }
+    if (typeof answer.sdp !== 'string') {
+      this.handleError('INVALID_PAYLOAD', new Error('Missing sdp string'), 'Invalid signaling payload: payload.sdp must be a string.');
+      return;
+    }
+    if (!answer.sdp.startsWith('v=0')) {
+      this.handleError('INVALID_PAYLOAD', new Error('SDP does not start with v=0'), 'Invalid signaling payload: payload.sdp must start with "v=0".');
+      return;
+    }
+
+    // Update Signaling Diagnostics for received Answer
+    this.renderSignalingDiagnostics(answer.type, answer.sdp);
+
+    // 3. setRemoteDescription directly without any SDP modifications
     try {
       this.updateStatus('CONNECTING');
       this.btnConnect.disabled = true;
       this.btnConnect.textContent = 'Connecting...';
       this.logMessage('SYSTEM', 'Applying Answer from iPhone...');
 
-      // Handle raw SDP string or JSON object
-      let sdp = rawAnswer;
-      try {
-        const parsed = JSON.parse(rawAnswer);
-        if (parsed.sdp) sdp = parsed.sdp;
-      } catch (_) {}
-
-      await this.pc.setRemoteDescription(new RTCSessionDescription({
-        type: 'answer',
-        sdp: sdp
-      }));
-
+      await this.pc.setRemoteDescription(answer);
       this.updateDebugStates();
-      this.btnConnect.disabled = false;
-      this.btnConnect.textContent = 'Connect';
+
       this.logMessage('SYSTEM', 'Remote Answer applied. Establishing peer connection...');
     } catch (err) {
-      console.error('[MacApp] setRemoteDescription failed:', err);
-      this.updateStatus('FAILED');
+      this.handleError('SET_REMOTE_DESCRIPTION_FAILED', err, err.message, answer);
+    } finally {
       this.btnConnect.disabled = false;
       this.btnConnect.textContent = 'Connect';
-      this.logMessage('ERROR', `Connect failed: ${err.message}`);
-      alert('Failed to connect: ' + err.message);
     }
   }
 
@@ -348,11 +446,11 @@ class MacApp {
 
       pc.addEventListener('icegatheringstatechange', checkState);
 
-      // Safe timeout (3s) to prevent indefinite hang on restricted networks
+      // Safe timeout (3.5s) to prevent indefinite hang on restricted networks
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', checkState);
         resolve();
-      }, 3000);
+      }, 3500);
     });
   }
 
@@ -361,7 +459,7 @@ class MacApp {
    */
   async copyToClipboard(text, btnElement, defaultLabel) {
     if (!text) {
-      alert('No SDP content to copy.');
+      alert('No JSON content to copy.');
       return;
     }
 
@@ -427,6 +525,49 @@ class MacApp {
   }
 
   /**
+   * Updates Signaling Diagnostics panel
+   */
+  renderSignalingDiagnostics(type, sdp) {
+    const diag = extractSdpDiagnostics(type, sdp);
+    if (this.sigPayloadType) this.sigPayloadType.textContent = diag.type;
+    if (this.sigSdpLength) this.sigSdpLength.textContent = `${diag.length} chars`;
+    if (this.sigFirstLine) this.sigFirstLine.textContent = diag.firstLine;
+    if (this.sigLastLine) this.sigLastLine.textContent = diag.lastLine;
+    if (this.sigLineCount) this.sigLineCount.textContent = `${diag.lineCount}`;
+  }
+
+  /**
+   * Dedicated Error Handler
+   */
+  handleError(code, error, userMessage, payload) {
+    this.updateStatus('FAILED');
+    console.error(`[${code}]`, error.name || 'Error', error.message || error);
+    if (payload && payload.sdp) {
+      const diag = extractSdpDiagnostics(payload.type, payload.sdp);
+      console.error('Payload Details:', {
+        type: payload.type,
+        sdpLength: diag.length,
+        firstLine: diag.firstLine,
+        lastLine: diag.lastLine,
+        lineCount: diag.lineCount
+      });
+    }
+
+    if (this.errorBox) {
+      this.errorBox.style.display = 'block';
+      this.errorBox.innerHTML = `<strong>[${escapeHtml(code)}]</strong> ${escapeHtml(userMessage || error.message)}`;
+    }
+    this.logMessage('ERROR', `[${code}] ${userMessage || error.message}`);
+  }
+
+  clearError() {
+    if (this.errorBox) {
+      this.errorBox.style.display = 'none';
+      this.errorBox.innerHTML = '';
+    }
+  }
+
+  /**
    * Logs activity into the on-screen log box
    */
   logMessage(type, message) {
@@ -463,6 +604,26 @@ class MacApp {
       this.httpsWarning.style.display = report.isHttps ? 'none' : 'block';
     }
   }
+}
+
+function extractSdpDiagnostics(type, sdp) {
+  if (typeof sdp !== 'string' || !sdp) {
+    return {
+      type: type || 'none',
+      length: 0,
+      firstLine: '-',
+      lastLine: '-',
+      lineCount: 0
+    };
+  }
+  const lines = sdp.split(/\r\n|\r|\n/).filter(line => line.length > 0);
+  return {
+    type: type || 'none',
+    length: sdp.length,
+    firstLine: lines.length > 0 ? lines[0] : '-',
+    lastLine: lines.length > 0 ? lines[lines.length - 1] : '-',
+    lineCount: lines.length
+  };
 }
 
 function escapeHtml(str) {
