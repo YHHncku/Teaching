@@ -144,6 +144,52 @@
           </div>
         </div>
 
+        <!-- iPhone Motion Sensors Section (Phase 6) -->
+        <div class="motion-card">
+          <div class="motion-header">
+            <div class="motion-header-left">
+              <span class="motion-icon">🧭📱</span>
+              <h3 class="motion-title">Motion Sensors (30 Hz)</h3>
+            </div>
+            <span id="motion-status-badge" class="motion-badge motion-waiting">WAITING (DC REQUIRED)</span>
+          </div>
+
+          <p id="motion-hint" class="motion-hint">
+            Establish WebRTC connection above first. When DataChannel opens, tap "Enable Motion" to start streaming.
+          </p>
+
+          <div class="motion-controls">
+            <button id="btn-enable-motion" class="btn-primary" type="button" disabled>Enable Motion</button>
+          </div>
+
+          <div class="motion-metrics-grid">
+            <div class="motion-metric-item">
+              <span class="metric-label">Alpha (Yaw)</span>
+              <span id="phone-motion-alpha" class="metric-val">0.0°</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Beta (Pitch)</span>
+              <span id="phone-motion-beta" class="metric-val">0.0°</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Gamma (Roll)</span>
+              <span id="phone-motion-gamma" class="metric-val">0.0°</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Accel (X, Y, Z)</span>
+              <span id="phone-motion-acc" class="metric-val">0, 0, 0</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Stream Rate</span>
+              <span id="phone-motion-rate" class="metric-val">0.0 Hz</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Packets Sent</span>
+              <span id="phone-motion-packets" class="metric-val">0</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Developer Mode / PeerConnection Session Diagnostics -->
         <div class="debug-panel">
           <div class="debug-title">Developer Mode &mdash; PeerConnection Session Diagnostics</div>

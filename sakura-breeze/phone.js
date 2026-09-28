@@ -34,7 +34,28 @@ class PhoneApp {
     this.btnStartCamera = document.getElementById('btn-start-camera');
     this.btnSwitchCamera = document.getElementById('btn-switch-camera');
 
-    // 3. Diagnostics elements (Phase 2 preserved)
+    // 3. Motion Sensor elements (Phase 6)
+    this.btnEnableMotion = document.getElementById('btn-enable-motion');
+    this.motionStatusBadge = document.getElementById('motion-status-badge');
+    this.motionHint = document.getElementById('motion-hint');
+    this.phoneMotionAlpha = document.getElementById('phone-motion-alpha');
+    this.phoneMotionBeta = document.getElementById('phone-motion-beta');
+    this.phoneMotionGamma = document.getElementById('phone-motion-gamma');
+    this.phoneMotionAcc = document.getElementById('phone-motion-acc');
+    this.phoneMotionRate = document.getElementById('phone-motion-rate');
+    this.phoneMotionPackets = document.getElementById('phone-motion-packets');
+
+    // Motion streaming state
+    this.motionActive = false;
+    this.motionInterval = null;
+    this.orientationListener = null;
+    this.motionListener = null;
+    this.latestOrientation = { alpha: 0, beta: 0, gamma: 0 };
+    this.latestMotion = { accX: 0, accY: 0, accZ: 0, rotAlpha: 0, rotBeta: 0, rotGamma: 0 };
+    this.motionPacketsSent = 0;
+    this.motionSentTimestamps = [];
+
+    // 4. Diagnostics elements (Phase 2 preserved)
     this.diagBrowser = document.getElementById('diag-browser');
     this.diagHttps = document.getElementById('diag-https');
     this.diagOnline = document.getElementById('diag-online');
@@ -137,8 +158,13 @@ class PhoneApp {
       this.btnResetWebRTC.addEventListener('click', () => this.resetWebRTC());
     }
 
+    // Bind Motion Sensor controls (Phase 6)
+    if (this.btnEnableMotion) {
+      this.btnEnableMotion.addEventListener('click', () => this.handleEnableMotion());
+    }
+
     this.updateDebugStates();
-    console.log('[PhoneApp] Initialized successfully with Phase 4 Camera and DataChannel support.');
+    console.log('[PhoneApp] Initialized successfully with Phase 6 Camera, Microphone, and Motion sensor support.');
   }
 
   /**
@@ -159,7 +185,9 @@ class PhoneApp {
       messageLog: this.messageLog,
       localVideo: this.localVideo,
       btnStartCamera: this.btnStartCamera,
-      micStatusBadge: this.micStatusBadge
+      micStatusBadge: this.micStatusBadge,
+      btnEnableMotion: this.btnEnableMotion,
+      motionStatusBadge: this.motionStatusBadge
     };
 
     let allValid = true;
@@ -390,6 +418,9 @@ class PhoneApp {
       this.channel = null;
     }
 
+    // Stop motion sensors if active
+    this.stopMotionSensors();
+
     if (this.pc) {
       this.pc.onconnectionstatechange = null;
       this.pc.oniceconnectionstatechange = null;
@@ -448,6 +479,27 @@ class PhoneApp {
     // Clear textareas
     if (this.offerTextarea) this.offerTextarea.value = '';
     if (this.answerTextarea) this.answerTextarea.value = '';
+
+    // Reset motion UI state
+    this.stopMotionSensors();
+    if (this.btnEnableMotion) {
+      this.btnEnableMotion.disabled = true;
+      this.btnEnableMotion.textContent = 'Enable Motion';
+    }
+    if (this.motionStatusBadge) {
+      this.motionStatusBadge.className = 'motion-badge motion-waiting';
+      this.motionStatusBadge.textContent = 'WAITING (DC REQUIRED)';
+    }
+    if (this.motionHint) {
+      this.motionHint.textContent = 'Establish WebRTC connection above first. When DataChannel opens, tap "Enable Motion" to start streaming.';
+    }
+    if (this.phoneMotionAlpha) this.phoneMotionAlpha.textContent = '0.0°';
+    if (this.phoneMotionBeta) this.phoneMotionBeta.textContent = '0.0°';
+    if (this.phoneMotionGamma) this.phoneMotionGamma.textContent = '0.0°';
+    if (this.phoneMotionAcc) this.phoneMotionAcc.textContent = '0, 0, 0';
+    if (this.phoneMotionRate) this.phoneMotionRate.textContent = '0.0 Hz';
+    if (this.phoneMotionPackets) this.phoneMotionPackets.textContent = '0';
+    this.motionPacketsSent = 0;
 
     // Clear signaling diagnostics
     this.renderSignalingDiagnostics('none', '');
@@ -549,11 +601,36 @@ class PhoneApp {
       } catch (sendErr) {
         console.error('[PhoneApp] Failed to send HELLO_FROM_IPHONE:', sendErr);
       }
+
+      // Phase 6: Enable Motion button once DataChannel is OPEN
+      if (this.btnEnableMotion && !this.motionActive) {
+        this.btnEnableMotion.disabled = false;
+        this.btnEnableMotion.textContent = 'Enable Motion';
+      }
+      if (this.motionStatusBadge && !this.motionActive) {
+        this.motionStatusBadge.className = 'motion-badge motion-ready';
+        this.motionStatusBadge.textContent = 'READY (TAP TO ENABLE)';
+      }
+      if (this.motionHint && !this.motionActive) {
+        this.motionHint.textContent = 'DataChannel connected. Tap "Enable Motion" to start streaming orientation & acceleration.';
+      }
     };
 
     channel.onclose = () => {
       console.log(`[PhoneApp] [Session ${this.sessionId}] DataChannel closed`);
       this.logMessage('SYSTEM', 'DataChannel closed');
+      this.stopMotionSensors();
+      if (this.btnEnableMotion) {
+        this.btnEnableMotion.disabled = true;
+        this.btnEnableMotion.textContent = 'Enable Motion';
+      }
+      if (this.motionStatusBadge) {
+        this.motionStatusBadge.className = 'motion-badge motion-waiting';
+        this.motionStatusBadge.textContent = 'WAITING (DC REQUIRED)';
+      }
+      if (this.motionHint) {
+        this.motionHint.textContent = 'WebRTC connection disconnected. Re-pair with MacBook to restart streaming.';
+      }
       if (this.pc && this.pc.connectionState !== 'connected') {
         this.updateStatus('DISCONNECTED');
       }
@@ -965,6 +1042,216 @@ class PhoneApp {
     if (this.httpsWarning) {
       this.httpsWarning.style.display = report.isHttps ? 'none' : 'block';
     }
+  }
+
+  /**
+   * =========================================================================
+   * Phase 6: Motion Sensor Lifecycle & 30 Hz Telemetry Transmission
+   * =========================================================================
+   */
+
+  /**
+   * Requests device orientation/motion permission (iOS 13+ requirement).
+   * Must be executed within a direct user gesture (button click).
+   */
+  async handleEnableMotion() {
+    this.clearError();
+
+    // Check DataChannel state
+    if (!this.channel || this.channel.readyState !== 'open') {
+      this.handleError(
+        'DATACHANNEL_NOT_OPEN',
+        new Error('DataChannel not open'),
+        'DataChannel "sakura" must be open before enabling motion streaming. Complete pairing first.'
+      );
+      return;
+    }
+
+    if (this.btnEnableMotion) {
+      this.btnEnableMotion.disabled = true;
+      this.btnEnableMotion.textContent = 'Requesting Permission...';
+    }
+
+    try {
+      // 1. DeviceOrientation permission (iOS Safari 13+)
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const oriPerm = await DeviceOrientationEvent.requestPermission();
+        if (oriPerm !== 'granted') {
+          this.handleMotionPermissionDenied('DeviceOrientation permission denied');
+          return;
+        }
+      }
+
+      // 2. DeviceMotion permission (iOS Safari 13+)
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        const motPerm = await DeviceMotionEvent.requestPermission();
+        if (motPerm !== 'granted') {
+          this.handleMotionPermissionDenied('DeviceMotion permission denied');
+          return;
+        }
+      }
+
+      // 3. Start listeners and 30Hz transmission
+      this.startMotionSensors();
+    } catch (err) {
+      console.error('[PhoneApp] Motion permission error:', err);
+      this.handleMotionPermissionDenied(err.message || 'Permission request failed');
+    }
+  }
+
+  /**
+   * Handles motion permission denial gracefully
+   */
+  handleMotionPermissionDenied(reason) {
+    if (this.btnEnableMotion) {
+      this.btnEnableMotion.disabled = false;
+      this.btnEnableMotion.textContent = 'Enable Motion (Retry)';
+    }
+    if (this.motionStatusBadge) {
+      this.motionStatusBadge.className = 'motion-badge motion-denied';
+      this.motionStatusBadge.textContent = 'PERMISSION DENIED';
+    }
+    if (this.motionHint) {
+      this.motionHint.textContent = `Motion permission denied (${reason}). In iOS Settings > Safari, ensure Motion & Orientation Access is allowed.`;
+    }
+    this.logMessage('ERROR', `Motion permission denied: ${reason}`);
+  }
+
+  /**
+   * Starts deviceorientation and devicemotion listeners and initiates 30Hz transmission loop
+   */
+  startMotionSensors() {
+    if (this.motionActive) return;
+
+    // Clean any residual listeners first
+    this.stopMotionSensors();
+    this.motionActive = true;
+
+    // Orientation listener
+    this.orientationListener = (e) => {
+      this.latestOrientation.alpha = e.alpha != null ? e.alpha : 0;
+      this.latestOrientation.beta = e.beta != null ? e.beta : 0;
+      this.latestOrientation.gamma = e.gamma != null ? e.gamma : 0;
+    };
+    window.addEventListener('deviceorientation', this.orientationListener, true);
+
+    // Motion listener (safely handles devices with only accelerationIncludingGravity)
+    this.motionListener = (e) => {
+      const acc = e.acceleration || e.accelerationIncludingGravity || {};
+      this.latestMotion.accX = acc.x != null ? acc.x : 0;
+      this.latestMotion.accY = acc.y != null ? acc.y : 0;
+      this.latestMotion.accZ = acc.z != null ? acc.z : 0;
+
+      const rot = e.rotationRate || {};
+      this.latestMotion.rotAlpha = rot.alpha != null ? rot.alpha : 0;
+      this.latestMotion.rotBeta = rot.beta != null ? rot.beta : 0;
+      this.latestMotion.rotGamma = rot.gamma != null ? rot.gamma : 0;
+    };
+    window.addEventListener('devicemotion', this.motionListener, true);
+
+    // 30 Hz sampling loop (~33.3ms)
+    this.motionInterval = setInterval(() => {
+      this.sendMotionPacket();
+    }, 33);
+
+    if (this.btnEnableMotion) {
+      this.btnEnableMotion.disabled = true;
+      this.btnEnableMotion.textContent = 'Streaming Motion (30 Hz)';
+    }
+    if (this.motionStatusBadge) {
+      this.motionStatusBadge.className = 'motion-badge motion-active';
+      this.motionStatusBadge.textContent = 'STREAMING (30 Hz)';
+    }
+    if (this.motionHint) {
+      this.motionHint.textContent = 'Streaming 30 Hz real-time orientation & acceleration over DataChannel "sakura".';
+    }
+
+    this.logMessage('SYSTEM', 'Motion sensors activated. 30 Hz streaming active.');
+  }
+
+  /**
+   * Transmits a single 30Hz motion packet over DataChannel "sakura"
+   */
+  sendMotionPacket() {
+    if (!this.motionActive) return;
+
+    if (!this.channel || this.channel.readyState !== 'open') {
+      return;
+    }
+
+    // Guard against DataChannel buffer congestion
+    if (this.channel.bufferedAmount > 65536) {
+      return;
+    }
+
+    const payload = {
+      type: 'motion',
+      timestamp: Date.now(),
+      orientation: {
+        alpha: Number(this.latestOrientation.alpha.toFixed(2)),
+        beta: Number(this.latestOrientation.beta.toFixed(2)),
+        gamma: Number(this.latestOrientation.gamma.toFixed(2))
+      },
+      acceleration: {
+        x: Number(this.latestMotion.accX.toFixed(3)),
+        y: Number(this.latestMotion.accY.toFixed(3)),
+        z: Number(this.latestMotion.accZ.toFixed(3))
+      },
+      rotationRate: {
+        alpha: Number(this.latestMotion.rotAlpha.toFixed(2)),
+        beta: Number(this.latestMotion.rotBeta.toFixed(2)),
+        gamma: Number(this.latestMotion.rotGamma.toFixed(2))
+      }
+    };
+
+    try {
+      this.channel.send(JSON.stringify(payload));
+      this.motionPacketsSent++;
+
+      // Update rate calculation (sliding 1-second window)
+      const now = performance.now();
+      this.motionSentTimestamps.push(now);
+      const oneSecAgo = now - 1000;
+      while (this.motionSentTimestamps.length > 0 && this.motionSentTimestamps[0] < oneSecAgo) {
+        this.motionSentTimestamps.shift();
+      }
+      const hz = this.motionSentTimestamps.length;
+
+      // Update UI telemetry readouts
+      if (this.phoneMotionAlpha) this.phoneMotionAlpha.textContent = `${payload.orientation.alpha.toFixed(1)}°`;
+      if (this.phoneMotionBeta) this.phoneMotionBeta.textContent = `${payload.orientation.beta.toFixed(1)}°`;
+      if (this.phoneMotionGamma) this.phoneMotionGamma.textContent = `${payload.orientation.gamma.toFixed(1)}°`;
+      if (this.phoneMotionAcc) this.phoneMotionAcc.textContent = `${payload.acceleration.x.toFixed(1)}, ${payload.acceleration.y.toFixed(1)}, ${payload.acceleration.z.toFixed(1)}`;
+      if (this.phoneMotionRate) this.phoneMotionRate.textContent = `${hz.toFixed(1)} Hz`;
+      if (this.phoneMotionPackets) this.phoneMotionPackets.textContent = this.motionPacketsSent;
+    } catch (err) {
+      console.warn('[PhoneApp] Error sending motion packet:', err);
+    }
+  }
+
+  /**
+   * Cleanly stops motion sensors, clears interval, and detaches listeners
+   */
+  stopMotionSensors() {
+    this.motionActive = false;
+
+    if (this.motionInterval) {
+      clearInterval(this.motionInterval);
+      this.motionInterval = null;
+    }
+
+    if (this.orientationListener) {
+      window.removeEventListener('deviceorientation', this.orientationListener, true);
+      this.orientationListener = null;
+    }
+
+    if (this.motionListener) {
+      window.removeEventListener('devicemotion', this.motionListener, true);
+      this.motionListener = null;
+    }
+
+    this.motionSentTimestamps = [];
+    if (this.phoneMotionRate) this.phoneMotionRate.textContent = '0.0 Hz';
   }
 }
 

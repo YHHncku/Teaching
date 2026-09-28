@@ -43,6 +43,25 @@ class MacApp {
     this.windMeterBar = document.getElementById('wind-meter-bar');
     this.windMeterValue = document.getElementById('wind-meter-value');
 
+    // 2.2 Motion Sensor elements (Phase 6)
+    this.motionStatusBadge = document.getElementById('motion-status-badge');
+    this.motionStatusText = document.getElementById('motion-status-text');
+    this.horizonBubble = document.getElementById('horizon-bubble');
+    this.motionBubbleRoll = document.getElementById('motion-bubble-roll');
+    this.motionBubblePitch = document.getElementById('motion-bubble-pitch');
+    this.motionTiltBar = document.getElementById('motion-tilt-bar');
+    this.motionTiltVal = document.getElementById('motion-tilt-val');
+    this.motionShakeBar = document.getElementById('motion-shake-bar');
+    this.motionShakeVal = document.getElementById('motion-shake-val');
+    this.motionRate = document.getElementById('motion-rate');
+    this.motionPackets = document.getElementById('motion-packets');
+    this.motionRoll = document.getElementById('motion-roll');
+    this.motionPitch = document.getElementById('motion-pitch');
+    this.motionYaw = document.getElementById('motion-yaw');
+    this.motionNormPitch = document.getElementById('motion-norm-pitch');
+    this.motionNormRoll = document.getElementById('motion-norm-roll');
+    this.motionAccelXyz = document.getElementById('motion-accel-xyz');
+
     // 3. Diagnostics elements (Phase 2 preserved)
     this.diagBrowser = document.getElementById('diag-browser');
     this.diagHttps = document.getElementById('diag-https');
@@ -87,13 +106,18 @@ class MacApp {
     this.debugMicRms = document.getElementById('debug-mic-rms');
     this.debugMicSmoothed = document.getElementById('debug-mic-smoothed');
     this.debugMicWind = document.getElementById('debug-mic-wind');
+    this.debugMotionState = document.getElementById('debug-motion-state');
+    this.debugMotionHz = document.getElementById('debug-motion-hz');
+    this.debugMotionRoll = document.getElementById('debug-motion-roll');
+    this.debugMotionPitch = document.getElementById('debug-motion-pitch');
 
-    // 10. WebRTC & Audio instances
+    // 10. WebRTC & Audio & Motion instances
     this.pc = null;
     this.channel = null;
     this.diagnostics = null;
     this.arRenderer = null;
     this.audioManager = null;
+    this.motionManager = null;
     this.remoteVideoStream = null;
     this.remoteAudioStream = null;
     this.videoTransceiver = null;
@@ -134,6 +158,17 @@ class MacApp {
           await this.audioManager.resume();
         }
       });
+    }
+
+    // Initialize MotionManager (Phase 6)
+    if (typeof MotionManager !== 'undefined') {
+      this.motionManager = new MotionManager({
+        onMotionUpdate: (data) => this.renderMotionMetrics(data),
+        onStatusChange: (status) => this.renderMotionStatus(status)
+      });
+      console.log('[MacApp] MotionManager initialized.');
+    } else {
+      console.warn('[MacApp] MotionManager not loaded.');
     }
 
     // Initialize AR Renderer (Phase 1 stub preserved)
@@ -232,7 +267,29 @@ class MacApp {
       debugMicState: this.debugMicState,
       debugMicRms: this.debugMicRms,
       debugMicSmoothed: this.debugMicSmoothed,
-      debugMicWind: this.debugMicWind
+      debugMicWind: this.debugMicWind,
+      // Phase 6 Motion Elements
+      motionStatusBadge: this.motionStatusBadge,
+      motionStatusText: this.motionStatusText,
+      horizonBubble: this.horizonBubble,
+      motionBubbleRoll: this.motionBubbleRoll,
+      motionBubblePitch: this.motionBubblePitch,
+      motionTiltBar: this.motionTiltBar,
+      motionTiltVal: this.motionTiltVal,
+      motionShakeBar: this.motionShakeBar,
+      motionShakeVal: this.motionShakeVal,
+      motionRate: this.motionRate,
+      motionPackets: this.motionPackets,
+      motionRoll: this.motionRoll,
+      motionPitch: this.motionPitch,
+      motionYaw: this.motionYaw,
+      motionNormPitch: this.motionNormPitch,
+      motionNormRoll: this.motionNormRoll,
+      motionAccelXyz: this.motionAccelXyz,
+      debugMotionState: this.debugMotionState,
+      debugMotionHz: this.debugMotionHz,
+      debugMotionRoll: this.debugMotionRoll,
+      debugMotionPitch: this.debugMotionPitch
     };
 
     let allValid = true;
@@ -324,6 +381,12 @@ class MacApp {
       status: 'WAITING'
     });
     this.renderAudioStatus('WAITING');
+
+    // Reset motion manager (Phase 6)
+    if (this.motionManager) {
+      this.motionManager.reset();
+    }
+    this.renderMotionStatus('WAITING');
 
     // Clear textareas
     if (this.offerTextarea) this.offerTextarea.value = '';
@@ -610,6 +673,106 @@ class MacApp {
   }
 
   /**
+   * =========================================================================
+   * Phase 6: Motion Sensor Telemetry Rendering & Horizon Bubble Physics
+   * =========================================================================
+   */
+
+  /**
+   * Renders real-time motion metrics from MotionManager
+   */
+  renderMotionMetrics(data) {
+    if (!data) return;
+
+    // 1. Attitude bubble position in 2D horizon gauge
+    // Roll (-90 to +90) -> X translation (-38px to +38px)
+    // Pitch (-90 to +90) -> Y translation (-38px to +38px)
+    if (this.horizonBubble) {
+      const rollDeg = data.smoothed.gamma || 0;
+      const pitchDeg = data.smoothed.beta || 0;
+      const x = Math.max(-38, Math.min(38, (rollDeg / 90) * 38));
+      const y = Math.max(-38, Math.min(38, (pitchDeg / 90) * 38));
+      this.horizonBubble.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    }
+
+    if (this.motionBubbleRoll) this.motionBubbleRoll.textContent = `${(data.smoothed.gamma || 0).toFixed(1)}°`;
+    if (this.motionBubblePitch) this.motionBubblePitch.textContent = `${(data.smoothed.beta || 0).toFixed(1)}°`;
+
+    // 2. Bars for Tilt Angle and Dynamic Shake
+    if (this.motionTiltBar) {
+      const tiltPct = Math.min(100, Math.max(0, (data.normalized.tiltMagnitude || 0) * 100));
+      this.motionTiltBar.style.width = `${tiltPct.toFixed(1)}%`;
+    }
+    if (this.motionTiltVal) {
+      this.motionTiltVal.textContent = (data.normalized.tiltMagnitude || 0).toFixed(2);
+    }
+
+    if (this.motionShakeBar) {
+      const shakePct = Math.min(100, Math.max(0, (data.normalized.shakeIntensity || 0) * 100));
+      this.motionShakeBar.style.width = `${shakePct.toFixed(1)}%`;
+    }
+    if (this.motionShakeVal) {
+      this.motionShakeVal.textContent = (data.normalized.shakeIntensity || 0).toFixed(2);
+    }
+
+    // 3. Frequency & packets
+    if (this.motionRate) this.motionRate.textContent = `${(data.hz || 0).toFixed(1)} Hz`;
+    if (this.motionPackets) this.motionPackets.textContent = data.packetCount || 0;
+
+    // 4. Detailed telemetry readouts
+    if (this.motionRoll) this.motionRoll.textContent = `${(data.smoothed.gamma || 0).toFixed(1)}°`;
+    if (this.motionPitch) this.motionPitch.textContent = `${(data.smoothed.beta || 0).toFixed(1)}°`;
+    if (this.motionYaw) this.motionYaw.textContent = `${(data.smoothed.alpha || 0).toFixed(1)}°`;
+    if (this.motionNormPitch) this.motionNormPitch.textContent = (data.normalized.pitch || 0).toFixed(2);
+    if (this.motionNormRoll) this.motionNormRoll.textContent = (data.normalized.roll || 0).toFixed(2);
+
+    if (this.motionAccelXyz) {
+      const ax = (data.raw.accX || 0).toFixed(1);
+      const ay = (data.raw.accY || 0).toFixed(1);
+      const az = (data.raw.accZ || 0).toFixed(1);
+      this.motionAccelXyz.textContent = `${ax}, ${ay}, ${az}`;
+    }
+
+    // 5. Developer diagnostics grid
+    if (this.debugMotionState) this.debugMotionState.textContent = data.status || 'WAITING';
+    if (this.debugMotionHz) this.debugMotionHz.textContent = `${(data.hz || 0).toFixed(1)} Hz`;
+    if (this.debugMotionRoll) this.debugMotionRoll.textContent = `${(data.smoothed.gamma || 0).toFixed(1)}°`;
+    if (this.debugMotionPitch) this.debugMotionPitch.textContent = `${(data.smoothed.beta || 0).toFixed(1)}°`;
+  }
+
+  /**
+   * Renders motion status badge and guidance
+   */
+  renderMotionStatus(status) {
+    if (this.motionStatusBadge) {
+      this.motionStatusBadge.textContent = status;
+      this.motionStatusBadge.className = `motion-badge motion-${status.toLowerCase()}`;
+    }
+
+    if (this.motionStatusText) {
+      switch (status) {
+        case 'STREAMING':
+          this.motionStatusText.textContent = 'Active 30 Hz orientation and acceleration telemetry stream connected.';
+          break;
+        case 'STALE':
+          this.motionStatusText.textContent = 'Motion telemetry paused or waiting for iPhone sensor activity.';
+          break;
+        case 'DISCONNECTED':
+          this.motionStatusText.textContent = 'DataChannel closed. Motion telemetry inactive.';
+          break;
+        case 'WAITING':
+        default:
+          this.motionStatusText.textContent = 'Awaiting 30 Hz motion telemetry stream from iPhone (Click "Enable Motion" on iPhone).';
+          break;
+      }
+    }
+
+    if (this.debugMotionState) {
+      this.debugMotionState.textContent = status;
+    }
+  }
+
+  /**
    * Configures event handlers on RTCDataChannel
    */
   setupDataChannel(channel) {
@@ -626,6 +789,9 @@ class MacApp {
     channel.onclose = () => {
       console.log(`[MacApp] [Session ${this.sessionId}] DataChannel "sakura" closed`);
       this.logMessage('SYSTEM', 'DataChannel "sakura" closed');
+      if (this.motionManager) {
+        this.motionManager.updateStatus('DISCONNECTED');
+      }
       if (this.dcStateBadge) this.dcStateBadge.textContent = 'channel: sakura (CLOSED)';
       if (this.customMsgInput) this.customMsgInput.disabled = true;
       if (this.btnSendMsg) this.btnSendMsg.disabled = true;
@@ -643,6 +809,16 @@ class MacApp {
 
     channel.onmessage = (event) => {
       const data = event.data;
+
+      // Phase 6: Intercept high-frequency motion packets (30 Hz)
+      // Route directly to MotionManager without spamming chat message log
+      if (typeof data === 'string' && data.startsWith('{"type":"motion"')) {
+        if (this.motionManager) {
+          this.motionManager.handleMessage(data);
+        }
+        return;
+      }
+
       console.log(`[MacApp] [Session ${this.sessionId}] DataChannel onmessage:`, data);
 
       // Display Received message

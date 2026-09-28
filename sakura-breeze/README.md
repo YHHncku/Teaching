@@ -120,6 +120,47 @@ Because normal conversational speech produces RMS values far below 1.0 (typicall
 
 ---
 
+## 🧭 Motion Sensor Architecture (`motion.js`, Phase 6)
+
+```text
+iPhone Safari
+  DeviceOrientationEvent (alpha, beta, gamma)
+  DeviceMotionEvent (acc x/y/z, rotationRate)
+            │
+            ↓
+  30 Hz Throttle Loop (~33ms)
+            │
+            ↓
+  RTCDataChannel "sakura" (JSON payload)
+            │
+            ↓
+  MacBook Chrome
+            │
+            ↓
+  MotionManager (motion.js)
+    ├── Null-safe Sanitize
+    ├── Low-Pass Smoothing (EMA with 0-360° wrapping)
+    ├── Normalization (pitch -1..1, roll -1..1, yaw 0..1)
+    ├── Attitude Horizon Bubble Gauge & Tilt Magnitude
+    └── Dynamic Shake / Jerk Detection
+```
+
+### 1. iPhone User-Gesture Permission
+- iOS 13+ Safari requires explicit user gestures to invoke `DeviceOrientationEvent.requestPermission()` and `DeviceMotionEvent.requestPermission()`.
+- The **Enable Motion** button is activated on the iPhone only after the WebRTC DataChannel `"sakura"` transitions to `OPEN`.
+
+### 2. 30 Hz Sampling & Congestion Guard
+- Motion sensors often trigger at 60Hz or 100Hz. The iPhone controller throttles transmission to ~30 Hz (33.3ms interval).
+- Before dispatching a JSON packet, `channel.bufferedAmount` is verified `< 65536` to prevent channel buffer bloat.
+
+### 3. Normalization & Low-Pass Smoothing
+- **Roll (Gamma)**: $-90^\circ$ to $+90^\circ$, normalized to $[-1, 1]$.
+- **Pitch (Beta)**: Clamped to $[-90^\circ, 90^\circ]$ for normal mobile viewing, normalized to $[-1, 1]$.
+- **Yaw (Alpha)**: $0^\circ$ to $360^\circ$, smoothed using angular difference $\Delta = (\alpha - \bar{\alpha} + 540) \bmod 360 - 180$ to prevent wrapping jumps.
+- **Shake Detection**: Measures acceleration derivative (jerk) across consecutive samples to yield a reactive `0.0 - 1.0` shake intensity gauge.
+
+---
+
 ## 🔄 Step-by-Step Connection & Test Procedure
 
 1. **MacBook (`index.html`)**:
@@ -140,15 +181,18 @@ Because normal conversational speech produces RMS values far below 1.0 (typicall
    - Status updates to **CONNECTED**.
    - Camera: **STREAMING LIVE** (video plays on `#remote-video`).
    - Microphone: **ANALYZING** (real-time wind strength meter responds).
-   - *(Note: If browser autoplay policy suspends AudioContext, click **Enable Audio Analysis**)*.
+   - DataChannel `"sakura"` opens; automatic `HELLO_FROM_IPHONE` &harr; `HELLO_FROM_MAC` exchange completes.
 
-4. **Acoustic Wind Testing**:
-   - **Quiet**: Keep quiet &rarr; `Wind ≈ 0.00 – 0.04`.
-   - **Speech**: Say "櫻花" &rarr; Wind rises promptly to `~0.30 - 0.50`.
-   - **Continuous speech**: Wind stays elevated.
-   - **Stop speaking**: Wind decays slowly and smoothly back to calm.
-   - **Loud speech**: Wind reaches `0.60 – 0.90`.
-   - **Zero Acoustic Feedback**: No sound comes out of the MacBook speaker.
+4. **iPhone Motion Sensor Activation (Phase 6)**:
+   - On iPhone, notice the **Enable Motion** button is now unlocked and highlighted.
+   - Tap **Enable Motion**.
+   - iOS Safari prompts for Motion and Orientation permission &rarr; Tap **Allow**.
+   - iPhone status changes to `STREAMING (30 Hz)` and displays live Alpha, Beta, Gamma, and Accel values.
+   - On MacBook, the **iPhone Motion Sensor Telemetry** card transitions to `STREAMING` at `~30 Hz`:
+     - Tilting the iPhone left/right shifts the **Attitude Horizon bubble** horizontally and adjusts **Roll**.
+     - Tilting the iPhone forward/backward shifts the **bubble** vertically and adjusts **Pitch**.
+     - Rotating the iPhone updates **Yaw (Alpha)**.
+     - Shaking the iPhone dynamically raises the **Shake Jerk** meter.
 
 ---
 

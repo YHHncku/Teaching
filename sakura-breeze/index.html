@@ -132,6 +132,93 @@
           </div>
         </section>
 
+        <!-- Section: iPhone Motion Sensor Telemetry (Phase 6) -->
+        <section class="motion-card">
+          <div class="motion-header">
+            <div class="motion-header-left">
+              <span class="motion-icon">🧭📱</span>
+              <h2 class="motion-title">iPhone Motion Sensor Telemetry</h2>
+            </div>
+            <div class="motion-status-wrap">
+              <span id="motion-status-badge" class="motion-badge motion-waiting">WAITING</span>
+            </div>
+          </div>
+
+          <div id="motion-status-text" class="motion-status-text">
+            Awaiting 30 Hz motion telemetry stream from iPhone (Click "Enable Motion" on iPhone).
+          </div>
+
+          <!-- Tilt & Horizon Gauges -->
+          <div class="motion-vis-grid">
+            <!-- Visual Tilt Horizon Indicator -->
+            <div class="motion-vis-card">
+              <div class="motion-vis-title">Attitude / Tilt Horizon</div>
+              <div class="horizon-bubble-wrap">
+                <div class="horizon-crosshair-h"></div>
+                <div class="horizon-crosshair-v"></div>
+                <div id="horizon-bubble" class="horizon-bubble"></div>
+              </div>
+              <div class="vis-sublabel">
+                Roll: <span id="motion-bubble-roll">0.0°</span> | Pitch: <span id="motion-bubble-pitch">0.0°</span>
+              </div>
+            </div>
+
+            <!-- Dynamic Motion & Shake Intensity -->
+            <div class="motion-vis-card">
+              <div class="motion-vis-title">Dynamic Shake &amp; Tilt Magnitude</div>
+              <div class="motion-meter-row">
+                <span class="meter-label">Tilt Angle</span>
+                <div class="motion-meter-track">
+                  <div id="motion-tilt-bar" class="motion-meter-bar" style="width: 0%;"></div>
+                </div>
+                <span id="motion-tilt-val" class="meter-val">0.00</span>
+              </div>
+              <div class="motion-meter-row">
+                <span class="meter-label">Shake Jerk</span>
+                <div class="motion-meter-track">
+                  <div id="motion-shake-bar" class="motion-meter-bar motion-bar-shake" style="width: 0%;"></div>
+                </div>
+                <span id="motion-shake-val" class="meter-val">0.00</span>
+              </div>
+              <div class="vis-sublabel">
+                Stream Frequency: <span id="motion-rate" class="highlight-val">0.0 Hz</span> (<span id="motion-packets">0</span> pkts)
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Telemetry Grid -->
+          <div class="motion-metrics-grid">
+            <div class="motion-metric-item">
+              <span class="metric-label">Roll (Gamma / Y)</span>
+              <span id="motion-roll" class="metric-val">0.0°</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Pitch (Beta / X)</span>
+              <span id="motion-pitch" class="metric-val">0.0°</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Yaw (Alpha / Z)</span>
+              <span id="motion-yaw" class="metric-val">0.0°</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Normalized Pitch</span>
+              <span id="motion-norm-pitch" class="metric-val">0.00</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Normalized Roll</span>
+              <span id="motion-norm-roll" class="metric-val">0.00</span>
+            </div>
+            <div class="motion-metric-item">
+              <span class="metric-label">Accel (X, Y, Z) m/s²</span>
+              <span id="motion-accel-xyz" class="metric-val">0, 0, 0</span>
+            </div>
+          </div>
+
+          <div class="motion-safety-note">
+            🍃 <em>WebRTC DataChannel "sakura":</em> 30 Hz orientation and acceleration sampling powering natural Sakura petal trajectory.
+          </div>
+        </section>
+
         <!-- WebRTC Connection Section -->
         <section class="webrtc-card">
           <div class="webrtc-header">
@@ -290,6 +377,22 @@
                   <span class="debug-label">Wind Strength</span>
                   <span id="debug-mic-wind" class="debug-value">0.00</span>
                 </div>
+                <div class="debug-item">
+                  <span class="debug-label">MOTION STREAM</span>
+                  <span id="debug-motion-state" class="debug-value">WAITING</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Motion Rate</span>
+                  <span id="debug-motion-hz" class="debug-value">0.0 Hz</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Motion Roll</span>
+                  <span id="debug-motion-roll" class="debug-value">0.0°</span>
+                </div>
+                <div class="debug-item">
+                  <span class="debug-label">Motion Pitch</span>
+                  <span id="debug-motion-pitch" class="debug-value">0.0°</span>
+                </div>
               </div>
             </div>
           </div>
@@ -341,6 +444,7 @@
   <script src="./diagnostics.js"></script>
   <script src="./ar.js"></script>
   <script src="./audio.js"></script>
+  <script src="./motion.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
