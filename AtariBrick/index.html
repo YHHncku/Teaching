@@ -228,12 +228,15 @@
         top: 0;
         left: 0;
         right: 0;
-        padding: 18px 26px;
+        padding: 10px 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px 16px;
         pointer-events: none;
         z-index: 20;
+        background: linear-gradient(180deg, rgba(3, 10, 18, 0.95) 0%, rgba(3, 10, 18, 0.6) 75%, transparent 100%);
       }
       #game-header > * {
         pointer-events: auto;
@@ -242,68 +245,159 @@
       .game-left-hud {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 18px;
+        flex-shrink: 0;
       }
       .game-title-group {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        line-height: 1.1;
       }
       .game-logo {
-        font-size: clamp(20px, 2.8vw, 30px); /* 70% of 28-42px */
+        font-size: 22px;
         font-weight: 900;
         letter-spacing: 2px;
         color: #ffffff;
-        text-shadow: 0 0 14px rgba(0, 240, 255, 0.85);
+        text-shadow: 0 0 12px rgba(0, 240, 255, 0.85);
       }
       .game-sublogo {
-        font-size: 11px; /* 70% of 14px */
+        font-size: 10px;
         font-weight: 700;
         letter-spacing: 1.5px;
         color: var(--text-cyan);
+        opacity: 0.85;
       }
 
-      /* Prominent HUD for Score & Lives (20-24px font, Layer 4 above scanlines) */
+      /* Prominent HUD for Score & Lives (Layer 4 above scanlines) */
       .hud-score-lives {
         display: flex;
         align-items: center;
-        gap: 16px;
-        background: rgba(3, 12, 22, 0.92);
-        border: 2px solid var(--border-color);
-        border-radius: 6px;
-        padding: 6px 16px;
-        box-shadow: 0 0 16px rgba(0, 240, 255, 0.18);
+        gap: 14px;
+        background: rgba(4, 14, 24, 0.9);
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        padding: 0 14px;
+        height: 36px;
+        box-sizing: border-box;
       }
       .hud-item {
         display: flex;
         align-items: baseline;
-        gap: 8px;
+        gap: 6px;
         font-family: var(--font-mono);
-        font-size: 22px; /* 20-24px as requested */
+        font-size: 18px;
         font-weight: 900;
-        letter-spacing: 1.5px;
+        letter-spacing: 1.2px;
       }
       .hud-label {
-        font-size: 14px;
+        font-size: 11px;
         color: var(--text-dim);
         font-weight: 800;
-        letter-spacing: 1.2px;
+        letter-spacing: 1px;
       }
       .hud-value-score {
         color: #ffffff;
-        text-shadow: 0 0 14px rgba(0, 240, 255, 0.95);
-        min-width: 60px;
+        text-shadow: 0 0 10px rgba(0, 240, 255, 0.85);
+        min-width: 48px;
       }
       .hud-value-lives {
         color: var(--text-pink);
-        text-shadow: 0 0 16px rgba(255, 0, 127, 0.95);
-        letter-spacing: 4px;
+        text-shadow: 0 0 12px rgba(255, 0, 127, 0.85);
+        letter-spacing: 3px;
       }
 
+      /* Unified Toolbar Controls Row */
       .game-actions {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .btn-tb {
+        height: 36px;
+        padding: 0 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        border-radius: 4px;
+        border: 1px solid var(--border-color);
+        background: rgba(8, 24, 40, 0.8);
+        color: var(--text-bright);
+        cursor: pointer;
+        white-space: nowrap;
+        box-sizing: border-box;
+        transition: all 0.15s ease;
+      }
+      .btn-tb:hover {
+        background: rgba(14, 38, 62, 0.95);
+        border-color: var(--text-cyan);
+        color: #ffffff;
+        transform: translateY(-1px);
+      }
+      .btn-tb.btn-tb-start {
+        border-color: rgba(0, 245, 118, 0.6);
+        color: var(--text-green);
+        background: rgba(0, 245, 118, 0.08);
+      }
+      .btn-tb.btn-tb-start:hover {
+        background: rgba(0, 245, 118, 0.2);
+        border-color: var(--text-green);
+        box-shadow: 0 0 12px rgba(0, 245, 118, 0.35);
+        color: #ffffff;
+      }
+      .btn-tb.btn-tb-pause {
+        border-color: rgba(255, 190, 11, 0.6);
+        color: var(--text-amber);
+        background: rgba(255, 190, 11, 0.08);
+      }
+      .btn-tb.btn-tb-pause:hover {
+        background: rgba(255, 190, 11, 0.2);
+        border-color: var(--text-amber);
+        box-shadow: 0 0 12px rgba(255, 190, 11, 0.35);
+        color: #ffffff;
+      }
+      .btn-tb.btn-tb-connect {
+        border-color: rgba(0, 240, 255, 0.5);
+        color: var(--text-cyan);
+        background: rgba(0, 240, 255, 0.08);
+      }
+      .btn-tb.btn-tb-connect:hover {
+        background: rgba(0, 240, 255, 0.2);
+        border-color: var(--text-cyan);
+        box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+        color: #ffffff;
+      }
+      .btn-tb.btn-tb-connect.connected {
+        border-color: rgba(0, 245, 118, 0.8);
+        color: var(--text-green);
+        background: rgba(0, 245, 118, 0.12);
+        box-shadow: 0 0 10px rgba(0, 245, 118, 0.25);
+      }
+      .btn-tb.active {
+        border-color: var(--text-cyan);
+        color: var(--text-cyan);
+        background: rgba(0, 240, 255, 0.16);
+      }
+
+      .status-dot-pulse {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--text-green);
+        box-shadow: 0 0 8px var(--text-green);
+        animation: pulse-dot 1.8s infinite;
+      }
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.85); }
       }
 
       /* FULLSCREEN DARK SEMI-TRANSPARENT PAUSE OVERLAY */
@@ -416,7 +510,7 @@
       /* PAIRING DRAWER / MODAL IN GAME MODE (COMPACT FOR UNIVERSAL CLIPBOARD) */
       .modal-drawer {
         position: fixed;
-        top: 85px;
+        top: 60px;
         right: 20px;
         width: 380px;
         max-width: calc(100vw - 36px);
@@ -502,85 +596,6 @@
       .step-badge {
         color: var(--text-amber);
         font-weight: 900;
-      }
-
-      /* PERSISTENT FLOATING NOTIFICATION (CONNECTED) */
-      #connected-banner {
-        position: fixed;
-        bottom: 24px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(5, 20, 32, 0.92);
-        border: 2px solid var(--text-green);
-        box-shadow: 0 0 24px rgba(0, 245, 118, 0.4);
-        border-radius: 30px;
-        padding: 10px 24px;
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        z-index: 50;
-        font-size: 16px;
-        font-weight: 800;
-        letter-spacing: 2px;
-        color: var(--text-green);
-        backdrop-filter: blur(10px);
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.3s ease;
-      }
-      #connected-banner.active {
-        opacity: 1;
-        pointer-events: auto;
-      }
-
-      /* PROMINENT PHONE CONTROLLER VISUALIZATION (BOTTOM-RIGHT: 30-35vw, max 420px) */
-      #phone-widget {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: clamp(280px, 32vw, 420px);
-        background: rgba(6, 18, 30, 0.88);
-        border: 2px solid var(--border-glow);
-        border-radius: 8px;
-        padding: 14px;
-        z-index: 30;
-        backdrop-filter: blur(10px);
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 240, 255, 0.2);
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-      .widget-title {
-        font-size: 13px;
-        font-weight: 800;
-        color: var(--text-cyan);
-        letter-spacing: 1.5px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      #widget-canvas {
-        width: 100%;
-        height: 110px; /* Taller canvas for visually prominent phone illustration */
-        display: block;
-        background: #02070e;
-        border: 1px solid var(--border-color);
-        border-radius: 4px;
-      }
-      .widget-meter-labels {
-        display: flex;
-        justify-content: space-between;
-        font-size: 11px;
-        font-weight: 800;
-        color: var(--text-dim);
-      }
-      .widget-footer-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-top: 6px;
-        border-top: 1px solid rgba(26, 60, 94, 0.6);
-        font-size: 11px;
       }
 
       /* ============================================================
@@ -871,7 +886,7 @@
             <div class="game-sublogo">// EMBODIED IPHONE CONTROLLER</div>
           </div>
 
-          <!-- Bright high-contrast SCORE and LIVES HUD (20-24px) -->
+          <!-- Bright high-contrast SCORE and LIVES HUD -->
           <div class="hud-score-lives">
             <span class="hud-item">
               <span class="hud-label">SCORE</span>
@@ -885,24 +900,20 @@
         </div>
 
         <div class="game-actions">
-          <div id="game-status-badge" class="badge badge-offline">
-            <span class="badge-dot"></span>
-            <span id="game-status-text">KEYBOARD / MOUSE</span>
-          </div>
-          <button id="btn-manual-start" class="btn-green" title="Start Game (Space / Triple-Tap)">
-            START GAME
+          <button id="btn-manual-start" class="btn-tb btn-tb-start" title="Start Game (Space / Triple-Tap)">
+            START
           </button>
-          <button id="btn-manual-pause" class="btn-amber" title="Pause / Resume Game (P / Shake)">
+          <button id="btn-manual-pause" class="btn-tb btn-tb-pause" title="Pause / Resume Game (P / Shake)">
             PAUSE
           </button>
-          <button id="btn-toggle-pair" class="btn-cyan" title="Connect iPhone motion controller">
+          <button id="btn-toggle-pair" class="btn-tb btn-tb-connect" title="Connect iPhone motion controller">
             CONNECT PHONE
           </button>
-          <button id="btn-toggle-debug" style="padding: 10px 14px;" title="Toggle Telemetry HUD (D)">
+          <button id="btn-toggle-debug" class="btn-tb" title="Toggle Telemetry HUD (D)">
             DEBUG
           </button>
-          <button id="btn-toggle-audio" style="padding: 10px 14px;" title="Toggle sound (M)">
-            SND: ON
+          <button id="btn-toggle-audio" class="btn-tb" title="Toggle sound (M)">
+            SND
           </button>
         </div>
       </header>
@@ -975,37 +986,6 @@
           <textarea id="mac-answer-text" rows="3" placeholder="Paste Answer JSON from iPhone here..."></textarea>
           <button id="btn-apply-answer" class="btn-green" style="width: 100%; margin-top: 6px; font-size: 12px; padding: 8px 12px;" disabled>
             APPLY ANSWER
-          </button>
-        </div>
-      </div>
-
-      <!-- Persistent Connected Pill -->
-      <div id="connected-banner">
-        <span class="badge-dot" style="background: var(--text-green);"></span>
-        <span>CONTROLLER CONNECTED</span>
-        <button id="btn-reopen-pair" style="padding: 6px 14px; font-size: 13px; margin-left: 8px;">
-          PAIRING
-        </button>
-      </div>
-
-      <!-- Prominent Phone Visualizer Widget (Bottom-Right: 30-35vw, max 420px) -->
-      <div id="phone-widget">
-        <div class="widget-title">
-          <span>IPHONE EMBODIED CONTROLLER</span>
-          <span id="widget-tilt-val" style="color: #ffffff; background: #0b2238; padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-color);">0.0°</span>
-        </div>
-        <canvas id="widget-canvas" width="380" height="110"></canvas>
-        <div class="widget-meter-labels">
-          <span>◀ TILT LEFT</span>
-          <span style="color: var(--text-cyan);">HORIZONTAL TRAY</span>
-          <span>TILT RIGHT ▶</span>
-        </div>
-        <div class="widget-footer-row">
-          <span id="widget-status-msg" style="color: var(--text-amber); font-weight: bold;">
-            READY: TAP BACK 3× TO START
-          </span>
-          <button id="btn-widget-start" style="padding: 4px 10px; font-size: 11px;">
-            LAUNCH
           </button>
         </div>
       </div>
