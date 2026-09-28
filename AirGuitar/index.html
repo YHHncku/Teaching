@@ -1,0 +1,2474 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Air Guitar</title>
+    <meta name="description" content="Browser-based interactive two-hand air guitar with pose tracking, pitch zones, and expressive strum detection." />
+    <meta property="og:title" content="Air Guitar" />
+    <meta property="og:description" content="Browser-based interactive two-hand air guitar with pose tracking, pitch zones, and expressive strum detection." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- MediaPipe Pose CDN (BlazePose Lite for browser) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg-deep: #070913;
+        --panel-bg: rgba(13, 18, 32, 0.85);
+        --panel-border: rgba(255, 255, 255, 0.1);
+        --accent-cyan: #38bdf8;
+        --accent-purple: #c084fc;
+        --accent-glow: rgba(56, 189, 248, 0.35);
+        --text-main: #f8fafc;
+        --text-sub: #94a3b8;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--bg-deep);
+        color: var(--text-main);
+        min-height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 40%, #111a2e 0%, #060810 100%);
+      }
+
+      /* Desktop-First Responsive Container (~72% Performance Area : ~28% Control Panel) */
+      #app-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: row;
+        align-items: stretch;
+        justify-content: center;
+        padding: 16px;
+        gap: 16px;
+        max-width: 1540px;
+        margin: 0 auto;
+      }
+
+      /* 70-75% Main Performance Stage */
+      #performance-stage {
+        position: relative;
+        flex: 1 1 72%;
+        min-width: 0;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #020409;
+        border-radius: 18px;
+        overflow: hidden;
+        border: 1px solid var(--panel-border);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      }
+
+      #game-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      #webcam-video {
+        display: none;
+      }
+
+      /* 25-28% Control Panel */
+      #control-panel {
+        flex: 0 0 340px;
+        max-width: 360px;
+        height: 100%;
+        background: var(--panel-bg);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        padding: 22px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        z-index: 20;
+        overflow-y: auto;
+      }
+
+      /* Brand Header */
+      .panel-brand {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .brand-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        width: fit-content;
+        padding: 3px 9px;
+        border-radius: 9999px;
+        background: rgba(56, 189, 248, 0.12);
+        border: 1px solid rgba(56, 189, 248, 0.28);
+        color: var(--accent-cyan);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-title {
+        font-size: 24px;
+        font-weight: 900;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        background: linear-gradient(135deg, #ffffff 0%, #38bdf8 55%, #c084fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .brand-tagline {
+        font-size: 12px;
+        color: var(--text-sub);
+        letter-spacing: 0.02em;
+      }
+
+      /* Panel Sections */
+      .panel-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        color: var(--text-sub);
+        text-transform: uppercase;
+      }
+
+      .section-header .sub-hint {
+        font-size: 10px;
+        font-weight: 500;
+        color: #64748b;
+      }
+
+      /* Chord Selector Grid */
+      .chord-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .chord-btn {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        padding: 10px 4px;
+        color: #cbd5e1;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        transition: all 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+        outline: none;
+      }
+
+      .chord-btn:focus-visible {
+        box-shadow: 0 0 0 2px var(--accent-cyan);
+      }
+
+      .chord-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        border-color: rgba(255, 255, 255, 0.24);
+        transform: translateY(-1px);
+      }
+
+      .chord-btn.active {
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(14, 165, 233, 0.4) 100%);
+        border-color: var(--accent-cyan);
+        color: #ffffff;
+        box-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+      }
+
+      .chord-btn.resonating {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(56, 189, 248, 0.6) 100%) !important;
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.8), 0 0 40px rgba(192, 132, 252, 0.5) !important;
+        transform: scale(1.05) !important;
+      }
+
+      .chord-key {
+        font-size: 9px;
+        color: #64748b;
+        font-weight: 600;
+      }
+
+      .chord-btn.active .chord-key {
+        color: #bae6fd;
+      }
+
+      /* Note & Acoustic Status Display */
+      .note-showcase-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .note-badge-wrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .note-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, rgba(192, 132, 252, 0.2) 0%, rgba(168, 85, 247, 0.35) 100%);
+        border: 1px solid rgba(192, 132, 252, 0.5);
+        color: #ffffff;
+        font-size: 22px;
+        font-weight: 900;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 16px rgba(192, 132, 252, 0.3);
+      }
+
+      .note-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .note-title {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent-purple);
+      }
+
+      .note-desc {
+        font-size: 12px;
+        color: #cbd5e1;
+        font-weight: 500;
+      }
+
+      /* Status Pill Rows */
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .status-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        padding: 9px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .status-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        color: #64748b;
+        text-transform: uppercase;
+      }
+
+      .status-val {
+        font-size: 12px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .val-strum { color: var(--accent-cyan); }
+      .val-pitch { color: var(--accent-purple); }
+      .val-ok { color: #4ade80; }
+      .val-standby { color: #facc15; }
+
+      .status-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 9999px;
+        background: currentColor;
+        box-shadow: 0 0 6px currentColor;
+      }
+
+      /* Controls & Sound Slider */
+      .panel-footer {
+        padding-top: 16px;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .volume-control-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--text-sub);
+        text-transform: uppercase;
+      }
+
+      .volume-slider {
+        flex: 1;
+        accent-color: var(--accent-cyan);
+        cursor: pointer;
+      }
+
+      .footer-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .ghost-btn {
+        background: none;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        color: #94a3b8;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+
+      .ghost-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+      }
+
+      /* Polished Start Screen Overlay */
+      #start-screen {
+        position: absolute;
+        inset: 0;
+        z-index: 50;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at center, rgba(13, 19, 36, 0.96) 0%, rgba(4, 6, 12, 0.99) 100%);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        text-align: center;
+        padding: 32px;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+      }
+
+      #start-screen.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .start-logo {
+        font-size: clamp(42px, 7vw, 68px);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        background: linear-gradient(135deg, #ffffff 0%, #38bdf8 50%, #c084fc 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 6px;
+        line-height: 1.1;
+      }
+
+      .start-motto {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--accent-cyan);
+        margin-bottom: 16px;
+      }
+
+      .start-explanation {
+        font-size: 15px;
+        color: #94a3b8;
+        max-width: 440px;
+        line-height: 1.6;
+        margin-bottom: 30px;
+      }
+
+      .start-btn {
+        position: relative;
+        padding: 16px 54px;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #030712;
+        background: linear-gradient(135deg, #38bdf8 0%, #00f0ff 100%);
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0.4), 0 4px 14px rgba(0, 0, 0, 0.4);
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        outline: none;
+      }
+
+      .start-btn:focus-visible {
+        box-shadow: 0 0 0 3px #ffffff, 0 0 30px rgba(56, 189, 248, 0.8);
+      }
+
+      .start-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 38px rgba(56, 189, 248, 0.65), 0 6px 18px rgba(0, 0, 0, 0.5);
+      }
+
+      .start-btn:active {
+        transform: translateY(1px);
+      }
+
+      .start-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      /* Camera Error Modal */
+      #error-modal {
+        display: none;
+        position: absolute;
+        inset: 0;
+        z-index: 60;
+        align-items: center;
+        justify-content: center;
+        background: rgba(3, 6, 14, 0.88);
+        backdrop-filter: blur(10px);
+        padding: 24px;
+      }
+
+      .error-card {
+        background: #171b2c;
+        border: 1px solid #ef4444;
+        border-radius: 16px;
+        padding: 28px 24px;
+        max-width: 420px;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(239, 68, 68, 0.2);
+      }
+
+      .error-icon {
+        width: 44px;
+        height: 44px;
+        margin: 0 auto 12px;
+        color: #ef4444;
+      }
+
+      .error-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #f87171;
+        margin-bottom: 8px;
+      }
+
+      .error-desc {
+        font-size: 13px;
+        color: #cbd5e1;
+        margin-bottom: 20px;
+        line-height: 1.5;
+      }
+
+      .retry-btn {
+        padding: 10px 28px;
+        font-size: 14px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #ffffff;
+        background: #ef4444;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      /* Floating Overlay Hint on Stage */
+      #stage-hint {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(11, 16, 30, 0.75);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 9999px;
+        padding: 6px 18px;
+        font-size: 12px;
+        color: #94a3b8;
+        pointer-events: none;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 10;
+      }
+
+      #stage-hint .accent {
+        color: var(--accent-cyan);
+        font-weight: 700;
+      }
+
+      #stage-hint .pitch-accent {
+        color: var(--accent-purple);
+        font-weight: 700;
+      }
+
+      /* Compact Debug Tray (collapsible for developer check) */
+      #debug-tray {
+        display: none;
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        z-index: 40;
+        background: rgba(10, 14, 25, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-family: ui-monospace, monospace;
+        font-size: 10px;
+        color: #cbd5e1;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      /* Responsive Layout: Stack for smaller laptops / tablets */
+      @media (max-width: 980px) {
+        #app-container {
+          flex-direction: column;
+          height: auto;
+          min-height: 100vh;
+          overflow-y: auto;
+        }
+
+        #performance-stage {
+          width: 100%;
+          height: 60vh;
+          min-height: 380px;
+        }
+
+        #control-panel {
+          flex: none;
+          max-width: none;
+          width: 100%;
+          height: auto;
+        }
+      }
+
+      /* Accessibility: Reduced Motion Support */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app-container">
+      <!-- Hidden Video Element for Webcam Input -->
+      <video id="webcam-video" playsinline muted></video>
+
+      <!-- 70-75% Main Performance Area -->
+      <div id="performance-stage">
+        <!-- Render Canvas for Video, Skeleton, Pitch Frets, Strings, Ripples, Particles -->
+        <canvas id="game-canvas" width="640" height="480"></canvas>
+
+        <!-- Floating Stage Hint -->
+        <div id="stage-hint">
+          <span class="pitch-accent">Pitch Hand (2D):</span> Left/Right = Chord &bull; Up/Down = Pitch &bull; <span class="accent">Strum Hand:</span> Strum to play
+        </div>
+
+        <!-- Compact Dev Debug Tray -->
+        <div id="debug-tray">
+          <div>FPS: <span id="dbg-fps">0</span> | STATE: <span id="dbg-state">IDLE</span></div>
+          <div>STRUM SPEED: <span id="dbg-speed">0</span> px/s</div>
+        </div>
+
+        <!-- Polished Start Screen Overlay -->
+        <div id="start-screen">
+          <div class="brand-badge">2D Musical Controller</div>
+          <h1 class="start-logo">AIR GUITAR</h1>
+          <div class="start-motto">Move (2D) &bull; Strum &bull; Play</div>
+          <p class="start-explanation">
+            <strong>Pitch Hand:</strong> Move Left/Right for Chord, Up/Down for Pitch.<br />
+            <strong>Strum Hand:</strong> Natural strum in any direction to trigger sound.
+          </p>
+          <button id="start-btn" class="start-btn" aria-label="Start Air Guitar">START</button>
+        </div>
+
+        <!-- Camera Error Modal -->
+        <div id="error-modal" role="alertdialog" aria-modal="true" aria-labelledby="error-title">
+          <div class="error-card">
+            <svg class="error-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h2 class="error-title" id="error-title">Camera access is needed to play.</h2>
+            <p class="error-desc" id="error-desc">Please allow camera permissions in your browser to detect your hands.</p>
+            <button id="retry-btn" class="retry-btn">TRY AGAIN</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 25-30% Sleek Instrument Control Panel -->
+      <aside id="control-panel" aria-label="Instrument Controls">
+        <div>
+          <!-- Header -->
+          <div class="panel-brand">
+            <div class="brand-badge">Air Guitar</div>
+            <h2 class="brand-title">Synthesizer</h2>
+            <p class="brand-tagline">Body-Movement Plucked Instrument</p>
+          </div>
+
+          <!-- Chord Selector Grid -->
+          <section class="panel-section" aria-labelledby="chord-heading">
+            <div class="section-header">
+              <span id="chord-heading">CHORD (X AXIS)</span>
+              <span class="sub-hint">Hand X or 1–6</span>
+            </div>
+            <div class="chord-grid" role="group" aria-label="Select musical chord">
+              <button class="chord-btn active" data-chord="C" aria-pressed="true">
+                <span>C</span>
+                <span class="chord-key">[1]</span>
+              </button>
+              <button class="chord-btn" data-chord="G" aria-pressed="false">
+                <span>G</span>
+                <span class="chord-key">[2]</span>
+              </button>
+              <button class="chord-btn" data-chord="Am" aria-pressed="false">
+                <span>Am</span>
+                <span class="chord-key">[3]</span>
+              </button>
+              <button class="chord-btn" data-chord="F" aria-pressed="false">
+                <span>F</span>
+                <span class="chord-key">[4]</span>
+              </button>
+              <button class="chord-btn" data-chord="Dm" aria-pressed="false">
+                <span>Dm</span>
+                <span class="chord-key">[5]</span>
+              </button>
+              <button class="chord-btn" data-chord="Em" aria-pressed="false">
+                <span>Em</span>
+                <span class="chord-key">[6]</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- Current Note Card -->
+          <section class="panel-section" aria-labelledby="note-heading">
+            <div class="section-header">
+              <span id="note-heading">ACTIVE PITCH (Y AXIS)</span>
+              <span class="sub-hint" id="hud-zone-indicator">ZONE 3/6</span>
+            </div>
+            <div class="note-showcase-card">
+              <div class="note-badge-wrap">
+                <div class="note-badge" id="hud-note-badge">E</div>
+                <div class="note-meta">
+                  <span class="note-title">2D MUSICAL STATE</span>
+                  <span class="note-desc" id="hud-note-scale">C Chord &bull; Harmonic Major Third</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Instrument Telemetry & Hand Roles -->
+          <section class="panel-section" aria-labelledby="status-heading">
+            <div class="section-header">
+              <span id="status-heading">INSTRUMENT STATUS</span>
+            </div>
+            <div class="status-grid">
+              <div class="status-item">
+                <span class="status-label">STRUM HAND</span>
+                <span class="status-val val-strum" id="hud-strum-hand">RIGHT</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">PITCH HAND</span>
+                <span class="status-val val-pitch" id="hud-pitch-hand">LEFT</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">POSE TRACKING</span>
+                <span class="status-val val-standby" id="hud-pose-status">
+                  <span class="status-dot"></span>STANDBY
+                </span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">AUDIO ENGINE</span>
+                <span class="status-val val-ok" id="hud-audio-status">
+                  <span class="status-dot"></span>READY
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- Panel Footer -->
+        <footer class="panel-footer">
+          <div class="volume-control-row">
+            <label for="master-volume">VOLUME</label>
+            <input type="range" id="master-volume" class="volume-slider" min="0" max="1" step="0.05" value="0.85" aria-label="Master Volume" />
+          </div>
+          <div class="footer-actions">
+            <button id="toggle-debug-btn" class="ghost-btn">Dev Tray</button>
+            <span style="font-size: 11px; color: #475569;">GitHub Pages Static</span>
+          </div>
+        </footer>
+      </aside>
+    </div>
+
+    <!-- Application Script (Self-Contained Single-File Architecture) -->
+    <script>
+      (function () {
+        'use strict';
+
+        // --- Preferences: Reduced Motion Support ---
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // --- Musical Chord Family & Pentatonic Scale Framework ---
+        // Frequencies tuned for a rich, warm electric guitar register (~110Hz to ~440Hz).
+        const CHORDS = {
+          'C': {
+            name: 'C',
+            notes: ['C', 'D', 'E', 'G', 'A', 'C'],
+            descriptions: ['Tonic Root', 'Major Second', 'Major Third', 'Perfect Fifth', 'Major Sixth', 'High Octave'],
+            freqs: [130.81, 146.83, 164.81, 196.00, 220.00, 261.63],
+            rootFreq: 130.81,
+            color: '#38bdf8'
+          },
+          'G': {
+            name: 'G',
+            notes: ['G', 'A', 'B', 'D', 'E', 'G'],
+            descriptions: ['Tonic Root', 'Major Second', 'Major Third', 'Perfect Fifth', 'Major Sixth', 'High Octave'],
+            freqs: [196.00, 220.00, 246.94, 293.66, 329.63, 392.00],
+            rootFreq: 98.00,
+            color: '#4ade80'
+          },
+          'Am': {
+            name: 'Am',
+            notes: ['A', 'C', 'D', 'E', 'G', 'A'],
+            descriptions: ['Minor Root', 'Minor Third', 'Perfect Fourth', 'Perfect Fifth', 'Minor Seventh', 'High Octave'],
+            freqs: [220.00, 261.63, 293.66, 329.63, 392.00, 440.00],
+            rootFreq: 110.00,
+            color: '#c084fc'
+          },
+          'F': {
+            name: 'F',
+            notes: ['F', 'G', 'A', 'C', 'D', 'F'],
+            descriptions: ['Tonic Root', 'Major Second', 'Major Third', 'Perfect Fifth', 'Major Sixth', 'High Octave'],
+            freqs: [174.61, 196.00, 220.00, 261.63, 293.66, 349.23],
+            rootFreq: 87.31,
+            color: '#f59e0b'
+          },
+          'Dm': {
+            name: 'Dm',
+            notes: ['D', 'F', 'G', 'A', 'C', 'D'],
+            descriptions: ['Minor Root', 'Minor Third', 'Perfect Fourth', 'Perfect Fifth', 'Minor Seventh', 'High Octave'],
+            freqs: [146.83, 174.61, 196.00, 220.00, 261.63, 293.66],
+            rootFreq: 146.83,
+            color: '#ec4899'
+          },
+          'Em': {
+            name: 'Em',
+            notes: ['E', 'G', 'A', 'B', 'D', 'E'],
+            descriptions: ['Minor Root', 'Minor Third', 'Perfect Fourth', 'Perfect Fifth', 'Minor Seventh', 'High Octave'],
+            freqs: [164.81, 196.00, 220.00, 246.94, 293.66, 329.63],
+            rootFreq: 82.41,
+            color: '#06b6d4'
+          }
+        };
+
+        // --- 2D Musical Controller Zones (Pitch Hand: X = Chord, Y = Pitch) ---
+        const CHORD_ZONE_CONFIG = {
+          keys: ['C', 'G', 'Am', 'F', 'Dm', 'Em'],
+          count: 6,
+          minNormX: 0.06, // Same safe interaction margin as tracking EDGE_MARGIN
+          maxNormX: 0.94,
+        };
+
+        // --- Pitch Zones Constants (6 Horizontal Bands across Y: 60..420) ---
+        const PITCH_ZONE_CONFIG = {
+          count: 6,
+          topY: 60,
+          bottomY: 420,
+          zoneHeight: (420 - 60) / 6
+        };
+
+        // --- Boundary-Safe Gesture Detection Thresholds ---
+        const STRUM_MIN_VELOCITY = 360;       // Minimum 2D velocity (px/s) for strum candidate
+        const STRUM_MIN_DISTANCE = 22;        // Minimum stroke distance (px)
+        const STRUM_COOLDOWN = 190;           // Debounce cooldown (ms) between strums
+        const STRUM_RESET_VELOCITY = 140;     // Lockout reset velocity
+        const EDGE_MARGIN = 0.06;             // 6% safety margin on all 4 camera frame edges
+        const CONSECUTIVE_VALID_FRAMES_REQ = 4; // Required valid samples after frame re-entry
+        const MAX_PARTICLES = prefersReducedMotion ? 12 : 75; // Hard ceiling on particle count
+
+        const STRUM_CONFIG = {
+          smoothingAlpha: 0.38,
+          roleHysteresisRatio: 2.2,
+          roleSwitchCooldown: 2200,
+        };
+
+        // --- Expressive Layered Audio Synthesizer (Web Audio API) ---
+        class ExpressiveGuitarSynthesizer {
+          constructor() {
+            this.ctx = null;
+            this.masterGain = null;
+            this.limiter = null;
+            this.noiseBuffer = null;
+          }
+
+          init() {
+            if (this.ctx) {
+              if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+              }
+              return;
+            }
+
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContextClass();
+
+            // Master Limiter / Compressor to avoid any clipping or runaway volume
+            this.limiter = this.ctx.createDynamicsCompressor();
+            this.limiter.threshold.setValueAtTime(-3, this.ctx.currentTime);
+            this.limiter.knee.setValueAtTime(5, this.ctx.currentTime);
+            this.limiter.ratio.setValueAtTime(10, this.ctx.currentTime);
+            this.limiter.attack.setValueAtTime(0.002, this.ctx.currentTime);
+            this.limiter.release.setValueAtTime(0.08, this.ctx.currentTime);
+
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+
+            this.limiter.connect(this.masterGain);
+            this.masterGain.connect(this.ctx.destination);
+
+            // Short plectrum pick noise buffer (~18ms)
+            const sampleRate = this.ctx.sampleRate;
+            const bufferSize = Math.floor(sampleRate * 0.018);
+            this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, sampleRate);
+            const data = this.noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (sampleRate * 0.004));
+            }
+          }
+
+          setVolume(val) {
+            if (this.masterGain && this.ctx) {
+              this.masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, val)), this.ctx.currentTime);
+            }
+          }
+
+          // Trigger expressive guitar pluck with natural dynamics and harmonic accompaniment
+          pluck(frequency, rootFreq, chordFreqs, noteIndex, speed, direction, zoneIndex) {
+            if (!this.ctx) this.init();
+            if (this.ctx.state === 'suspended') {
+              this.ctx.resume();
+            }
+
+            const now = this.ctx.currentTime;
+            const nodesToClean = [];
+
+            // Normalized velocity dynamics (0.0 to 1.0) with musical curve
+            const normSpeed = Math.min(1.0, Math.max(0.0, (speed - STRUM_MIN_VELOCITY) / 600));
+            const dynamics = Math.pow(normSpeed, 0.72);
+
+            // Expressive direction-dependent attack, brightness & volume nuances (up, down, sideways, diagonal)
+            let attackTime = 0.0035;
+            let filterBoost = 1.0;
+            let levelScale = 1.0;
+
+            if (direction === 'down') {
+              attackTime = 0.0022;
+              filterBoost = 1.15;
+              levelScale = 1.05;
+            } else if (direction === 'up') {
+              attackTime = 0.0055;
+              filterBoost = 0.88;
+              levelScale = 0.95;
+            } else if (direction === 'right' || direction === 'left') {
+              attackTime = 0.0030;
+              filterBoost = 1.08;
+              levelScale = 1.0;
+            } else if (direction && direction.startsWith('diag-down')) {
+              attackTime = 0.0025;
+              filterBoost = 1.12;
+              levelScale = 1.02;
+            } else if (direction && direction.startsWith('diag-up')) {
+              attackTime = 0.0046;
+              filterBoost = 0.92;
+              levelScale = 0.97;
+            }
+
+            // Subtle Humanization
+            const humanizeAttack = (Math.random() * 0.001 - 0.0005);
+            const finalAttack = Math.max(0.0015, attackTime + humanizeAttack);
+            const humanizeDetune = (Math.random() * 3.0 - 1.5);
+            const decayTime = (0.65 + dynamics * 0.45) * (0.95 + Math.random() * 0.1);
+            const mainGainPeak = (0.35 + dynamics * 0.45) * levelScale;
+
+            // Subtle Stereo Spread across pitch zones
+            let panner = null;
+            if (typeof this.ctx.createStereoPanner === 'function') {
+              panner = this.ctx.createStereoPanner();
+              const panValue = Math.max(-0.55, Math.min(0.55, ((zoneIndex - 2.5) * 0.12) + (Math.random() * 0.1 - 0.05)));
+              panner.pan.setValueAtTime(panValue, now);
+              panner.connect(this.limiter);
+              nodesToClean.push(panner);
+            }
+            const dest = panner || this.limiter;
+
+            // --- LAYER 1: Main Note (Dual Detuned Saw + Triangle with Lowpass Sweep) ---
+            const osc1 = this.ctx.createOscillator();
+            const osc2 = this.ctx.createOscillator();
+            osc1.type = 'sawtooth';
+            osc2.type = 'triangle';
+            osc1.frequency.setValueAtTime(frequency, now);
+            osc2.frequency.setValueAtTime(frequency, now);
+            osc1.detune.setValueAtTime(-2.5 + humanizeDetune, now);
+            osc2.detune.setValueAtTime(3.0 + humanizeDetune, now);
+
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.Q.setValueAtTime(2.8 + dynamics * 0.8, now);
+            const startCutoff = Math.min(5400, frequency * (3.8 + dynamics * 3.6) * filterBoost);
+            const endCutoff = Math.max(180, frequency * (1.1 + dynamics * 0.4));
+            filter.frequency.setValueAtTime(startCutoff, now);
+            filter.frequency.exponentialRampToValueAtTime(endCutoff, now + Math.min(0.42, decayTime * 0.6));
+
+            const ampGain = this.ctx.createGain();
+            ampGain.gain.setValueAtTime(0.0001, now);
+            ampGain.gain.exponentialRampToValueAtTime(mainGainPeak, now + finalAttack);
+            ampGain.gain.exponentialRampToValueAtTime(mainGainPeak * 0.45, now + 0.14);
+            ampGain.gain.exponentialRampToValueAtTime(0.0001, now + decayTime);
+
+            osc1.connect(filter);
+            osc2.connect(filter);
+            filter.connect(ampGain);
+            ampGain.connect(dest);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + decayTime + 0.05);
+            osc2.stop(now + decayTime + 0.05);
+            nodesToClean.push(osc1, osc2, filter, ampGain);
+
+            // --- LAYER 2: Subtle Octave Harmonic Chime ---
+            const octaveOsc = this.ctx.createOscillator();
+            octaveOsc.type = 'sine';
+            const octaveFreq = (frequency < 250) ? frequency * 2 : frequency;
+            octaveOsc.frequency.setValueAtTime(octaveFreq, now);
+
+            const octaveGain = this.ctx.createGain();
+            const octavePeak = mainGainPeak * (0.16 + (Math.random() * 0.06));
+            octaveGain.gain.setValueAtTime(0.0001, now);
+            octaveGain.gain.exponentialRampToValueAtTime(octavePeak, now + finalAttack + 0.002);
+            octaveGain.gain.exponentialRampToValueAtTime(0.0001, now + Math.min(0.45, decayTime * 0.55));
+
+            octaveOsc.connect(octaveGain);
+            octaveGain.connect(dest);
+            octaveOsc.start(now);
+            octaveOsc.stop(now + 0.5);
+            nodesToClean.push(octaveOsc, octaveGain);
+
+            // --- LAYER 3: Supporting Chord Tone Resonance ---
+            if (chordFreqs && chordFreqs.length > 0) {
+              const supportFreq = rootFreq || chordFreqs[0];
+              const bodyOsc = this.ctx.createOscillator();
+              bodyOsc.type = 'triangle';
+              bodyOsc.frequency.setValueAtTime(supportFreq, now);
+
+              const bodyFilter = this.ctx.createBiquadFilter();
+              bodyFilter.type = 'lowpass';
+              bodyFilter.frequency.setValueAtTime(650, now);
+
+              const bodyGain = this.ctx.createGain();
+              const bodyPeak = 0.07 + dynamics * 0.05;
+              bodyGain.gain.setValueAtTime(0.0001, now);
+              bodyGain.gain.exponentialRampToValueAtTime(bodyPeak, now + 0.02);
+              bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + Math.min(0.9, decayTime * 0.85));
+
+              bodyOsc.connect(bodyFilter);
+              bodyFilter.connect(bodyGain);
+              bodyGain.connect(dest);
+
+              bodyOsc.start(now);
+              bodyOsc.stop(now + 0.95);
+              nodesToClean.push(bodyOsc, bodyFilter, bodyGain);
+            }
+
+            // --- LAYER 4: Transient Noise Pick Scraping ---
+            if (this.noiseBuffer) {
+              const noiseSource = this.ctx.createBufferSource();
+              noiseSource.buffer = this.noiseBuffer;
+
+              const noiseFilter = this.ctx.createBiquadFilter();
+              noiseFilter.type = 'bandpass';
+              noiseFilter.frequency.setValueAtTime(1800 + dynamics * 600, now);
+              noiseFilter.Q.setValueAtTime(2.0, now);
+
+              const noiseGain = this.ctx.createGain();
+              const pickLevel = 0.08 + dynamics * 0.12;
+              noiseGain.gain.setValueAtTime(pickLevel, now);
+              noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.022);
+
+              noiseSource.connect(noiseFilter);
+              noiseFilter.connect(noiseGain);
+              noiseGain.connect(dest);
+
+              noiseSource.start(now);
+              noiseSource.stop(now + 0.03);
+              nodesToClean.push(noiseSource, noiseFilter, noiseGain);
+            }
+
+            // High shimmer ping
+            const shimmerOsc = this.ctx.createOscillator();
+            shimmerOsc.type = 'sine';
+            shimmerOsc.frequency.setValueAtTime(Math.min(3600, frequency * 4), now);
+
+            const shimmerGain = this.ctx.createGain();
+            shimmerGain.gain.setValueAtTime(0.0001, now);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.04 + dynamics * 0.04, now + 0.003);
+            shimmerGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+
+            shimmerOsc.connect(shimmerGain);
+            shimmerGain.connect(dest);
+            shimmerOsc.start(now);
+            shimmerOsc.stop(now + 0.05);
+            nodesToClean.push(shimmerOsc, shimmerGain);
+
+            // Clean up node references after sound finishes
+            osc1.onended = () => {
+              setTimeout(() => {
+                for (let i = 0; i < nodesToClean.length; i++) {
+                  try {
+                    nodesToClean[i].disconnect();
+                  } catch (e) {}
+                }
+              }, 100);
+            };
+          }
+        }
+
+        const synth = new ExpressiveGuitarSynthesizer();
+
+        // --- Application State ---
+        const state = {
+          isRunning: false,
+          cameraStatus: 'STANDBY',
+          poseStatus: 'STANDBY',
+          cameraStream: null,
+          isInferencing: false,
+
+          // Active Chord & Selected Note (2D Musical Controller: X=Chord, Y=Pitch)
+          currentChordKey: 'C',
+          currentChordZone: 0,
+          currentNote: 'E',
+          currentNoteIndex: 2,
+          currentPitchZone: 2,
+          chordTransitionAnim: 0,
+          pitchTransitionAnim: 0,
+          consecutivePitchValidFrames: 0,
+
+          // Hand Roles: 'right' | 'left' (in mirrored screen coordinates)
+          strumHand: 'right',
+          pitchHand: 'left',
+          lastRoleSwitchTime: 0,
+          leftStrumScore: 0,
+          rightStrumScore: 0,
+
+          // Strum State Machine & Bounds Safety
+          strumTrackingState: 'IDLE', // 'IDLE' | 'TRACKING' | 'STRUM_CANDIDATE' | 'STRUM_TRIGGERED' | 'TRACKING_LOST'
+          consecutiveValidFrames: 0,
+          strumCandidate: null,
+          isStrumHandInBounds: false,
+          isPitchHandInBounds: false,
+
+          totalStrums: 0,
+          lastStrumTime: 0,
+          lastStrumDirection: null,
+          lastStrumDynamics: 0.5,
+          awaitingReset: false,
+
+          currentStrumWristPos: { x: 0, y: 0 },
+          currentStrumWristVel: { vx: 0, vy: 0, speed: 0 },
+          pitchWristPos: { x: 0, y: 0 },
+
+          smoothedLandmarks: {},
+          leftWristHistory: [],
+          rightWristHistory: [],
+          strumTrail: [],
+
+          // Strings & Visual FX Arrays
+          stringVibrations: [0, 0, 0, 0, 0, 0],
+          strumMarkerRadius: 14,
+          pitchMarkerRadius: 12,
+          ripples: [],
+          strumBanners: [],
+          particles: [],
+
+          fps: 0,
+          frameCount: 0,
+          lastFpsTime: performance.now(),
+        };
+
+        // --- Utility: Hex to RGBA ---
+        function hexToRgba(hex, alpha) {
+          let c = hex.replace('#', '');
+          if (c.length === 3) {
+            c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+          }
+          const num = parseInt(c, 16);
+          const r = (num >> 16) & 255;
+          const g = (num >> 8) & 255;
+          const b = num & 255;
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        // --- DOM Elements ---
+        const video = document.getElementById('webcam-video');
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const startBtn = document.getElementById('start-btn');
+        const errorModal = document.getElementById('error-modal');
+        const retryBtn = document.getElementById('retry-btn');
+
+        // Control Panel Elements
+        const chordBtns = document.querySelectorAll('.chord-btn');
+        const hudNoteBadge = document.getElementById('hud-note-badge');
+        const hudNoteScale = document.getElementById('hud-note-scale');
+        const hudZoneIndicator = document.getElementById('hud-zone-indicator');
+        const hudStrumHand = document.getElementById('hud-strum-hand');
+        const hudPitchHand = document.getElementById('hud-pitch-hand');
+        const hudPoseStatus = document.getElementById('hud-pose-status');
+        const masterVolume = document.getElementById('master-volume');
+        const toggleDebugBtn = document.getElementById('toggle-debug-btn');
+        const debugTray = document.getElementById('debug-tray');
+        const dbgFps = document.getElementById('dbg-fps');
+        const dbgState = document.getElementById('dbg-state');
+        const dbgSpeed = document.getElementById('dbg-speed');
+
+        let poseInstance = null;
+
+        const SKELETON_BONES = [
+          [11, 12], [11, 13], [13, 15], [15, 17], [15, 19],
+          [12, 14], [14, 16], [16, 18], [16, 20],
+          [11, 23], [12, 24], [23, 24]
+        ];
+
+        // --- Chord Selection (Secondary / Manual Override) ---
+        function selectChord(chordKey, isManual = false) {
+          if (!CHORDS[chordKey]) return;
+          state.currentChordKey = chordKey;
+          const idx = CHORD_ZONE_CONFIG.keys.indexOf(chordKey);
+          if (idx !== -1) {
+            state.currentChordZone = idx;
+          }
+          state.chordTransitionAnim = 1.0;
+
+          syncChordButtonsUI(chordKey);
+          updatePitchZoneAndNote();
+        }
+
+        function syncChordButtonsUI(chordKey) {
+          chordBtns.forEach(btn => {
+            const isMatch = (btn.getAttribute('data-chord') === chordKey);
+            btn.classList.toggle('active', isMatch);
+            btn.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+          });
+        }
+
+        chordBtns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            selectChord(btn.getAttribute('data-chord'), true);
+          });
+        });
+
+        // Keyboard Shortcuts (1-6)
+        const CHORD_KEYS = ['C', 'G', 'Am', 'F', 'Dm', 'Em'];
+        window.addEventListener('keydown', (e) => {
+          const num = parseInt(e.key, 10);
+          if (num >= 1 && num <= 6) {
+            selectChord(CHORD_KEYS[num - 1], true);
+          }
+        });
+
+        masterVolume.addEventListener('input', (e) => {
+          synth.setVolume(parseFloat(e.target.value));
+        });
+
+        toggleDebugBtn.addEventListener('click', () => {
+          const isShown = debugTray.style.display === 'flex';
+          debugTray.style.display = isShown ? 'none' : 'flex';
+        });
+
+        // --- Error Alert Management ---
+        function showError(msg) {
+          document.getElementById('error-desc').textContent = msg;
+          errorModal.style.display = 'flex';
+          startBtn.disabled = false;
+          startBtn.textContent = 'START';
+        }
+
+        function hideError() {
+          errorModal.style.display = 'none';
+        }
+
+        retryBtn.addEventListener('click', () => {
+          hideError();
+          initApplication();
+        });
+
+        startBtn.addEventListener('click', () => {
+          synth.init();
+          initApplication();
+        });
+
+        // --- Initialization Flow ---
+        async function initApplication() {
+          startBtn.disabled = true;
+          startBtn.textContent = 'CONNECTING...';
+          hudPoseStatus.innerHTML = '<span class="status-dot"></span>LOADING';
+          hudPoseStatus.className = 'status-val val-standby';
+
+          // 1. Request Webcam Permission
+          try {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+              throw new Error('Your browser does not support webcam access.');
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: 'user'
+              },
+              audio: false
+            });
+
+            state.cameraStream = stream;
+            video.srcObject = stream;
+            await video.play();
+            state.cameraStatus = 'READY';
+          } catch (err) {
+            state.cameraStatus = 'ERROR';
+            let msg = 'Camera access is needed to play.';
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+              msg = 'Camera permission was denied. Please allow camera permissions in your browser address bar.';
+            } else if (err.name === 'NotFoundError') {
+              msg = 'No camera device found on this system.';
+            } else if (err.name === 'NotReadableError') {
+              msg = 'Webcam is in use by another application.';
+            }
+            showError(msg);
+            return;
+          }
+
+          // 2. Initialize MediaPipe Pose Tracker
+          startBtn.textContent = 'PREPARING AI...';
+
+          try {
+            if (typeof window.Pose === 'undefined') {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+            }
+
+            if (typeof window.Pose === 'undefined') {
+              throw new Error('MediaPipe Pose failed to load. Please verify your internet connection.');
+            }
+
+            poseInstance = new window.Pose({
+              locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`
+            });
+
+            poseInstance.setOptions({
+              modelComplexity: 0,
+              smoothLandmarks: true,
+              enableSegmentation: false,
+              smoothSegmentation: false,
+              minDetectionConfidence: 0.5,
+              minTrackingConfidence: 0.5
+            });
+
+            poseInstance.onResults(onPoseResults);
+            await poseInstance.send({ image: video });
+
+            state.poseStatus = 'READY';
+            hudPoseStatus.innerHTML = '<span class="status-dot"></span>ACTIVE';
+            hudPoseStatus.className = 'status-val val-ok';
+          } catch (err) {
+            console.error('Pose tracking error:', err);
+            hudPoseStatus.innerHTML = '<span class="status-dot"></span>ERROR';
+            hudPoseStatus.className = 'status-val val-pitch';
+            showError('Failed to initialize pose model. Please refresh and try again.');
+            return;
+          }
+
+          // 3. Launch Performance Area
+          startScreen.classList.add('hidden');
+          state.isRunning = true;
+
+          requestAnimationFrame(renderLoop);
+          startInferenceLoop();
+        }
+
+        // --- Throttled Pose Inference Loop ---
+        function startInferenceLoop() {
+          const runInference = async () => {
+            if (!state.isRunning) return;
+
+            if (!state.isInferencing && video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+              state.isInferencing = true;
+              try {
+                await poseInstance.send({ image: video });
+              } catch (e) {
+              } finally {
+                state.isInferencing = false;
+              }
+            }
+
+            setTimeout(() => {
+              if (window.requestVideoFrameCallback && video.requestVideoFrameCallback) {
+                video.requestVideoFrameCallback(runInference);
+              } else {
+                requestAnimationFrame(runInference);
+              }
+            }, 25);
+          };
+
+          runInference();
+        }
+
+        // --- Robust Landmark Validation (Boundary & Presence Guard) ---
+        function isLandmarkValid(rawLandmark) {
+          if (!rawLandmark) return false;
+          if (!Number.isFinite(rawLandmark.x) || !Number.isFinite(rawLandmark.y)) return false;
+          if (rawLandmark.visibility !== undefined && rawLandmark.visibility < 0.52) return false;
+          if (rawLandmark.presence !== undefined && rawLandmark.presence < 0.52) return false;
+
+          const normScreenX = 1 - rawLandmark.x;
+          const normY = rawLandmark.y;
+
+          if (normScreenX < EDGE_MARGIN || normScreenX > (1 - EDGE_MARGIN)) return false;
+          if (normY < EDGE_MARGIN || normY > (1 - EDGE_MARGIN)) return false;
+
+          return true;
+        }
+
+        // --- MediaPipe Callback ---
+        function onPoseResults(results) {
+          if (!results.poseLandmarks) {
+            handleCompleteTrackingLoss();
+            return;
+          }
+
+          const rawLandmarks = results.poseLandmarks;
+          const w = canvas.width;
+          const h = canvas.height;
+          const alpha = STRUM_CONFIG.smoothingAlpha;
+
+          for (let i = 0; i < rawLandmarks.length; i++) {
+            const raw = rawLandmarks[i];
+            if (!raw || !Number.isFinite(raw.x) || !Number.isFinite(raw.y)) continue;
+
+            const targetX = (1 - raw.x) * w;
+            const targetY = raw.y * h;
+            const vis = raw.visibility || 0;
+
+            if (!state.smoothedLandmarks[i]) {
+              state.smoothedLandmarks[i] = { x: targetX, y: targetY, visibility: vis };
+            } else {
+              state.smoothedLandmarks[i].x += (targetX - state.smoothedLandmarks[i].x) * alpha;
+              state.smoothedLandmarks[i].y += (targetY - state.smoothedLandmarks[i].y) * alpha;
+              state.smoothedLandmarks[i].visibility = vis;
+            }
+          }
+
+          processTwoHandInteraction(rawLandmarks);
+        }
+
+        function handleCompleteTrackingLoss() {
+          state.isStrumHandInBounds = false;
+          state.isPitchHandInBounds = false;
+          state.consecutivePitchValidFrames = 0;
+          state.strumTrackingState = 'TRACKING_LOST';
+          state.consecutiveValidFrames = 0;
+          state.strumCandidate = null;
+          state.leftWristHistory = [];
+          state.rightWristHistory = [];
+          state.strumTrail = [];
+          state.currentStrumWristVel = { vx: 0, vy: 0, speed: 0 };
+          state.awaitingReset = false;
+        }
+
+        // --- Two-Hand Interaction Processor with Robust State Machine ---
+        function processTwoHandInteraction(rawLandmarks) {
+          const now = performance.now();
+          const sl = state.smoothedLandmarks;
+
+          const rawLeftWrist = rawLandmarks[15];
+          const rawRightWrist = rawLandmarks[16];
+
+          const isLeftValid = isLandmarkValid(rawLeftWrist);
+          const isRightValid = isLandmarkValid(rawRightWrist);
+
+          const leftWrist = sl[15];
+          const rightWrist = sl[16];
+
+          if (isLeftValid && leftWrist) {
+            updateWristHistory(state.leftWristHistory, leftWrist, now);
+          } else {
+            state.leftWristHistory = [];
+          }
+
+          if (isRightValid && rightWrist) {
+            updateWristHistory(state.rightWristHistory, rightWrist, now);
+          } else {
+            state.rightWristHistory = [];
+          }
+
+          const leftVel = computeWristVelocity(state.leftWristHistory);
+          const rightVel = computeWristVelocity(state.rightWristHistory);
+
+          if (isLeftValid && leftVel.speed > STRUM_MIN_VELOCITY * 0.75) {
+            state.leftStrumScore += (leftVel.speed / 100);
+          }
+          if (isRightValid && rightVel.speed > STRUM_MIN_VELOCITY * 0.75) {
+            state.rightStrumScore += (rightVel.speed / 100);
+          }
+
+          state.leftStrumScore *= 0.94;
+          state.rightStrumScore *= 0.94;
+
+          // Hand-Role Determination with Hysteresis
+          const canSwitchRoles = (now - state.lastRoleSwitchTime) > STRUM_CONFIG.roleSwitchCooldown;
+          if (canSwitchRoles) {
+            if (state.strumHand === 'right') {
+              if (state.leftStrumScore > state.rightStrumScore * STRUM_CONFIG.roleHysteresisRatio + 35) {
+                state.strumHand = 'left';
+                state.pitchHand = 'right';
+                state.lastRoleSwitchTime = now;
+                resetStrumTrackingState();
+              }
+            } else {
+              if (state.rightStrumScore > state.leftStrumScore * STRUM_CONFIG.roleHysteresisRatio + 35) {
+                state.strumHand = 'right';
+                state.pitchHand = 'left';
+                state.lastRoleSwitchTime = now;
+                resetStrumTrackingState();
+              }
+            }
+          }
+
+          const isRightStrum = (state.strumHand === 'right');
+          const isStrumValid = isRightStrum ? isRightValid : isLeftValid;
+          const isPitchValid = isRightStrum ? isLeftValid : isRightValid;
+
+          const strumWrist = isRightStrum ? rightWrist : leftWrist;
+          const strumVel = isRightStrum ? rightVel : leftVel;
+          const pitchWrist = isRightStrum ? leftWrist : rightWrist;
+
+          state.isStrumHandInBounds = isStrumValid;
+          state.isPitchHandInBounds = isPitchValid;
+
+          // PITCH HAND (2D Musical Controller: X = Chord, Y = Pitch)
+          // Updates visual & musical state ONLY; NEVER triggers audio
+          if (isPitchValid && pitchWrist) {
+            state.consecutivePitchValidFrames++;
+            state.pitchWristPos = { x: pitchWrist.x, y: pitchWrist.y };
+            if (state.consecutivePitchValidFrames >= 2) {
+              updatePitchHand2D(pitchWrist.x, pitchWrist.y, now);
+            }
+          } else {
+            state.consecutivePitchValidFrames = 0;
+            // When pitch hand leaves the valid area, safely freeze current musical state without jumps or sound
+          }
+
+          // STRUM HAND: Boundary Guard & State Machine (Triggers Sound)
+          if (!isStrumValid || !strumWrist) {
+            state.strumTrackingState = 'TRACKING_LOST';
+            state.consecutiveValidFrames = 0;
+            state.strumCandidate = null;
+            state.currentStrumWristVel = { vx: 0, vy: 0, speed: 0 };
+            state.awaitingReset = false;
+            state.strumTrail = [];
+            return;
+          }
+
+          state.currentStrumWristPos = { x: strumWrist.x, y: strumWrist.y };
+          state.currentStrumWristVel = strumVel;
+          state.consecutiveValidFrames++;
+
+          state.strumTrail.push({ x: strumWrist.x, y: strumWrist.y, t: now });
+          while (state.strumTrail.length > 0 && now - state.strumTrail[0].t > 240) {
+            state.strumTrail.shift();
+          }
+
+          if (state.consecutiveValidFrames < CONSECUTIVE_VALID_FRAMES_REQ) {
+            state.strumTrackingState = 'IDLE';
+            return;
+          }
+
+          handleStrumStateMachine(strumWrist, strumVel, now);
+        }
+
+        function resetStrumTrackingState() {
+          state.strumTrackingState = 'IDLE';
+          state.consecutiveValidFrames = 0;
+          state.strumCandidate = null;
+          state.leftWristHistory = [];
+          state.rightWristHistory = [];
+          state.strumTrail = [];
+          state.awaitingReset = false;
+        }
+
+        function updateWristHistory(history, wrist, timestamp) {
+          history.push({ x: wrist.x, y: wrist.y, t: timestamp });
+          while (history.length > 0 && timestamp - history[0].t > 280) {
+            history.shift();
+          }
+        }
+
+        function computeWristVelocity(history) {
+          if (history.length < 2) return { vx: 0, vy: 0, speed: 0 };
+          const pLatest = history[history.length - 1];
+          let pBack = history[0];
+          for (let i = history.length - 2; i >= 0; i--) {
+            if (pLatest.t - history[i].t >= 45) {
+              pBack = history[i];
+              break;
+            }
+          }
+
+          const dt = (pLatest.t - pBack.t) / 1000;
+          if (dt <= 0.001 || dt > 0.3) return { vx: 0, vy: 0, speed: 0 };
+
+          const vx = (pLatest.x - pBack.x) / dt;
+          const vy = (pLatest.y - pBack.y) / dt;
+          const speed = Math.hypot(vx, vy);
+          return { vx, vy, speed };
+        }
+
+        // --- 2D Musical Dimension 1: Horizontal Wrist Position (X) Controls Chord ---
+        // With Horizontal Deadband / Hysteresis to eliminate rapid border oscillations
+        function updateChordFromWristX(wristX, now) {
+          const w = canvas.width;
+          const minX = w * CHORD_ZONE_CONFIG.minNormX;
+          const maxX = w * CHORD_ZONE_CONFIG.maxNormX;
+          const totalW = maxX - minX;
+          const zoneW = totalW / CHORD_ZONE_CONFIG.count;
+          const deadband = zoneW * 0.18; // 18% horizontal hysteresis band
+
+          const currentZone = state.currentChordZone;
+          const currentZoneMin = minX + currentZone * zoneW;
+          const currentZoneMax = currentZoneMin + zoneW;
+
+          let newZone = currentZone;
+          // Must clearly cross past current zone border + deadband to switch
+          if (wristX > currentZoneMax + (currentZone < CHORD_ZONE_CONFIG.count - 1 ? deadband : 0)) {
+            const clampedX = Math.max(minX, Math.min(maxX, wristX));
+            const norm = (clampedX - minX) / totalW;
+            newZone = Math.min(CHORD_ZONE_CONFIG.count - 1, Math.floor(norm * CHORD_ZONE_CONFIG.count));
+          } else if (wristX < currentZoneMin - (currentZone > 0 ? deadband : 0)) {
+            const clampedX = Math.max(minX, Math.min(maxX, wristX));
+            const norm = (clampedX - minX) / totalW;
+            newZone = Math.max(0, Math.floor(norm * CHORD_ZONE_CONFIG.count));
+          }
+
+          if (newZone !== currentZone) {
+            state.currentChordZone = newZone;
+            state.currentChordKey = CHORD_ZONE_CONFIG.keys[newZone];
+            state.chordTransitionAnim = 1.0; // Trigger subtle visual animation; NO AUDIO
+            syncChordButtonsUI(state.currentChordKey);
+            updatePitchZoneAndNote();
+          }
+        }
+
+        // --- 2D Musical Dimension 2: Vertical Wrist Position (Y) Controls Pitch ---
+        // Quantized to notes compatible with the CURRENT CHORD with vertical hysteresis
+        function updatePitchFromWristY(wristY) {
+          const cfg = PITCH_ZONE_CONFIG;
+          const deadbandY = cfg.zoneHeight * 0.16; // 16% vertical hysteresis band
+          const currentZone = state.currentPitchZone; // 0 (low) to 5 (high)
+
+          const zoneTop = cfg.bottomY - (currentZone + 1) * cfg.zoneHeight;
+          const zoneBottom = cfg.bottomY - currentZone * cfg.zoneHeight;
+
+          let newZone = currentZone;
+          // Moving UP (wristY decreasing, higher pitch)
+          if (wristY < zoneTop - (currentZone < cfg.count - 1 ? deadbandY : 0)) {
+            const clampedY = Math.max(cfg.topY, Math.min(cfg.bottomY, wristY));
+            const normalized = 1 - ((clampedY - cfg.topY) / (cfg.bottomY - cfg.topY));
+            newZone = Math.min(cfg.count - 1, Math.max(0, Math.floor(normalized * cfg.count)));
+          } else if (wristY > zoneBottom + (currentZone > 0 ? deadbandY : 0)) {
+            // Moving DOWN (wristY increasing, lower pitch)
+            const clampedY = Math.max(cfg.topY, Math.min(cfg.bottomY, wristY));
+            const normalized = 1 - ((clampedY - cfg.topY) / (cfg.bottomY - cfg.topY));
+            newZone = Math.min(cfg.count - 1, Math.max(0, Math.floor(normalized * cfg.count)));
+          }
+
+          if (newZone !== currentZone) {
+            state.currentPitchZone = newZone;
+            state.currentNoteIndex = newZone;
+            state.pitchTransitionAnim = 1.0; // Trigger subtle visual animation; NO AUDIO
+            updatePitchZoneAndNote();
+          }
+        }
+
+        // Pitch hand runs both 2D dimensions simultaneously
+        function updatePitchHand2D(wristX, wristY, now) {
+          updateChordFromWristX(wristX, now);
+          updatePitchFromWristY(wristY);
+        }
+
+        function updatePitchZoneAndNote() {
+          const chord = CHORDS[state.currentChordKey];
+          const noteName = chord.notes[state.currentNoteIndex] || chord.notes[0];
+          const noteDesc = chord.descriptions[state.currentNoteIndex] || '';
+
+          state.currentNote = noteName;
+          hudNoteBadge.textContent = noteName;
+          hudNoteScale.textContent = `${state.currentChordKey} Chord • ${noteDesc}`;
+          hudZoneIndicator.textContent = `ZONE ${state.currentPitchZone + 1}/${PITCH_ZONE_CONFIG.count}`;
+
+          hudStrumHand.textContent = state.strumHand.toUpperCase();
+          hudPitchHand.textContent = state.pitchHand.toUpperCase();
+        }
+
+        // Strum Gesture State Machine (Primary Sound Trigger)
+        function handleStrumStateMachine(wrist, vel, now) {
+          const elapsedSinceLastStrum = now - state.lastStrumTime;
+          const speed = vel.speed;
+
+          if (state.awaitingReset) {
+            if (speed < STRUM_RESET_VELOCITY || elapsedSinceLastStrum > 450) {
+              state.awaitingReset = false;
+              state.strumTrackingState = 'TRACKING';
+            } else {
+              state.strumTrackingState = 'STRUM_TRIGGERED';
+              return;
+            }
+          }
+
+          if (elapsedSinceLastStrum < STRUM_COOLDOWN) {
+            state.strumTrackingState = 'STRUM_TRIGGERED';
+            return;
+          }
+
+          if (state.strumTrackingState === 'IDLE' || state.strumTrackingState === 'TRACKING_LOST') {
+            state.strumTrackingState = 'TRACKING';
+          }
+
+          if (state.strumTrackingState === 'TRACKING') {
+            if (speed >= STRUM_MIN_VELOCITY) {
+              state.strumTrackingState = 'STRUM_CANDIDATE';
+              state.strumCandidate = {
+                startX: wrist.x,
+                startY: wrist.y,
+                startTime: now,
+                maxSpeed: speed,
+                vx: vel.vx,
+                vy: vel.vy
+              };
+            }
+            return;
+          }
+
+          if (state.strumTrackingState === 'STRUM_CANDIDATE') {
+            const cand = state.strumCandidate;
+            if (!cand) {
+              state.strumTrackingState = 'TRACKING';
+              return;
+            }
+
+            cand.maxSpeed = Math.max(cand.maxSpeed, speed);
+
+            const dx = wrist.x - cand.startX;
+            const dy = wrist.y - cand.startY;
+            const strokeDistance = Math.hypot(dx, dy);
+
+            // Valid strums in all directions: upward, downward, diagonal, sideways
+            if (strokeDistance >= STRUM_MIN_DISTANCE) {
+              let direction = 'down';
+              const absDx = Math.abs(dx);
+              const absDy = Math.abs(dy);
+
+              if (absDy >= absDx * 1.8) {
+                direction = (dy > 0) ? 'down' : 'up';
+              } else if (absDx >= absDy * 1.8) {
+                direction = (dx > 0) ? 'right' : 'left';
+              } else {
+                if (dy > 0 && dx > 0) direction = 'diag-down-right';
+                else if (dy > 0 && dx < 0) direction = 'diag-down-left';
+                else if (dy < 0 && dx > 0) direction = 'diag-up-right';
+                else direction = 'diag-up-left';
+              }
+
+              triggerStrum(wrist.x, wrist.y, direction, cand.maxSpeed, now);
+
+              state.strumCandidate = null;
+              state.strumTrackingState = 'STRUM_TRIGGERED';
+              state.awaitingReset = true;
+              return;
+            }
+
+            if (now - cand.startTime > 160 || speed < STRUM_RESET_VELOCITY) {
+              state.strumCandidate = null;
+              state.strumTrackingState = 'TRACKING';
+            }
+          }
+        }
+
+        // --- Strum Trigger Action (Plays Current Musical State) ---
+        function triggerStrum(x, y, direction, strokeSpeed, now) {
+          state.totalStrums++;
+          state.lastStrumTime = now;
+          state.lastStrumDirection = direction;
+
+          const chord = CHORDS[state.currentChordKey];
+          const noteFreq = chord.freqs[state.currentNoteIndex] || chord.freqs[0];
+          const noteName = chord.notes[state.currentNoteIndex] || chord.notes[0];
+
+          const normSpeed = Math.min(1.0, Math.max(0.0, (strokeSpeed - STRUM_MIN_VELOCITY) / 600));
+          const dynamics = Math.pow(normSpeed, 0.72);
+          state.lastStrumDynamics = dynamics;
+
+          // 1. Play Expressive Plucked Guitar Sound: Main Note dominant + chord harmonic resonance
+          synth.pluck(noteFreq, chord.rootFreq, chord.freqs, state.currentNoteIndex, strokeSpeed, direction, state.currentPitchZone);
+
+          // 2. Excite Virtual String Vibration
+          state.stringVibrations[state.currentPitchZone] = 0.5 + dynamics * 0.8;
+
+          // 3. Hand Marker Pulses
+          state.strumMarkerRadius = 20 + dynamics * 20;
+          state.pitchMarkerRadius = 16 + dynamics * 12;
+
+          // 4. Harmonic Chord Button Flash
+          const activeBtn = document.querySelector(`.chord-btn[data-chord="${state.currentChordKey}"]`);
+          if (activeBtn) {
+            activeBtn.classList.add('resonating');
+            setTimeout(() => activeBtn.classList.remove('resonating'), 320);
+          }
+
+          // 5. Spawn Radial Ripple at Strum Hand
+          let rippleColor = '#38bdf8';
+          if (direction === 'down' || direction === 'diag-down-right' || direction === 'diag-down-left') {
+            rippleColor = '#38bdf8';
+          } else if (direction === 'up' || direction === 'diag-up-right' || direction === 'diag-up-left') {
+            rippleColor = '#00f0ff';
+          } else {
+            rippleColor = '#c084fc';
+          }
+
+          state.ripples.push({
+            x: x,
+            y: y,
+            radius: 16,
+            maxRadius: 60 + dynamics * 45,
+            opacity: 1.0,
+            color: rippleColor,
+            lineWidth: 2.2 + dynamics * 2.5
+          });
+
+          // 6. Spawn Floating Strum Banner showing both Chord and Plucked Note
+          let dirArrow = '↓';
+          if (direction === 'down') dirArrow = '↓';
+          else if (direction === 'up') dirArrow = '↑';
+          else if (direction === 'right') dirArrow = '→';
+          else if (direction === 'left') dirArrow = '←';
+          else if (direction === 'diag-down-right') dirArrow = '↘';
+          else if (direction === 'diag-down-left') dirArrow = '↙';
+          else if (direction === 'diag-up-right') dirArrow = '↗';
+          else if (direction === 'diag-up-left') dirArrow = '↖';
+
+          state.strumBanners.push({
+            text: `STRUM ${dirArrow} [ ${state.currentChordKey} • ${noteName} ]`,
+            x: x,
+            y: y - 24,
+            opacity: 1.0,
+            scale: 1.15 + dynamics * 0.35,
+            vy: -1.3,
+            color: chord.color || '#38bdf8'
+          });
+
+          // 7. Particle System Burst (Responsive to dynamics, direction & chord)
+          spawnParticles(x, y, direction, dynamics, chord.color);
+        }
+
+        // --- Particle System ---
+        function spawnParticles(x, y, direction, dynamics, chordColor) {
+          if (prefersReducedMotion) return;
+
+          // Dynamic particle burst size: slow strum: ~12, fast strum: ~36
+          const count = Math.min(36, Math.floor(12 + dynamics * 24));
+          const baseAngle = (direction === 'down') ? Math.PI / 2 : (direction === 'up') ? -Math.PI / 2 : (direction === 'right') ? 0 : Math.PI;
+
+          for (let i = 0; i < count; i++) {
+            // Respect hard upper limit
+            if (state.particles.length >= MAX_PARTICLES) {
+              state.particles.shift();
+            }
+
+            const spread = (Math.random() - 0.5) * 1.5;
+            const angle = baseAngle + spread;
+            const speed = (2.0 + Math.random() * 4.5) * (0.8 + dynamics * 0.8);
+            const size = 2.0 + Math.random() * 3.5;
+            const lifetime = 25 + Math.floor(Math.random() * 20);
+
+            state.particles.push({
+              x: x + (Math.random() - 0.5) * 10,
+              y: y + (Math.random() - 0.5) * 10,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              size: size,
+              color: Math.random() > 0.4 ? chordColor : '#ffffff',
+              alpha: 1.0,
+              life: lifetime,
+              maxLife: lifetime
+            });
+          }
+        }
+
+        function updateAndDrawParticles() {
+          if (state.particles.length === 0) return;
+
+          ctx.save();
+          for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.94;
+            p.vy *= 0.94;
+            p.life--;
+            p.alpha = p.life / p.maxLife;
+
+            if (p.life <= 0) {
+              state.particles.splice(i, 1);
+              continue;
+            }
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * (0.5 + p.alpha * 0.5), 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.alpha;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 8;
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        // --- 60 FPS Render Loop ---
+        function renderLoop(timestamp) {
+          if (!state.isRunning) return;
+
+          state.frameCount++;
+          if (timestamp - state.lastFpsTime >= 500) {
+            state.fps = ((state.frameCount * 1000) / (timestamp - state.lastFpsTime)).toFixed(1);
+            state.frameCount = 0;
+            state.lastFpsTime = timestamp;
+            dbgFps.textContent = state.fps;
+            dbgState.textContent = state.strumTrackingState;
+            dbgSpeed.textContent = Math.round(state.currentStrumWristVel.speed);
+          }
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // 1. Mirrored Webcam Video as Background
+          if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+            ctx.save();
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // Sophisticated Dark Stage Lighting Wash
+            ctx.fillStyle = 'rgba(6, 10, 20, 0.48)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+
+          // 2. Futuristic Pitch Energy Frets & Virtual Vibrating Strings (Y Axis)
+          drawPitchEnergyFrets(timestamp);
+
+          // 2b. Futuristic Horizontal Chord Guide Rail (X Axis)
+          drawHorizontalChordGuide(timestamp);
+
+          // 3. Stylized Pose Skeleton
+          drawSkeleton();
+
+          // 4. Strum Hand Trail & Hand Reticles
+          drawStrumHandTrail();
+          drawTwoHands();
+
+          // 5. Strum Ripples, Particle Bursts, Floating Banners
+          drawRipples();
+          updateAndDrawParticles();
+          drawStrumBanners();
+
+          // Smoothly relax marker radii
+          state.strumMarkerRadius += (14 - state.strumMarkerRadius) * 0.16;
+          state.pitchMarkerRadius += (12 - state.pitchMarkerRadius) * 0.16;
+
+          // Decay chord and pitch transition pulses
+          state.chordTransitionAnim *= 0.86;
+          if (state.chordTransitionAnim < 0.005) state.chordTransitionAnim = 0;
+          state.pitchTransitionAnim *= 0.86;
+          if (state.pitchTransitionAnim < 0.005) state.pitchTransitionAnim = 0;
+
+          // Decay virtual string vibrations
+          for (let i = 0; i < state.stringVibrations.length; i++) {
+            state.stringVibrations[i] *= 0.91;
+          }
+
+          requestAnimationFrame(renderLoop);
+        }
+
+        // --- Render Horizontal Chord Guide (X Axis: C | G | Am | F | Dm | Em) ---
+        function drawHorizontalChordGuide(now) {
+          const w = canvas.width;
+          const minX = w * CHORD_ZONE_CONFIG.minNormX;
+          const maxX = w * CHORD_ZONE_CONFIG.maxNormX;
+          const totalW = maxX - minX;
+          const zoneW = totalW / CHORD_ZONE_CONFIG.count;
+          const guideY = 430;
+          const guideH = 42;
+
+          ctx.save();
+
+          // Subtle Background glass rail
+          ctx.fillStyle = 'rgba(8, 14, 28, 0.85)';
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.roundRect(minX, guideY, totalW, guideH, 8);
+          ctx.fill();
+          ctx.stroke();
+
+          // Draw each chord zone
+          for (let i = 0; i < CHORD_ZONE_CONFIG.count; i++) {
+            const zX = minX + i * zoneW;
+            const isSelected = (i === state.currentChordZone);
+            const chordKey = CHORD_ZONE_CONFIG.keys[i];
+            const chord = CHORDS[chordKey];
+            const chordColor = chord.color;
+
+            // Upward vertical ambient column beam when selected
+            if (isSelected) {
+              const colGrad = ctx.createLinearGradient(zX + zoneW / 2, guideY, zX + zoneW / 2, 60);
+              colGrad.addColorStop(0, hexToRgba(chordColor, 0.25 + state.chordTransitionAnim * 0.2));
+              colGrad.addColorStop(0.65, hexToRgba(chordColor, 0.05));
+              colGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+              ctx.fillStyle = colGrad;
+              ctx.fillRect(zX, 60, zoneW, guideY - 60);
+
+              // Active zone pill highlight inside the ribbon
+              ctx.fillStyle = hexToRgba(chordColor, 0.28 + state.chordTransitionAnim * 0.22);
+              ctx.strokeStyle = chordColor;
+              ctx.lineWidth = 1.5;
+              ctx.shadowColor = chordColor;
+              ctx.shadowBlur = 10;
+              ctx.beginPath();
+              ctx.roundRect(zX + 3, guideY + 3, zoneW - 6, guideH - 6, 6);
+              ctx.fill();
+              ctx.stroke();
+              ctx.shadowBlur = 0;
+            }
+
+            // Dividers between zones
+            if (i > 0) {
+              ctx.beginPath();
+              ctx.moveTo(zX, guideY + 6);
+              ctx.lineTo(zX, guideY + guideH - 6);
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+
+              // Subtle dashed column separator in performance space
+              ctx.beginPath();
+              ctx.setLineDash([2, 8]);
+              ctx.moveTo(zX, 60);
+              ctx.lineTo(zX, guideY);
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+
+            // Zone Name (C, G, Am, F, Dm, Em)
+            ctx.font = isSelected
+              ? '900 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              : '700 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = isSelected ? '#ffffff' : 'rgba(148, 163, 184, 0.7)';
+            if (isSelected) {
+              ctx.shadowColor = chordColor;
+              ctx.shadowBlur = 10;
+            }
+            ctx.fillText(chordKey, zX + zoneW / 2, guideY + guideH / 2 - 3);
+            ctx.shadowBlur = 0;
+
+            // Small Key Indicator Hint
+            ctx.font = '600 8px ui-monospace, monospace';
+            ctx.fillStyle = isSelected ? hexToRgba('#ffffff', 0.8) : 'rgba(100, 116, 139, 0.7)';
+            ctx.fillText(`[${i + 1}]`, zX + zoneW / 2, guideY + guideH / 2 + 10);
+          }
+
+          // Small cursor dot showing pitch hand's exact projected X position along the rail
+          if (state.isPitchHandInBounds && state.pitchWristPos) {
+            const curX = Math.max(minX, Math.min(maxX, state.pitchWristPos.x));
+            ctx.beginPath();
+            ctx.arc(curX, guideY + 1, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 8;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+
+          // Axis label
+          ctx.font = '800 9px ui-monospace, SFMono-Regular, monospace';
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.75)';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText('◄── X AXIS: CHORD ──►', minX + 4, guideY - 4);
+
+          ctx.restore();
+        }
+
+        // --- Render Pitch Energy Frets & Laser Strings (Y Axis: Low to High Note) ---
+        function drawPitchEnergyFrets(now) {
+          const cfg = PITCH_ZONE_CONFIG;
+          const chord = CHORDS[state.currentChordKey];
+          const isPitchLeft = (state.pitchHand === 'left');
+
+          const fretStartX = isPitchLeft ? 0 : canvas.width * 0.45;
+          const fretEndX = isPitchLeft ? canvas.width * 0.55 : canvas.width;
+          const labelX = isPitchLeft ? 18 : canvas.width - 18;
+          const labelAlign = isPitchLeft ? 'left' : 'right';
+
+          ctx.save();
+
+          // Axis indicator
+          ctx.font = '800 9px ui-monospace, SFMono-Regular, monospace';
+          ctx.fillStyle = 'rgba(192, 132, 252, 0.75)';
+          ctx.textAlign = labelAlign;
+          ctx.textBaseline = 'bottom';
+          ctx.fillText('▲ Y: PITCH (HIGH) ▼', labelX, cfg.topY - 6);
+
+          for (let i = 0; i < cfg.count; i++) {
+            const zoneBottomY = cfg.bottomY - i * cfg.zoneHeight;
+            const zoneTopY = zoneBottomY - cfg.zoneHeight;
+            const zoneCenterY = (zoneTopY + zoneBottomY) / 2;
+            const isHovered = (i === state.currentPitchZone);
+            const vibration = state.stringVibrations[i] || 0;
+            const noteName = chord.notes[i];
+
+            // 1. Subtle Energy Band Glow
+            if (isHovered) {
+              const bgGrad = ctx.createLinearGradient(fretStartX, 0, fretEndX, 0);
+              if (isPitchLeft) {
+                bgGrad.addColorStop(0, 'rgba(192, 132, 252, 0.22)');
+                bgGrad.addColorStop(0.7, 'rgba(192, 132, 252, 0.06)');
+                bgGrad.addColorStop(1, 'rgba(192, 132, 252, 0)');
+              } else {
+                bgGrad.addColorStop(0, 'rgba(192, 132, 252, 0)');
+                bgGrad.addColorStop(0.3, 'rgba(192, 132, 252, 0.06)');
+                bgGrad.addColorStop(1, 'rgba(192, 132, 252, 0.22)');
+              }
+              ctx.fillStyle = bgGrad;
+              ctx.fillRect(fretStartX, zoneTopY, fretEndX - fretStartX, cfg.zoneHeight);
+            }
+
+            // 2. Virtual String (Propagating Wave When Plucked)
+            ctx.beginPath();
+            if (vibration > 0.04) {
+              const numSegments = 24;
+              const step = (fretEndX - fretStartX) / numSegments;
+              ctx.moveTo(fretStartX, zoneCenterY);
+              for (let s = 1; s <= numSegments; s++) {
+                const sx = fretStartX + s * step;
+                const wave = Math.sin(s * 0.8 + now * 0.035) * (vibration * 9.0);
+                ctx.lineTo(sx, zoneCenterY + wave);
+              }
+            } else {
+              ctx.moveTo(fretStartX, zoneCenterY);
+              ctx.lineTo(fretEndX, zoneCenterY);
+            }
+
+            if (isHovered) {
+              ctx.strokeStyle = vibration > 0.1 ? '#ffffff' : 'rgba(192, 132, 252, 0.9)';
+              ctx.lineWidth = vibration > 0.1 ? 3.0 : 2.0;
+              ctx.shadowColor = '#c084fc';
+              ctx.shadowBlur = 12;
+            } else {
+              ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+              ctx.lineWidth = 1;
+              ctx.shadowBlur = 0;
+            }
+            ctx.stroke();
+
+            // 3. Fret Note Label
+            ctx.font = isHovered
+              ? '800 13px ui-monospace, SFMono-Regular, Menlo, monospace'
+              : '600 11px ui-monospace, SFMono-Regular, Menlo, monospace';
+            ctx.textAlign = labelAlign;
+            ctx.textBaseline = 'middle';
+
+            const zoneDescriptor = (i === 5) ? 'HIGH' : (i === 0) ? 'LOW' : '';
+            const labelText = zoneDescriptor ? `${noteName}  (${zoneDescriptor})` : noteName;
+
+            ctx.fillStyle = isHovered ? '#ffffff' : 'rgba(148, 163, 184, 0.55)';
+            if (isHovered) {
+              ctx.shadowColor = '#c084fc';
+              ctx.shadowBlur = 10;
+            }
+            ctx.fillText(labelText, labelX, zoneCenterY);
+            ctx.shadowBlur = 0;
+          }
+
+          ctx.restore();
+        }
+
+        // --- Render Skeleton ---
+        function drawSkeleton() {
+          const sl = state.smoothedLandmarks;
+          if (!sl[11] || !sl[12]) return;
+
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          for (let i = 0; i < SKELETON_BONES.length; i++) {
+            const [p1Idx, p2Idx] = SKELETON_BONES[i];
+            const p1 = sl[p1Idx];
+            const p2 = sl[p2Idx];
+
+            if (p1 && p2 && (p1.visibility > 0.4 || p2.visibility > 0.4)) {
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+              ctx.lineWidth = 2.2;
+              ctx.shadowColor = '#0284c7';
+              ctx.shadowBlur = 6;
+              ctx.stroke();
+            }
+          }
+
+          const joints = [11, 12, 13, 14, 23, 24];
+          for (let j = 0; j < joints.length; j++) {
+            const p = sl[joints[j]];
+            if (p && p.visibility > 0.4) {
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, 3.2, 0, Math.PI * 2);
+              ctx.fillStyle = '#ffffff';
+              ctx.fill();
+            }
+          }
+
+          ctx.restore();
+        }
+
+        // --- Render Strum Hand Trail ---
+        function drawStrumHandTrail() {
+          if (state.strumTrail.length < 2) return;
+
+          ctx.save();
+          const now = performance.now();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          for (let i = 1; i < state.strumTrail.length; i++) {
+            const p0 = state.strumTrail[i - 1];
+            const p1 = state.strumTrail[i];
+            const age = now - p1.t;
+            const alpha = Math.max(0, 1 - (age / 240));
+
+            ctx.beginPath();
+            ctx.moveTo(p0.x, p0.y);
+            ctx.lineTo(p1.x, p1.y);
+            ctx.strokeStyle = `rgba(56, 189, 248, ${alpha * 0.7})`;
+            ctx.lineWidth = 3 + alpha * 3;
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+          }
+
+          ctx.restore();
+        }
+
+        // --- Render Strum & Pitch Hand Markers ---
+        function drawTwoHands() {
+          const strumPos = state.currentStrumWristPos;
+          const pitchPos = state.pitchWristPos;
+
+          ctx.save();
+
+          // 1. PITCH HAND (2D Controller)
+          if (state.isPitchHandInBounds && pitchPos) {
+            const pr = state.pitchMarkerRadius;
+            const chord = CHORDS[state.currentChordKey];
+            const chordColor = chord.color;
+
+            // Dual 2D Coordinate Guidelines:
+            // Guideline 1: Vertical line down to chord guide at bottom
+            const chordGuideY = 430;
+            ctx.beginPath();
+            ctx.moveTo(pitchPos.x, pitchPos.y);
+            ctx.lineTo(pitchPos.x, chordGuideY);
+            ctx.strokeStyle = hexToRgba(chordColor, 0.45);
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+
+            // Guideline 2: Horizontal line across to pitch fret string
+            const cfg = PITCH_ZONE_CONFIG;
+            const targetFretY = cfg.bottomY - (state.currentPitchZone + 0.5) * cfg.zoneHeight;
+            const isPitchLeft = (state.pitchHand === 'left');
+            const fretEdgeX = isPitchLeft ? 0 : canvas.width;
+            ctx.beginPath();
+            ctx.moveTo(pitchPos.x, pitchPos.y);
+            ctx.lineTo(fretEdgeX, targetFretY);
+            ctx.strokeStyle = 'rgba(192, 132, 252, 0.45)';
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Reticle Outer Glow
+            ctx.beginPath();
+            ctx.arc(pitchPos.x, pitchPos.y, pr + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = chordColor;
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = chordColor;
+            ctx.shadowBlur = 16;
+            ctx.stroke();
+
+            // Reticle Inner Disc
+            ctx.beginPath();
+            ctx.arc(pitchPos.x, pitchPos.y, pr, 0, Math.PI * 2);
+            ctx.fillStyle = hexToRgba(chordColor, 0.35);
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Reticle Center Dot
+            ctx.beginPath();
+            ctx.arc(pitchPos.x, pitchPos.y, 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            // Floating 2D Musical State Badge (CHORD & PITCH)
+            const isRightSide = (pitchPos.x > canvas.width / 2);
+            const badgeW = 76;
+            const badgeH = 50;
+            const badgeX = isRightSide ? Math.max(badgeW / 2 + 10, pitchPos.x - 48) : Math.min(canvas.width - badgeW / 2 - 10, pitchPos.x + 48);
+            const badgeY = Math.max(badgeH / 2 + 55, Math.min(canvas.height - 75, pitchPos.y - 12));
+
+            // Glassmorphic Badge Shell
+            ctx.fillStyle = 'rgba(8, 12, 24, 0.88)';
+            ctx.strokeStyle = chordColor;
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = chordColor;
+            ctx.shadowBlur = 12 + state.chordTransitionAnim * 12;
+
+            ctx.beginPath();
+            ctx.roundRect(badgeX - badgeW / 2, badgeY - badgeH / 2, badgeW, badgeH, 10);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Top: Chord Label with Transition Scale Pulse
+            const chordScale = 1.0 + state.chordTransitionAnim * 0.22;
+            ctx.save();
+            ctx.translate(badgeX, badgeY - 11);
+            ctx.scale(chordScale, chordScale);
+            ctx.font = '900 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = chordColor;
+            ctx.fillText(state.currentChordKey, 0, 0);
+            ctx.restore();
+
+            // Subtle Divider
+            ctx.beginPath();
+            ctx.moveTo(badgeX - badgeW / 2 + 8, badgeY);
+            ctx.lineTo(badgeX + badgeW / 2 - 8, badgeY);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+
+            // Bottom: Pitch Note Label with Transition Scale Pulse
+            const pitchScale = 1.0 + state.pitchTransitionAnim * 0.22;
+            ctx.save();
+            ctx.translate(badgeX, badgeY + 13);
+            ctx.scale(pitchScale, pitchScale);
+            ctx.font = '800 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(state.currentNote, 0, 0);
+            ctx.restore();
+
+            // Sub-label below marker
+            ctx.font = '700 9px ui-monospace, SFMono-Regular, monospace';
+            ctx.fillStyle = '#c084fc';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('PITCH HAND (2D)', pitchPos.x, pitchPos.y + pr + 12);
+          }
+
+          // 2. STRUM HAND
+          if (state.isStrumHandInBounds && strumPos) {
+            const sr = state.strumMarkerRadius;
+            const isDown = state.lastStrumDirection && state.lastStrumDirection.includes('down');
+            const strumAccent = isDown ? '#38bdf8' : '#00f0ff';
+
+            ctx.beginPath();
+            ctx.arc(strumPos.x, strumPos.y, sr + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = strumAccent;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = strumAccent;
+            ctx.shadowBlur = 18;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(strumPos.x, strumPos.y, sr, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(strumPos.x, strumPos.y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+
+            ctx.font = '700 9px ui-monospace, SFMono-Regular, monospace';
+            ctx.fillStyle = '#38bdf8';
+            ctx.shadowBlur = 0;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.fillText('STRUM HAND', strumPos.x, strumPos.y + sr + 12);
+          }
+
+          ctx.restore();
+        }
+
+        // --- Render Ripples ---
+        function drawRipples() {
+          if (state.ripples.length === 0) return;
+
+          ctx.save();
+          for (let i = state.ripples.length - 1; i >= 0; i--) {
+            const rip = state.ripples[i];
+
+            rip.radius += (rip.maxRadius - rip.radius) * 0.16 + 1.5;
+            rip.opacity -= 0.038;
+
+            if (rip.opacity <= 0) {
+              state.ripples.splice(i, 1);
+              continue;
+            }
+
+            ctx.beginPath();
+            ctx.arc(rip.x, rip.y, rip.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = rip.color;
+            ctx.globalAlpha = Math.max(0, rip.opacity);
+            ctx.lineWidth = rip.lineWidth;
+            ctx.shadowColor = rip.color;
+            ctx.shadowBlur = 14;
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // --- Render Strum Banners ---
+        function drawStrumBanners() {
+          if (state.strumBanners.length === 0) return;
+
+          ctx.save();
+          ctx.font = '900 22px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          for (let i = state.strumBanners.length - 1; i >= 0; i--) {
+            const b = state.strumBanners[i];
+
+            b.y += b.vy;
+            b.opacity -= 0.032;
+            b.scale += (1.0 - b.scale) * 0.1;
+
+            if (b.opacity <= 0) {
+              state.strumBanners.splice(i, 1);
+              continue;
+            }
+
+            ctx.save();
+            ctx.translate(b.x, b.y);
+            ctx.scale(b.scale, b.scale);
+            ctx.globalAlpha = Math.max(0, b.opacity);
+
+            ctx.shadowColor = b.color;
+            ctx.shadowBlur = 18;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(b.text, 0, 0);
+
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.strokeText(b.text, 0, 0);
+
+            ctx.restore();
+          }
+          ctx.restore();
+        }
+      })();
+    </script>
+  </body>
+</html>
