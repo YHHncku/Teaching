@@ -9,6 +9,7 @@
     <meta property="og:description" content="Minimalist Atari Breakout controlled by an iPhone held horizontally in both hands via WebRTC motion sensors." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
       :root {
         --bg-color: #07131f;
@@ -26,6 +27,10 @@
         user-select: none;
         -webkit-user-select: none;
         -webkit-touch-callout: none;
+      }
+      .selectable-text, #ctrl-url-text, .retro-textarea {
+        user-select: text !important;
+        -webkit-user-select: text !important;
       }
       html, body {
         width: 100%;
@@ -404,8 +409,10 @@
         </div>
 
         <div id="game-prompt">
-          <div id="prompt-main" class="prompt-main">HOLD PHONE FLAT</div>
-          <div id="prompt-sub" class="prompt-sub">FLIP IT OVER TO START</div>
+          <div id="prompt-main" class="prompt-main">HOLD PHONE LIKE A TRAY</div>
+          <div id="prompt-sub" class="prompt-sub">TILT LEFT / RIGHT TO MOVE</div>
+          <div id="prompt-tap-cta" style="font-size: 14px; font-weight: bold; letter-spacing: 2px; color: #00ffcc; margin-top: 10px;">TAP PHONE 3× TO START</div>
+          <div id="prompt-tap-dots" style="font-size: 24px; letter-spacing: 8px; color: #00ffcc; margin-top: 6px; text-shadow: 0 0 10px #00ffcc;">○ ○ ○</div>
         </div>
 
         <canvas id="gameCanvas"></canvas>
@@ -417,18 +424,19 @@
             <button id="close-panel-btn" class="panel-close-btn">✕</button>
           </div>
           <div class="qr-container">
-            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">1. SCAN WITH IPHONE OR OPEN:</div>
-            <canvas id="qrCanvas" width="120" height="120"></canvas>
-            <div id="ctrl-url-text" style="font-size: 9px; color: #38bdf8; word-break: break-all; margin-top: 6px;"></div>
+            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">1. SCAN WITH IPHONE CAMERA:</div>
+            <canvas id="qrCanvas" width="140" height="140"></canvas>
+            <div id="ctrl-url-text" class="selectable-text" style="font-size: 10px; color: #38bdf8; word-break: break-all; margin: 8px 0 6px 0; padding: 6px; background: #050d17; border: 1px solid #1a365d; border-radius: 2px;"></div>
+            <button id="btn-copy-ctrl-url" class="btn-retro" style="border-color: #38bdf8; color: #38bdf8; margin: 4px 0 2px 0;">COPY URL</button>
           </div>
           <div style="margin-bottom: 8px;">
-            <button id="btn-create-offer" class="btn-retro">1. CREATE OFFER</button>
-            <textarea id="offer-text" class="retro-textarea" placeholder="Offer payload will appear here..." readonly></textarea>
+            <button id="btn-create-offer" class="btn-retro">2. CREATE OFFER</button>
+            <textarea id="offer-text" class="retro-textarea selectable-text" placeholder="Offer payload will appear here..." readonly></textarea>
             <button id="btn-copy-offer" class="btn-retro" disabled>COPY OFFER</button>
           </div>
           <div style="border-top: 1px solid #1a365d; padding-top: 8px;">
-            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">2. PASTE ANSWER FROM IPHONE:</div>
-            <textarea id="answer-text" class="retro-textarea" placeholder="Paste answer JSON here..."></textarea>
+            <div style="font-size: 10px; color: #94a3b8; margin-bottom: 4px;">3. PASTE ANSWER FROM IPHONE:</div>
+            <textarea id="answer-text" class="retro-textarea selectable-text" placeholder="Paste answer JSON here..."></textarea>
             <button id="btn-apply-answer" class="btn-retro" disabled>APPLY ANSWER</button>
           </div>
         </div>
@@ -445,14 +453,14 @@
           <div class="ctrl-indicators">
             <span id="badge-motion" class="badge">MOTION: OFF</span>
             <span id="badge-calibrated" class="badge">UNCALIBRATED</span>
-            <span id="badge-flip" class="badge">FLIP: READY</span>
+            <span id="badge-tap" class="badge">TAP 3×: ○ ○ ○</span>
             <span id="badge-shake" class="badge">SHAKE: READY</span>
           </div>
 
           <canvas id="phoneVisualizer" width="240" height="140"></canvas>
 
           <div style="width: 100%; max-width: 280px; text-align: center;">
-            <div style="font-size: 10px; color: #64748b; letter-spacing: 1px; margin-bottom: 4px;">TILT GAUGING (-25° TO +25°)</div>
+            <div style="font-size: 10px; color: #64748b; letter-spacing: 1px; margin-bottom: 4px;">LANDSCAPE TILT (-22° TO +22°)</div>
             <div style="height: 12px; background: #0c1f33; border: 1px solid #234873; border-radius: 6px; position: relative; overflow: hidden;">
               <div id="tilt-bar-center" style="position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; background: #38bdf8;"></div>
               <div id="tilt-bar-needle" style="position: absolute; left: 50%; top: 1px; bottom: 1px; width: 14px; margin-left: -7px; background: #00ffcc; border-radius: 2px; box-shadow: 0 0 6px #00ffcc;"></div>
@@ -474,15 +482,15 @@
             <div style="font-size: 11px; font-weight: bold; color: #38bdf8; margin-bottom: 6px;">
               PAIR WITH MAC
             </div>
-            <textarea id="ctrl-offer-input" class="retro-textarea" placeholder="Paste Offer JSON from Mac here..."></textarea>
+            <textarea id="ctrl-offer-input" class="retro-textarea selectable-text" placeholder="Paste Offer JSON from Mac here..."></textarea>
             <button id="btn-ctrl-connect" class="btn-retro">PROCESS OFFER & GENERATE ANSWER</button>
-            <textarea id="ctrl-answer-output" class="retro-textarea" placeholder="Generated Answer will appear here..." readonly></textarea>
+            <textarea id="ctrl-answer-output" class="retro-textarea selectable-text" placeholder="Generated Answer will appear here..." readonly></textarea>
             <button id="btn-ctrl-copy-answer" class="btn-retro" disabled>COPY ANSWER</button>
           </div>
         </div>
 
         <div style="text-align: center; font-size: 10px; color: #64748b; padding-bottom: 4px;">
-          Hold flat with both hands like a tray • Turn over to start • Shake vigorously to end
+          Hold phone like a tray (landscape) • Tap phone 3× to start • Shake vigorously to end
         </div>
       </div>
 
@@ -493,18 +501,23 @@
     <!-- MAIN GAME & CONTROLLER LOGIC -->
     <script>
       // ==========================================
-      // TUNING PARAMETERS
+      // PHYSICAL CONTROL TUNING
       // ==========================================
-      const TILT_RANGE = 25;              // Degrees from neutral to hit screen edge (±25°)
-      const TILT_DEADZONE = 1.2;          // Degrees of deadzone to eliminate sensor jitter
-      const PADDLE_SMOOTHING = 0.14;      // Lerp factor for paddle smoothing (0.05 to 0.3)
+      const TILT_RANGE = 22;              // Degrees from neutral to hit screen edge (±22°)
+      const TILT_DEADZONE = 1.8;          // Degrees of deadzone to eliminate sensor jitter
+      const PADDLE_SMOOTHING = 0.12;      // Lerp factor for paddle smoothing (0.05 to 0.3)
       const ACCEL_IMPULSE_FACTOR = 0.015; // Transient acceleration velocity boost
+
+      const TAP_IMPULSE_THRESHOLD = 5.5;  // Delta acceleration magnitude for finger tap (m/s²)
+      const TAP_DEBOUNCE_MS = 150;        // Minimum refractory time between taps (ms)
+      const TRIPLE_TAP_WINDOW_MS = 1000;  // Rolling window to collect 3 taps (ms)
+      const START_GESTURE_COOLDOWN = 2000;// Cooldown between start gestures (ms)
+
       const SHAKE_THRESHOLD = 16.5;       // Acceleration magnitude threshold (m/s²)
-      const SHAKE_WINDOW = 800;           // Rolling window for peak detection (ms)
+      const SHAKE_WINDOW_MS = 800;        // Rolling window for peak detection (ms)
       const SHAKE_REQUIRED_PEAKS = 3;     // Peaks needed within window to trigger shake
       const SHAKE_COOLDOWN = 2000;        // Cooldown between shake triggers (ms)
-      const FLIP_HOLD_TIME = 350;         // Minimum duration face-down to register flip (ms)
-      const FLIP_COOLDOWN = 1800;         // Cooldown between flip starts (ms)
+
       const SENSOR_SEND_RATE = 30;        // Target sensor packets per second (Hz)
       const BALL_SPEED = 7.5;             // Initial ball speed
       const BALL_SPEED_MAX = 13.0;        // Maximum ball speed as game progresses
@@ -550,10 +563,15 @@
           const f = freqs[row % freqs.length] || 440;
           this.playTone(f, 'square', 0.09, 0.14);
         }
-        startFlip() {
+        tapBeep(tapNum = 1) {
+          const freqs = [520, 680, 880];
+          const f = freqs[tapNum - 1] || 680;
+          this.playTone(f, 'triangle', 0.08, 0.22);
+        }
+        startLaunch() {
           this.playTone(440, 'triangle', 0.08, 0.2);
-          setTimeout(() => this.playTone(660, 'triangle', 0.08, 0.2), 80);
-          setTimeout(() => this.playTone(880, 'triangle', 0.15, 0.25), 160);
+          setTimeout(() => this.playTone(660, 'triangle', 0.08, 0.2), 70);
+          setTimeout(() => this.playTone(880, 'triangle', 0.14, 0.25), 140);
         }
         shakeRumble() {
           this.playTone(90, 'sawtooth', 0.35, 0.25);
@@ -567,47 +585,37 @@
       const audio = new RetroAudio();
 
       // ==========================================
-      // LIGHTWEIGHT INLINE QR CODE GENERATOR (Canvas)
+      // REAL SCANNABLE QR CODE GENERATOR (Canvas)
       // ==========================================
-      function renderQRCode(canvas, text) {
+      function renderRealQRCode(canvas, text) {
         if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        const size = canvas.width;
-        // Simple visual QR placeholder with readable fallback link
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = '#07131f';
-        // Generate pseudo-random deterministic matrix pattern based on hash of text
-        let hash = 0;
-        for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
-        const modules = 21;
-        const cellSize = Math.floor((size - 16) / modules);
-        const offset = Math.floor((size - (cellSize * modules)) / 2);
-
-        function drawFinder(r, c) {
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(offset + c*cellSize, offset + r*cellSize, 7*cellSize, 7*cellSize);
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(offset + (c+1)*cellSize, offset + (r+1)*cellSize, 5*cellSize, 5*cellSize);
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(offset + (c+2)*cellSize, offset + (r+2)*cellSize, 3*cellSize, 3*cellSize);
-        }
-        drawFinder(0, 0);
-        drawFinder(0, modules - 7);
-        drawFinder(modules - 7, 0);
-
-        // Fill data matrix
-        for (let r = 0; r < modules; r++) {
-          for (let c = 0; c < modules; c++) {
-            const inFinder = (r < 7 && c < 7) || (r < 7 && c >= modules-7) || (r >= modules-7 && c < 7);
-            if (!inFinder) {
-              const seed = (r * 31 + c * 17 + Math.abs(hash)) % 100;
-              if (seed > 46) {
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(offset + c*cellSize, offset + r*cellSize, cellSize - 0.5, cellSize - 0.5);
-              }
+        if (window.QRCode && typeof window.QRCode.toCanvas === 'function') {
+          window.QRCode.toCanvas(canvas, text, {
+            width: 140,
+            margin: 1,
+            color: {
+              dark: '#050d17',
+              light: '#ffffff'
             }
-          }
+          }, function (error) {
+            if (error) console.error('QR code generation error:', error);
+          });
+        } else {
+          // Poll briefly in case CDN is finishing load
+          let attempts = 0;
+          const interval = setInterval(() => {
+            attempts++;
+            if (window.QRCode && typeof window.QRCode.toCanvas === 'function') {
+              clearInterval(interval);
+              window.QRCode.toCanvas(canvas, text, {
+                width: 140,
+                margin: 1,
+                color: { dark: '#050d17', light: '#ffffff' }
+              });
+            } else if (attempts > 15) {
+              clearInterval(interval);
+            }
+          }, 150);
         }
       }
 
@@ -793,62 +801,108 @@
       }
 
       // ==========================================
-      // GESTURE DETECTOR (Flip & Shake)
+      // GESTURE DETECTOR (Triple Tap & Shake)
       // ==========================================
       class GestureDetector {
-        constructor(onFlip, onShake) {
-          this.onFlip = onFlip;
+        constructor(onTapUpdate, onTripleTap, onShake) {
+          this.onTapUpdate = onTapUpdate; // callback with tap count (0, 1, 2, 3)
+          this.onTripleTap = onTripleTap;
           this.onShake = onShake;
-          this.isFaceDown = false;
-          this.faceDownStartTime = 0;
-          this.lastFlipTime = 0;
+
+          this.prevAx = 0;
+          this.prevAy = 0;
+          this.prevAz = 0;
+          this.hasPrevAccel = false;
+
+          this.lastTapTime = 0;
+          this.tapTimes = [];
+          this.lastStartGestureTime = 0;
+
           this.shakePeaks = [];
           this.lastShakeTime = 0;
-          this.currentOrientationState = 'FACE UP';
+          this.suppressShakeUntil = 0;
+
+          // Diagnostic metrics for debug overlay
+          this.lastImpulse = 0;
+          this.lastDeltaAx = 0;
+          this.lastDeltaAy = 0;
+          this.lastDeltaAz = 0;
+          this.shakeEnergy = 0;
         }
 
         processSensor(packet) {
           const now = performance.now();
-          const { beta = 0, gamma = 0, ax = 0, ay = 0, az = 0, gz = 0 } = packet;
+          const { ax = 0, ay = 0, az = 0 } = packet;
 
-          // 1. FLIP DETECTION (Holding flat -> face down)
-          // When holding flat face-up, |beta| < 45 and |gamma| < 45.
-          // When flipped face down, |beta| > 130 or |gamma| > 120 or inverted gravity Z
-          const faceDownNow = Math.abs(beta) > 130 || Math.abs(gamma) > 120 || gz > 5.5;
+          if (!this.hasPrevAccel) {
+            this.prevAx = ax;
+            this.prevAy = ay;
+            this.prevAz = az;
+            this.hasPrevAccel = true;
+            return;
+          }
 
-          if (faceDownNow) {
-            this.currentOrientationState = 'FACE DOWN';
-            if (!this.isFaceDown) {
-              this.isFaceDown = true;
-              this.faceDownStartTime = now;
-            } else if (now - this.faceDownStartTime >= FLIP_HOLD_TIME) {
-              if (now - this.lastFlipTime > FLIP_COOLDOWN) {
-                this.lastFlipTime = now;
-                if (this.onFlip) this.onFlip();
+          // 1. CALCULATE DELTA ACCELERATION IMPULSE
+          const deltaAx = ax - this.prevAx;
+          const deltaAy = ay - this.prevAy;
+          const deltaAz = az - this.prevAz;
+          this.prevAx = ax;
+          this.prevAy = ay;
+          this.prevAz = az;
+
+          const impulse = Math.sqrt(deltaAx * deltaAx + deltaAy * deltaAy + deltaAz * deltaAz);
+          this.lastImpulse = impulse;
+          this.lastDeltaAx = deltaAx;
+          this.lastDeltaAy = deltaAy;
+          this.lastDeltaAz = deltaAz;
+
+          // 2. SHAKE DETECTION (Sustained strong acceleration magnitude)
+          const accelMag = Math.sqrt(ax * ax + ay * ay + az * az);
+          if (now > this.suppressShakeUntil) {
+            if (accelMag > SHAKE_THRESHOLD) {
+              this.shakePeaks.push({ time: now, mag: accelMag });
+            }
+            this.shakePeaks = this.shakePeaks.filter(p => now - p.time <= SHAKE_WINDOW_MS);
+
+            if (this.shakePeaks.length >= SHAKE_REQUIRED_PEAKS) {
+              if (now - this.lastShakeTime > SHAKE_COOLDOWN) {
+                this.lastShakeTime = now;
+                this.shakePeaks = [];
+                this.tapTimes = []; // cancel any pending tap candidates on shake
+                if (this.onTapUpdate) this.onTapUpdate(0);
+                if (this.onShake) this.onShake();
               }
             }
-          } else {
-            this.isFaceDown = false;
-            if (Math.abs(beta) < 45 && Math.abs(gamma) < 45) {
-              this.currentOrientationState = 'FACE UP';
-            } else {
-              this.currentOrientationState = 'TILTED / SIDE';
-            }
+          }
+          this.shakeEnergy = this.shakePeaks.reduce((sum, p) => sum + p.mag, 0);
+
+          // 3. TRIPLE TAP DETECTION (Sharp, isolated impulses with quiet gaps)
+          // Prune expired taps
+          const prevCount = this.tapTimes.length;
+          this.tapTimes = this.tapTimes.filter(t => now - t <= TRIPLE_TAP_WINDOW_MS);
+          if (prevCount > 0 && this.tapTimes.length === 0 && this.onTapUpdate) {
+            this.onTapUpdate(0); // clear tap feedback if window expired
           }
 
-          // 2. SHAKE DETECTION (Rolling acceleration peaks)
-          const accelMag = Math.sqrt(ax * ax + ay * ay + az * az);
-          if (accelMag > SHAKE_THRESHOLD) {
-            this.shakePeaks.push({ time: now, mag: accelMag });
-          }
-          // Filter window
-          this.shakePeaks = this.shakePeaks.filter(p => now - p.time <= SHAKE_WINDOW);
+          // Distinguish tap from shake: ignore if vigorous shaking is active
+          const isShakingActive = this.shakePeaks.length >= 2 || accelMag > (SHAKE_THRESHOLD * 0.9);
 
-          if (this.shakePeaks.length >= SHAKE_REQUIRED_PEAKS) {
-            if (now - this.lastShakeTime > SHAKE_COOLDOWN) {
-              this.lastShakeTime = now;
-              this.shakePeaks = [];
-              if (this.onShake) this.onShake();
+          if (!isShakingActive && impulse >= TAP_IMPULSE_THRESHOLD) {
+            if (now - this.lastTapTime >= TAP_DEBOUNCE_MS) {
+              this.lastTapTime = now;
+              this.tapTimes.push(now);
+
+              const count = Math.min(3, this.tapTimes.length);
+              if (this.onTapUpdate) this.onTapUpdate(count);
+
+              if (count >= 3) {
+                if (now - this.lastStartGestureTime >= START_GESTURE_COOLDOWN) {
+                  this.lastStartGestureTime = now;
+                  this.tapTimes = [];
+                  this.suppressShakeUntil = now + 750; // suppress shake immediately after tap start
+                  if (this.onTripleTap) this.onTripleTap();
+                }
+              }
             }
           }
         }
@@ -860,7 +914,7 @@
       class Paddle {
         constructor(game) {
           this.game = game;
-          this.width = 110;
+          this.width = 220; // doubled paddle width
           this.height = 14;
           this.x = 0;
           this.prevX = 0;
@@ -871,7 +925,8 @@
         }
 
         reset(canvasWidth, canvasHeight) {
-          this.width = Math.max(90, Math.min(140, canvasWidth * 0.12));
+          // Double paddle width: approx 24% of screen width (clamped 180 to 280)
+          this.width = Math.max(180, Math.min(280, canvasWidth * 0.24));
           this.height = 14;
           this.x = (canvasWidth - this.width) / 2;
           this.prevX = this.x;
@@ -1192,12 +1247,30 @@
           if (this.state === 'ready') {
             this.state = 'playing';
             this.ball.launch();
-            audio.startFlip();
+            audio.startLaunch();
             this.updatePrompt();
           }
         }
 
-        handleFlip() {
+        updateTapFeedback(count = 0) {
+          const dotsEl = document.getElementById('prompt-tap-dots');
+          if (!dotsEl) return;
+          if (count === 1) {
+            dotsEl.textContent = '● ○ ○';
+            audio.tapBeep(1);
+          } else if (count === 2) {
+            dotsEl.textContent = '● ● ○';
+            audio.tapBeep(2);
+          } else if (count >= 3) {
+            dotsEl.textContent = '● ● ●';
+            audio.tapBeep(3);
+          } else {
+            dotsEl.textContent = '○ ○ ○';
+          }
+        }
+
+        handleTripleTap() {
+          this.updateTapFeedback(3);
           if (this.state === 'ready') {
             this.launch();
           } else if (this.state === 'gameover' || this.state === 'victory' || this.state === 'shaken') {
@@ -1218,6 +1291,7 @@
             this.ball.vx = 0;
             this.ball.vy = 0;
             this.updatePrompt('GAME OVER', 'SHAKE DETECTED');
+            this.updateTapFeedback(0);
 
             setTimeout(() => {
               if (this.state === 'shaken') {
@@ -1226,7 +1300,8 @@
                 this.score = 0;
                 this.initBricks();
                 this.reset();
-                this.updatePrompt('HOLD PHONE FLAT', 'FLIP IT OVER TO START');
+                this.updatePrompt('HOLD PHONE LIKE A TRAY', 'TILT LEFT / RIGHT TO MOVE');
+                this.updateTapFeedback(0);
               }
             }, 2200);
           }
@@ -1235,13 +1310,14 @@
         onBallLost() {
           this.lives--;
           this.updateHUD();
+          this.updateTapFeedback(0);
           if (this.lives <= 0) {
             this.state = 'gameover';
-            this.updatePrompt('GAME OVER', 'FLIP PHONE OR PRESS SPACE TO RETRY');
+            this.updatePrompt('GAME OVER', 'TAP PHONE 3× OR PRESS SPACE TO RETRY');
           } else {
             this.state = 'ready';
             this.reset();
-            this.updatePrompt('READY', 'FLIP PHONE OR PRESS SPACE TO LAUNCH');
+            this.updatePrompt('READY', 'TAP PHONE 3× OR PRESS SPACE TO LAUNCH');
           }
         }
 
@@ -1356,27 +1432,75 @@
       // Controller sensor states
       let motionEnabled = false;
       let isCalibrated = false;
-      let neutralBeta = 0;
-      let neutralGamma = 0;
+      let neutralTilt = 0; // Calibrated center tilt angle in landscape posture
       let currentAlpha = 0, currentBeta = 0, currentGamma = 0;
       let currentAx = 0, currentAy = 0, currentAz = 0;
       let currentGx = 0, currentGy = 0, currentGz = 0;
       let lastSensorSendTime = 0;
+      let lastTapCount = 0;
+
       let debugStats = {
         fps: 0,
         frames: 0,
         lastFpsTime: performance.now(),
+        screenAngle: 0,
+        rawBeta: 0,
+        rawGamma: 0,
+        landscapeTilt: 0,
+        neutralTilt: 0,
+        relativeTilt: 0,
         rawPaddleX: 0.5,
         smoothedPaddleX: 0.5,
-        relativeBeta: 0,
-        relativeGamma: 0,
-        tiltAngle: 0
+        impulse: 0,
+        deltaAx: 0,
+        deltaAy: 0,
+        deltaAz: 0,
+        tapCount: 0,
+        timeSinceLastTap: 0,
+        shakeEnergy: 0
       };
 
       // ------------------------------------------
-      // PHONE CANVAS VISUALIZER (Controller Mode)
+      // LANDSCAPE ORIENTATION & TILT HELPER
       // ------------------------------------------
-      function drawPhoneVisualizer(canvas, beta, gamma) {
+      function getScreenAngle() {
+        if (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === 'number') {
+          return window.screen.orientation.angle;
+        }
+        if (typeof window.orientation === 'number') {
+          return window.orientation;
+        }
+        return 0;
+      }
+
+      function getLandscapeAdjustedTilt(beta, gamma, screenAngle) {
+        // Normalize screenAngle to 0, 90, 180, 270
+        const angle = ((Math.round(screenAngle) % 360) + 360) % 360;
+        let tilt = 0;
+
+        if (angle === 90) {
+          // Landscape-primary (top to left, bottom to right)
+          // Lowering left hand lowers top of physical phone -> beta decreases
+          tilt = beta;
+        } else if (angle === 270) {
+          // Landscape-secondary (top to right, bottom to left)
+          // Lowering left hand lowers bottom of physical phone -> invert
+          tilt = -beta;
+        } else if (angle === 180) {
+          // Inverted portrait
+          tilt = -gamma;
+        } else {
+          // angle === 0: Portrait or portrait lock with physical landscape tray hold
+          // In tray posture (long edge parallel to chest), lowering left hand is lowering top edge (beta)
+          tilt = beta;
+        }
+        return tilt;
+      }
+
+      // ------------------------------------------
+      // PHONE CANVAS VISUALIZER (Landscape Tray Posture)
+      // ------------------------------------------
+      function drawPhoneVisualizer(canvas, tiltAngle) {
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         const w = canvas.width;
@@ -1389,15 +1513,13 @@
         ctx.save();
         ctx.translate(cx, cy);
 
-        // Clamp visual rotation for aesthetic appeal
-        const rotY = Math.max(-0.6, Math.min(0.6, (gamma * Math.PI) / 180));
-        const rotX = Math.max(-0.6, Math.min(0.6, (beta * Math.PI) / 180));
+        // Visual roll corresponding directly to landscape left/right tilt
+        const rotZ = Math.max(-0.45, Math.min(0.45, (tiltAngle * Math.PI) / 180));
+        ctx.rotate(rotZ);
 
-        ctx.transform(Math.cos(rotY), Math.sin(rotX)*0.3, 0, Math.cos(rotX), 0, 0);
-
-        // Phone body
-        const pw = 140;
-        const ph = 80;
+        // Landscape phone body (long edge parallel to chest)
+        const pw = 150;
+        const ph = 76;
         ctx.fillStyle = '#0f2742';
         ctx.strokeStyle = '#00ffcc';
         ctx.lineWidth = 2;
@@ -1414,12 +1536,17 @@
         ctx.roundRect(-pw/2 + 8, -ph/2 + 6, pw - 16, ph - 12, 4);
         ctx.fill();
 
-        // Dynamic motion indicator inside screen
-        const tiltX = Math.max(-30, Math.min(30, gamma * 1.2));
+        // Tray posture indicator: top & bottom long edge guide
+        ctx.fillStyle = '#1e3a5f';
+        ctx.fillRect(-pw/2 + 12, -ph/2 + 10, pw - 24, 2);
+        ctx.fillRect(-pw/2 + 12, ph/2 - 12, pw - 24, 2);
+
+        // Dynamic tilt puck inside screen
+        const puckX = Math.max(-50, Math.min(50, (tiltAngle / TILT_RANGE) * 50));
         ctx.fillStyle = '#00ffcc';
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.arc(tiltX, 0, 7, 0, Math.PI * 2);
+        ctx.arc(puckX, 0, 7, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -1431,65 +1558,77 @@
       function processAndSendSensor() {
         if (!motionEnabled) return;
 
-        // Compute tilt relative to neutral
-        let relBeta = currentBeta - neutralBeta;
-        let relGamma = currentGamma - neutralGamma;
+        const screenAngle = getScreenAngle();
+        const landscapeTilt = getLandscapeAdjustedTilt(currentBeta, currentGamma, screenAngle);
 
-        // When held flat in hands horizontally (landscape or tray orientation):
-        // Horizontal left/right roll is primarily gamma (or beta if in landscape).
-        // Check window orientation
-        const isLandscape = Math.abs(window.orientation) === 90 || window.innerWidth > window.innerHeight;
-        let tilt = isLandscape ? relBeta : relGamma;
-        if (window.orientation === -90) tilt = -tilt;
+        // Compute tilt relative to neutral calibrated position
+        const relativeTilt = landscapeTilt - neutralTilt;
 
         // Apply deadzone
-        let effectiveTilt = tilt;
+        let effectiveTilt = relativeTilt;
         if (Math.abs(effectiveTilt) < TILT_DEADZONE) {
           effectiveTilt = 0;
         } else {
           effectiveTilt = effectiveTilt > 0 ? effectiveTilt - TILT_DEADZONE : effectiveTilt + TILT_DEADZONE;
         }
 
-        // Map ±TILT_RANGE to 0.0 - 1.0 (0.5 is center)
+        // Map -TILT_RANGE to +TILT_RANGE to 0.0 - 1.0 (0.5 is center)
         const normalized = Math.max(0, Math.min(1, (effectiveTilt + TILT_RANGE) / (TILT_RANGE * 2)));
 
         // Update local controller UI
         const needle = document.getElementById('tilt-bar-needle');
         const angleLabel = document.getElementById('tilt-angle-label');
         if (needle) needle.style.left = `${(normalized * 100).toFixed(1)}%`;
-        if (angleLabel) angleLabel.textContent = `TILT: ${tilt.toFixed(1)}° (${effectiveTilt >= 0 ? '+' : ''}${effectiveTilt.toFixed(1)}°)`;
+        if (angleLabel) angleLabel.textContent = `TILT: ${relativeTilt.toFixed(1)}° (${effectiveTilt >= 0 ? '+' : ''}${effectiveTilt.toFixed(1)}°)`;
 
-        debugStats.tiltAngle = tilt;
-        debugStats.relativeBeta = relBeta;
-        debugStats.relativeGamma = relGamma;
+        debugStats.screenAngle = screenAngle;
+        debugStats.rawBeta = currentBeta;
+        debugStats.rawGamma = currentGamma;
+        debugStats.landscapeTilt = landscapeTilt;
+        debugStats.neutralTilt = neutralTilt;
+        debugStats.relativeTilt = relativeTilt;
         debugStats.rawPaddleX = normalized;
 
-        // Draw controller visualizer
+        // Draw controller visualizer with relative tilt
         const phoneCanvas = document.getElementById('phoneVisualizer');
-        if (phoneCanvas) drawPhoneVisualizer(phoneCanvas, currentBeta, currentGamma);
+        if (phoneCanvas) drawPhoneVisualizer(phoneCanvas, relativeTilt);
+
+        // Build sensor packet
+        const now = performance.now();
+        const packet = {
+          type: 'sensor',
+          alpha: currentAlpha,
+          beta: currentBeta,
+          gamma: currentGamma,
+          screenAngle: screenAngle,
+          landscapeTilt: landscapeTilt,
+          relativeTilt: relativeTilt,
+          ax: currentAx,
+          ay: currentAy,
+          az: currentAz,
+          gx: currentGx,
+          gy: currentGy,
+          gz: currentGz,
+          normX: normalized,
+          timestamp: now
+        };
+
+        // Local gesture check for tap impulse and shake detection
+        if (gestureDetector) {
+          gestureDetector.processSensor(packet);
+          debugStats.impulse = gestureDetector.lastImpulse;
+          debugStats.deltaAx = gestureDetector.lastDeltaAx;
+          debugStats.deltaAy = gestureDetector.lastDeltaAy;
+          debugStats.deltaAz = gestureDetector.lastDeltaAz;
+          debugStats.tapCount = gestureDetector.tapTimes.length;
+          debugStats.timeSinceLastTap = gestureDetector.lastTapTime ? Math.round(now - gestureDetector.lastTapTime) : 0;
+          debugStats.shakeEnergy = gestureDetector.shakeEnergy;
+        }
 
         // Rate limit WebRTC transmissions to ~30Hz
-        const now = performance.now();
         if (now - lastSensorSendTime >= (1000 / SENSOR_SEND_RATE)) {
           lastSensorSendTime = now;
-          const packet = {
-            type: 'sensor',
-            alpha: currentAlpha,
-            beta: currentBeta,
-            gamma: currentGamma,
-            ax: currentAx,
-            ay: currentAy,
-            az: currentAz,
-            gx: currentGx,
-            gy: currentGy,
-            gz: currentGz,
-            normX: normalized,
-            timestamp: now
-          };
           webRTC.send(packet);
-
-          // Local gesture check for feedback badges
-          if (gestureDetector) gestureDetector.processSensor(packet);
         }
       }
 
@@ -1543,6 +1682,17 @@
           processAndSendSensor();
         });
 
+        // Also allow screen tap on controller view as fallback touch support
+        document.getElementById('controller-view').addEventListener('touchstart', (e) => {
+          // If touching a button or textarea, let it handle natively
+          if (e.target.closest('button') || e.target.closest('textarea')) return;
+          // Synthesize a tap impulse for tactile feedback
+          if (gestureDetector) {
+            currentAz += 7.0; // momentary spike
+            processAndSendSensor();
+          }
+        });
+
         motionEnabled = true;
         const bMotion = document.getElementById('badge-motion');
         if (bMotion) {
@@ -1555,8 +1705,8 @@
       }
 
       function calibrateNeutral() {
-        neutralBeta = currentBeta;
-        neutralGamma = currentGamma;
+        const screenAngle = getScreenAngle();
+        neutralTilt = getLandscapeAdjustedTilt(currentBeta, currentGamma, screenAngle);
         isCalibrated = true;
         const bCal = document.getElementById('badge-calibrated');
         if (bCal) {
@@ -1592,12 +1742,16 @@
           <div>FPS: <span style="color:#fff">${debugStats.fps}</span> | MODE: ${appMode.toUpperCase()}</div>
           <div>WebRTC: ${connState} | ${sigState}</div>
           <div>DataChannel: <span style="color:${dcState === 'open' ? '#00ffcc' : '#ff3344'}">${dcState}</span></div>
-          <div>α: ${currentAlpha.toFixed(1)}° β: ${currentBeta.toFixed(1)}° γ: ${currentGamma.toFixed(1)}°</div>
-          <div>Rel β: ${debugStats.relativeBeta.toFixed(1)}° γ: ${debugStats.relativeGamma.toFixed(1)}° (tilt: ${debugStats.tiltAngle.toFixed(1)}°)</div>
-          <div>Accel: [${currentAx.toFixed(1)}, ${currentAy.toFixed(1)}, ${currentAz.toFixed(1)}] | Mag: ${accelMag.toFixed(1)}</div>
+          <div>Screen Angle: <span style="color:#fff">${debugStats.screenAngle}°</span></div>
+          <div>Raw β: ${debugStats.rawBeta.toFixed(1)}° | γ: ${debugStats.rawGamma.toFixed(1)}°</div>
+          <div>Landscape Tilt: ${debugStats.landscapeTilt.toFixed(1)}° (Cal: ${debugStats.neutralTilt.toFixed(1)}°)</div>
+          <div>Relative Tilt: <span style="color:#00ffcc">${debugStats.relativeTilt.toFixed(1)}°</span> (Range: ±${TILT_RANGE}°)</div>
           <div>Paddle X: raw ${debugStats.rawPaddleX.toFixed(2)} | sm: ${(gameInstance ? gameInstance.paddle.x / (window.innerWidth - gameInstance.paddle.width) : 0).toFixed(2)}</div>
-          <div>Orientation: <span style="color:#00ffcc">${gestureDetector ? gestureDetector.currentOrientationState : 'N/A'}</span></div>
-          <div>Shake Peaks: ${gestureDetector ? gestureDetector.shakePeaks.length : 0} / ${SHAKE_REQUIRED_PEAKS}</div>
+          <div>Accel [X,Y,Z]: [${currentAx.toFixed(1)}, ${currentAy.toFixed(1)}, ${currentAz.toFixed(1)}] | Mag: ${accelMag.toFixed(1)}</div>
+          <div>ΔAccel [X,Y,Z]: [${debugStats.deltaAx.toFixed(1)}, ${debugStats.deltaAy.toFixed(1)}, ${debugStats.deltaAz.toFixed(1)}]</div>
+          <div>Tap Impulse: <span style="color:${debugStats.impulse >= TAP_IMPULSE_THRESHOLD ? '#00ffcc' : '#94a3b8'}">${debugStats.impulse.toFixed(2)}</span> / ${TAP_IMPULSE_THRESHOLD}</div>
+          <div>Tap Count: <span style="color:#00ffcc">${debugStats.tapCount}</span> (since last: ${debugStats.timeSinceLastTap}ms)</div>
+          <div>Shake Peaks: ${gestureDetector ? gestureDetector.shakePeaks.length : 0} / ${SHAKE_REQUIRED_PEAKS} | Energy: ${debugStats.shakeEnergy.toFixed(1)}</div>
         `;
       }
 
@@ -1662,6 +1816,24 @@
       }
 
       // ------------------------------------------
+      // HELPER: FALLBACK TEXT CLIPBOARD COPY
+      // ------------------------------------------
+      function fallbackCopy(text, callback) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
+          document.execCommand('copy');
+          if (callback) callback();
+        } catch(e) {}
+        document.body.removeChild(ta);
+      }
+
+      // ------------------------------------------
       // GAME MODE SETUP
       // ------------------------------------------
       function initGameMode() {
@@ -1669,8 +1841,11 @@
 
         // Gestures triggered either locally via sensor packet or sent as gesture events
         gestureDetector = new GestureDetector(
+          (tapCount) => {
+            gameInstance.updateTapFeedback(tapCount);
+          },
           () => {
-            gameInstance.handleFlip();
+            gameInstance.handleTripleTap();
           },
           () => {
             gameInstance.handleShake();
@@ -1697,8 +1872,10 @@
                 gameInstance.paddle.setNormalizedTarget(data.normX, data.ax);
               }
               gestureDetector.processSensor(data);
+            } else if (data.type === 'tap') {
+              gameInstance.updateTapFeedback(data.count || 0);
             } else if (data.type === 'gesture') {
-              if (data.gesture === 'flip') gameInstance.handleFlip();
+              if (data.gesture === 'tripleTap') gameInstance.handleTripleTap();
               if (data.gesture === 'shake') gameInstance.handleShake();
             }
           },
@@ -1734,10 +1911,31 @@
           pairingPanel.classList.add('collapsed');
         };
 
-        // Render QR Code pointing to ?mode=controller
-        const ctrlUrl = window.location.origin + window.location.pathname + '?mode=controller' + (isDebug ? '&debug=1' : '');
+        // Derive real controller URL preserving origin and pathname
+        const url = new URL(window.location.href);
+        url.search = '';
+        url.searchParams.set('mode', 'controller');
+        if (isDebug) url.searchParams.set('debug', '1');
+        const ctrlUrl = url.toString();
+
         document.getElementById('ctrl-url-text').textContent = ctrlUrl;
-        renderQRCode(document.getElementById('qrCanvas'), ctrlUrl);
+        renderRealQRCode(document.getElementById('qrCanvas'), ctrlUrl);
+
+        // Copy Controller URL button
+        const copyUrlBtn = document.getElementById('btn-copy-ctrl-url');
+        if (copyUrlBtn) {
+          copyUrlBtn.onclick = () => {
+            const showCopied = () => {
+              copyUrlBtn.textContent = 'COPIED ✓';
+              setTimeout(() => { copyUrlBtn.textContent = 'COPY URL'; }, 1800);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(ctrlUrl).then(showCopied).catch(() => fallbackCopy(ctrlUrl, showCopied));
+            } else {
+              fallbackCopy(ctrlUrl, showCopied);
+            }
+          };
+        }
 
         // WebRTC Offer / Answer buttons
         const createOfferBtn = document.getElementById('btn-create-offer');
@@ -1753,19 +1951,24 @@
             const offerStr = await webRTC.createOffer();
             offerText.value = offerStr;
             copyOfferBtn.disabled = false;
-            createOfferBtn.textContent = '1. OFFER CREATED';
+            createOfferBtn.textContent = '2. OFFER CREATED';
           } catch(err) {
             alert('Offer error: ' + err.message);
             createOfferBtn.disabled = false;
-            createOfferBtn.textContent = '1. CREATE OFFER';
+            createOfferBtn.textContent = '2. CREATE OFFER';
           }
         };
 
         copyOfferBtn.onclick = () => {
-          navigator.clipboard.writeText(offerText.value).then(() => {
-            copyOfferBtn.textContent = 'COPIED TO CLIPBOARD!';
+          const onCopied = () => {
+            copyOfferBtn.textContent = 'COPIED ✓';
             setTimeout(() => copyOfferBtn.textContent = 'COPY OFFER', 1500);
-          });
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(offerText.value).then(onCopied).catch(() => fallbackCopy(offerText.value, onCopied));
+          } else {
+            fallbackCopy(offerText.value, onCopied);
+          }
         };
 
         applyAnswerBtn.onclick = async () => {
@@ -1787,10 +1990,24 @@
           }
         });
 
+        let simulatedTapCount = 0;
+        let tapTimeout = null;
         window.addEventListener('keydown', (e) => {
           if (e.code === 'Space') {
             e.preventDefault();
-            gameInstance.handleFlip(); // simulate flip
+            // Simulate tap count progression
+            simulatedTapCount++;
+            gameInstance.updateTapFeedback(simulatedTapCount);
+            clearTimeout(tapTimeout);
+            if (simulatedTapCount >= 3) {
+              simulatedTapCount = 0;
+              gameInstance.handleTripleTap();
+            } else {
+              tapTimeout = setTimeout(() => {
+                simulatedTapCount = 0;
+                gameInstance.updateTapFeedback(0);
+              }, 1000);
+            }
           } else if (e.code === 'Escape') {
             e.preventDefault();
             gameInstance.handleShake(); // simulate shake
@@ -1813,16 +2030,29 @@
       // ------------------------------------------
       function initControllerMode() {
         gestureDetector = new GestureDetector(
-          () => {
-            // Local flip gesture
-            const bFlip = document.getElementById('badge-flip');
-            if (bFlip) {
-              bFlip.className = 'badge active';
-              bFlip.textContent = 'FLIP TRIGGERED!';
-              setTimeout(() => { bFlip.textContent = 'FLIP: READY'; bFlip.className = 'badge'; }, 1500);
+          (tapCount) => {
+            // Local tap feedback
+            const bTap = document.getElementById('badge-tap');
+            if (bTap) {
+              if (tapCount === 1) bTap.textContent = 'TAP 3×: ● ○ ○';
+              else if (tapCount === 2) bTap.textContent = 'TAP 3×: ● ● ○';
+              else if (tapCount >= 3) bTap.textContent = 'TAP 3×: ● ● ●';
+              else bTap.textContent = 'TAP 3×: ○ ○ ○';
+              bTap.className = tapCount > 0 ? 'badge active' : 'badge';
             }
-            if (navigator.vibrate) navigator.vibrate([80]);
-            webRTC.send({ type: 'gesture', gesture: 'flip' });
+            if (navigator.vibrate) navigator.vibrate([40]);
+            webRTC.send({ type: 'tap', count: tapCount });
+          },
+          () => {
+            // Triple tap triggered
+            const bTap = document.getElementById('badge-tap');
+            if (bTap) {
+              bTap.className = 'badge active';
+              bTap.textContent = 'START TRIGGERED!';
+              setTimeout(() => { bTap.textContent = 'TAP 3×: ○ ○ ○'; bTap.className = 'badge'; }, 1800);
+            }
+            if (navigator.vibrate) navigator.vibrate([70, 50, 120]);
+            webRTC.send({ type: 'gesture', gesture: 'tripleTap' });
           },
           () => {
             // Local shake gesture
@@ -1883,14 +2113,19 @@
         };
 
         copyAnswerBtn.onclick = () => {
-          navigator.clipboard.writeText(answerOutput.value).then(() => {
-            copyAnswerBtn.textContent = 'COPIED TO CLIPBOARD!';
+          const onCopied = () => {
+            copyAnswerBtn.textContent = 'COPIED ✓';
             setTimeout(() => copyAnswerBtn.textContent = 'COPY ANSWER', 1500);
-          });
+          };
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(answerOutput.value).then(onCopied).catch(() => fallbackCopy(answerOutput.value, onCopied));
+          } else {
+            fallbackCopy(answerOutput.value, onCopied);
+          }
         };
 
-        // Draw initial visualizer
-        drawPhoneVisualizer(document.getElementById('phoneVisualizer'), 0, 0);
+        // Draw initial visualizer in landscape orientation
+        drawPhoneVisualizer(document.getElementById('phoneVisualizer'), 0);
       }
 
       // Initialize on load
