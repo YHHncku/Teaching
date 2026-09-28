@@ -5,7 +5,7 @@
  */
 class MacApp {
   constructor() {
-    // Status elements
+    // 1. Status elements
     this.statusBadge = document.getElementById('status-badge');
     this.statusElement = document.getElementById('connection-status');
     this.arStatusElement = document.getElementById('ar-status');
@@ -13,44 +13,44 @@ class MacApp {
     this.dcStateBadge = document.getElementById('dc-state-badge');
     this.errorBox = document.getElementById('error-diagnostics');
 
-    // Diagnostics elements (Phase 2 preserved)
+    // 2. Diagnostics elements (Phase 2 preserved)
     this.diagBrowser = document.getElementById('diag-browser');
     this.diagHttps = document.getElementById('diag-https');
     this.diagOnline = document.getElementById('diag-online');
 
-    // Signaling Diagnostics elements
+    // 3. Signaling Diagnostics elements
     this.sigPayloadType = document.getElementById('sig-payload-type');
     this.sigSdpLength = document.getElementById('sig-sdp-length');
     this.sigFirstLine = document.getElementById('sig-first-line');
     this.sigLastLine = document.getElementById('sig-last-line');
     this.sigLineCount = document.getElementById('sig-line-count');
 
-    // WebRTC Offer elements
-    this.offerTextarea = document.getElementById('offer-json');
+    // 4. WebRTC Offer elements (Unified ID: offer-sdp)
+    this.offerTextarea = document.getElementById('offer-sdp');
     this.btnCreateOffer = document.getElementById('btn-create-offer');
     this.btnCopyOffer = document.getElementById('btn-copy-offer');
     this.btnClearOffer = document.getElementById('btn-clear-offer');
 
-    // WebRTC Answer elements
-    this.answerTextarea = document.getElementById('answer-json');
+    // 5. WebRTC Answer elements (Unified ID: answer-sdp)
+    this.answerTextarea = document.getElementById('answer-sdp');
     this.btnConnect = document.getElementById('btn-connect');
     this.btnClearAnswer = document.getElementById('btn-clear-answer');
 
-    // Reset button
+    // 6. Reset button
     this.btnResetWebRTC = document.getElementById('btn-reset-webrtc');
 
-    // DataChannel test & message log
+    // 7. DataChannel test & message log
     this.messageLog = document.getElementById('datachannel-log');
     this.customMsgInput = document.getElementById('custom-msg-input');
     this.btnSendMsg = document.getElementById('btn-send-msg');
 
-    // Developer mode / Debug indicators
+    // 8. Developer mode / Debug indicators
     this.debugConnState = document.getElementById('debug-conn-state');
     this.debugIceConnState = document.getElementById('debug-ice-conn-state');
     this.debugIceGatherState = document.getElementById('debug-ice-gather-state');
     this.debugSignalState = document.getElementById('debug-signal-state');
 
-    // WebRTC connection instances
+    // 9. WebRTC connection instances
     this.pc = null;
     this.channel = null;
     this.diagnostics = null;
@@ -59,11 +59,17 @@ class MacApp {
     this.init();
   }
 
+  /**
+   * Initializes application, validates DOM bindings, and binds event listeners
+   */
   init() {
-    // 1. Initial Connection Status
+    // Audit & validate all required DOM elements immediately
+    this.validateDOMBindings();
+
+    // Initial Connection Status
     this.updateStatus('DISCONNECTED');
 
-    // 2. Initialize AR Renderer (Phase 1 preserved)
+    // Initialize AR Renderer (Phase 1 preserved)
     if (typeof ARRenderer !== 'undefined') {
       try {
         this.arRenderer = new ARRenderer();
@@ -75,7 +81,7 @@ class MacApp {
       }
     }
 
-    // 3. Initialize Network Diagnostics (Phase 2 preserved)
+    // Initialize Network Diagnostics (Phase 2 preserved)
     if (typeof NetworkDiagnostics !== 'undefined') {
       this.diagnostics = new NetworkDiagnostics({
         onStatusChange: (report) => this.renderDiagnostics(report)
@@ -83,18 +89,19 @@ class MacApp {
       this.renderDiagnostics(this.diagnostics.getReport());
     }
 
-    // 4. Bind WebRTC UI Event Listeners
+    // Bind all Event Listeners
     if (this.btnCreateOffer) {
       this.btnCreateOffer.addEventListener('click', () => this.handleCreateOffer());
     }
     if (this.btnCopyOffer) {
       this.btnCopyOffer.addEventListener('click', () => {
-        this.copyToClipboard(this.offerTextarea.value, this.btnCopyOffer, 'Copy Offer');
+        const text = this.offerTextarea ? this.offerTextarea.value : '';
+        this.copyToClipboard(text, this.btnCopyOffer, 'Copy Offer');
       });
     }
     if (this.btnClearOffer) {
       this.btnClearOffer.addEventListener('click', () => {
-        this.offerTextarea.value = '';
+        if (this.offerTextarea) this.offerTextarea.value = '';
         this.renderSignalingDiagnostics('none', '');
       });
     }
@@ -104,7 +111,7 @@ class MacApp {
     }
     if (this.btnClearAnswer) {
       this.btnClearAnswer.addEventListener('click', () => {
-        this.answerTextarea.value = '';
+        if (this.answerTextarea) this.answerTextarea.value = '';
       });
     }
 
@@ -124,7 +131,75 @@ class MacApp {
     }
 
     this.updateDebugStates();
-    console.log('[MacApp] Initialized successfully with JSON signaling envelope.');
+    console.log('[MacApp] Initialized successfully with audited DOM bindings.');
+  }
+
+  /**
+   * Audits all required DOM element references
+   */
+  validateDOMBindings() {
+    const required = {
+      offerTextarea: this.offerTextarea,
+      btnCreateOffer: this.btnCreateOffer,
+      btnCopyOffer: this.btnCopyOffer,
+      btnClearOffer: this.btnClearOffer,
+      answerTextarea: this.answerTextarea,
+      btnConnect: this.btnConnect,
+      btnClearAnswer: this.btnClearAnswer,
+      btnResetWebRTC: this.btnResetWebRTC,
+      statusElement: this.statusElement,
+      statusBadge: this.statusBadge,
+      errorBox: this.errorBox,
+      messageLog: this.messageLog
+    };
+
+    let allValid = true;
+    for (const [name, el] of Object.entries(required)) {
+      if (!el) {
+        console.error(`[MacApp] Missing DOM element: ${name}`);
+        allValid = false;
+      }
+    }
+
+    if (!allValid) {
+      this.handleError(
+        'DOM_BINDING_ERROR',
+        new Error('Required DOM element missing in index.html'),
+        'CRITICAL: One or more DOM elements were not found. Check console for details.'
+      );
+    } else {
+      console.log('[MacApp] All required DOM elements validated successfully.');
+    }
+
+    return allValid;
+  }
+
+  /**
+   * Safely detaches listeners and closes existing peer connection & datachannel
+   */
+  cleanupPeerConnection() {
+    if (this.channel) {
+      this.channel.onopen = null;
+      this.channel.onclose = null;
+      this.channel.onerror = null;
+      this.channel.onmessage = null;
+      try {
+        this.channel.close();
+      } catch (_) {}
+      this.channel = null;
+    }
+
+    if (this.pc) {
+      this.pc.onconnectionstatechange = null;
+      this.pc.oniceconnectionstatechange = null;
+      this.pc.onicegatheringstatechange = null;
+      this.pc.onsignalingstatechange = null;
+      this.pc.ondatachannel = null;
+      try {
+        this.pc.close();
+      } catch (_) {}
+      this.pc = null;
+    }
   }
 
   /**
@@ -133,31 +208,16 @@ class MacApp {
   resetWebRTC() {
     console.log('[MacApp] Resetting WebRTC state...');
     this.clearError();
+    this.cleanupPeerConnection();
 
-    // 1. Close DataChannel
-    if (this.channel) {
-      try {
-        this.channel.close();
-      } catch (_) {}
-      this.channel = null;
-    }
-
-    // 2. Close RTCPeerConnection
-    if (this.pc) {
-      try {
-        this.pc.close();
-      } catch (_) {}
-      this.pc = null;
-    }
-
-    // 3. Clear textareas
+    // Clear textareas
     if (this.offerTextarea) this.offerTextarea.value = '';
     if (this.answerTextarea) this.answerTextarea.value = '';
 
-    // 4. Clear signaling payload diagnostics
+    // Clear signaling diagnostics
     this.renderSignalingDiagnostics('none', '');
 
-    // 5. Reset status and badges
+    // Reset status and badges
     this.updateStatus('DISCONNECTED');
     if (this.dcStateBadge) this.dcStateBadge.textContent = 'channel: sakura';
     if (this.customMsgInput) this.customMsgInput.disabled = true;
@@ -171,16 +231,7 @@ class MacApp {
    * Initializes a fresh RTCPeerConnection and RTCDataChannel
    */
   initPeerConnection() {
-    if (this.pc) {
-      try {
-        if (this.channel) this.channel.close();
-        this.pc.close();
-      } catch (e) {
-        console.warn('[MacApp] Error closing prior peer connection:', e);
-      }
-      this.pc = null;
-      this.channel = null;
-    }
+    this.cleanupPeerConnection();
 
     // Local USB network - no STUN servers required
     this.pc = new RTCPeerConnection({
@@ -290,11 +341,19 @@ class MacApp {
    */
   async handleCreateOffer() {
     this.clearError();
+
+    // DOM safety check before start
+    if (!this.offerTextarea) {
+      throw new Error('DOM_BINDING_ERROR: Offer textarea not found');
+    }
+
     try {
       this.initPeerConnection();
       this.updateStatus('CONNECTING');
-      this.btnCreateOffer.disabled = true;
-      this.btnCreateOffer.textContent = 'Gathering ICE...';
+      if (this.btnCreateOffer) {
+        this.btnCreateOffer.disabled = true;
+        this.btnCreateOffer.textContent = 'Gathering ICE...';
+      }
       this.logMessage('SYSTEM', 'Creating Offer and gathering local ICE candidates...');
 
       let offer;
@@ -322,6 +381,11 @@ class MacApp {
       }
       this.updateDebugStates();
 
+      // DOM safety check before write
+      if (!this.offerTextarea) {
+        throw new Error('DOM_BINDING_ERROR: Offer textarea not found');
+      }
+
       // Directly use browser generated pc.localDescription without modifying SDP!
       const payload = {
         type: this.pc.localDescription.type,
@@ -337,10 +401,12 @@ class MacApp {
 
       this.logMessage('SYSTEM', 'Offer created. Copy Offer Signaling JSON to iPhone.');
     } catch (err) {
-      this.handleError('UNKNOWN_OFFER_ERROR', err, 'Unexpected error creating offer.');
+      this.handleError('CREATE_OFFER_FAILED', err, err.message);
     } finally {
-      this.btnCreateOffer.disabled = false;
-      this.btnCreateOffer.textContent = 'Create Offer';
+      if (this.btnCreateOffer) {
+        this.btnCreateOffer.disabled = false;
+        this.btnCreateOffer.textContent = 'Create Offer';
+      }
     }
   }
 
@@ -349,6 +415,12 @@ class MacApp {
    */
   async handleConnect() {
     this.clearError();
+
+    // DOM safety check
+    if (!this.answerTextarea) {
+      throw new Error('DOM_BINDING_ERROR: Answer textarea not found');
+    }
+
     const raw = this.answerTextarea.value.trim();
     if (!raw) {
       this.handleError('INVALID_PAYLOAD', new Error('Empty payload'), 'Please paste the Answer Signaling JSON from iPhone.');
@@ -386,11 +458,13 @@ class MacApp {
     // Update Signaling Diagnostics for received Answer
     this.renderSignalingDiagnostics(answer.type, answer.sdp);
 
-    // 3. setRemoteDescription directly without any SDP modifications
+    // 3. setRemoteDescription directly without modifying SDP
     try {
       this.updateStatus('CONNECTING');
-      this.btnConnect.disabled = true;
-      this.btnConnect.textContent = 'Connecting...';
+      if (this.btnConnect) {
+        this.btnConnect.disabled = true;
+        this.btnConnect.textContent = 'Connecting...';
+      }
       this.logMessage('SYSTEM', 'Applying Answer from iPhone...');
 
       await this.pc.setRemoteDescription(answer);
@@ -400,8 +474,10 @@ class MacApp {
     } catch (err) {
       this.handleError('SET_REMOTE_DESCRIPTION_FAILED', err, err.message, answer);
     } finally {
-      this.btnConnect.disabled = false;
-      this.btnConnect.textContent = 'Connect';
+      if (this.btnConnect) {
+        this.btnConnect.disabled = false;
+        this.btnConnect.textContent = 'Connect';
+      }
     }
   }
 
@@ -414,13 +490,13 @@ class MacApp {
       return;
     }
 
-    const text = this.customMsgInput.value.trim();
+    const text = this.customMsgInput ? this.customMsgInput.value.trim() : '';
     if (!text) return;
 
     try {
       this.channel.send(text);
       this.logMessage('SENT', `Sent:\n${text}`);
-      this.customMsgInput.value = '';
+      if (this.customMsgInput) this.customMsgInput.value = '';
     } catch (err) {
       console.error('[MacApp] Send message failed:', err);
       this.logMessage('ERROR', `Failed to send: ${err.message}`);

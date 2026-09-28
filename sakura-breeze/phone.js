@@ -5,47 +5,47 @@
  */
 class PhoneApp {
   constructor() {
-    // Status elements
+    // 1. Status elements
     this.statusBadge = document.getElementById('status-badge');
     this.statusElement = document.getElementById('connection-status');
     this.httpsWarning = document.getElementById('https-warning');
     this.errorBox = document.getElementById('error-diagnostics');
 
-    // Diagnostics elements (Phase 2 preserved)
+    // 2. Diagnostics elements (Phase 2 preserved)
     this.diagBrowser = document.getElementById('diag-browser');
     this.diagHttps = document.getElementById('diag-https');
     this.diagOnline = document.getElementById('diag-online');
 
-    // Signaling Diagnostics elements
+    // 3. Signaling Diagnostics elements
     this.sigPayloadType = document.getElementById('sig-payload-type');
     this.sigSdpLength = document.getElementById('sig-sdp-length');
     this.sigFirstLine = document.getElementById('sig-first-line');
     this.sigLastLine = document.getElementById('sig-last-line');
     this.sigLineCount = document.getElementById('sig-line-count');
 
-    // WebRTC Offer elements
-    this.offerTextarea = document.getElementById('offer-json');
+    // 4. WebRTC Offer elements (Unified ID: offer-sdp)
+    this.offerTextarea = document.getElementById('offer-sdp');
     this.btnCreateAnswer = document.getElementById('btn-create-answer');
     this.btnClearOffer = document.getElementById('btn-clear-offer');
 
-    // WebRTC Answer elements
-    this.answerTextarea = document.getElementById('answer-json');
+    // 5. WebRTC Answer elements (Unified ID: answer-sdp)
+    this.answerTextarea = document.getElementById('answer-sdp');
     this.btnCopyAnswer = document.getElementById('btn-copy-answer');
     this.btnClearAnswer = document.getElementById('btn-clear-answer');
 
-    // Reset button
+    // 6. Reset button
     this.btnResetWebRTC = document.getElementById('btn-reset-webrtc');
 
-    // DataChannel test & message log
+    // 7. DataChannel test & message log
     this.messageLog = document.getElementById('datachannel-log');
 
-    // Developer mode / Debug indicators
+    // 8. Developer mode / Debug indicators
     this.debugConnState = document.getElementById('debug-conn-state');
     this.debugIceConnState = document.getElementById('debug-ice-conn-state');
     this.debugIceGatherState = document.getElementById('debug-ice-gather-state');
     this.debugSignalState = document.getElementById('debug-signal-state');
 
-    // WebRTC connection instances
+    // 9. WebRTC connection instances
     this.pc = null;
     this.channel = null;
     this.diagnostics = null;
@@ -53,11 +53,17 @@ class PhoneApp {
     this.init();
   }
 
+  /**
+   * Initializes application, validates DOM bindings, and binds event listeners
+   */
   init() {
-    // 1. Initial Connection Status
+    // Audit & validate all required DOM elements immediately
+    this.validateDOMBindings();
+
+    // Initial Connection Status
     this.updateStatus('DISCONNECTED');
 
-    // 2. Initialize Network Diagnostics (Phase 2 preserved)
+    // Initialize Network Diagnostics (Phase 2 preserved)
     if (typeof NetworkDiagnostics !== 'undefined') {
       this.diagnostics = new NetworkDiagnostics({
         onStatusChange: (report) => this.renderDiagnostics(report)
@@ -65,25 +71,26 @@ class PhoneApp {
       this.renderDiagnostics(this.diagnostics.getReport());
     }
 
-    // 3. Bind WebRTC UI Event Listeners
+    // Bind all Event Listeners
     if (this.btnCreateAnswer) {
       this.btnCreateAnswer.addEventListener('click', () => this.handleCreateAnswer());
     }
     if (this.btnClearOffer) {
       this.btnClearOffer.addEventListener('click', () => {
-        this.offerTextarea.value = '';
+        if (this.offerTextarea) this.offerTextarea.value = '';
         this.renderSignalingDiagnostics('none', '');
       });
     }
 
     if (this.btnCopyAnswer) {
       this.btnCopyAnswer.addEventListener('click', () => {
-        this.copyToClipboard(this.answerTextarea.value, this.btnCopyAnswer, 'Copy Answer');
+        const text = this.answerTextarea ? this.answerTextarea.value : '';
+        this.copyToClipboard(text, this.btnCopyAnswer, 'Copy Answer');
       });
     }
     if (this.btnClearAnswer) {
       this.btnClearAnswer.addEventListener('click', () => {
-        this.answerTextarea.value = '';
+        if (this.answerTextarea) this.answerTextarea.value = '';
       });
     }
 
@@ -92,7 +99,74 @@ class PhoneApp {
     }
 
     this.updateDebugStates();
-    console.log('[PhoneApp] Initialized successfully with JSON signaling envelope.');
+    console.log('[PhoneApp] Initialized successfully with audited DOM bindings.');
+  }
+
+  /**
+   * Audits all required DOM element references
+   */
+  validateDOMBindings() {
+    const required = {
+      offerTextarea: this.offerTextarea,
+      btnCreateAnswer: this.btnCreateAnswer,
+      btnClearOffer: this.btnClearOffer,
+      answerTextarea: this.answerTextarea,
+      btnCopyAnswer: this.btnCopyAnswer,
+      btnClearAnswer: this.btnClearAnswer,
+      btnResetWebRTC: this.btnResetWebRTC,
+      statusElement: this.statusElement,
+      statusBadge: this.statusBadge,
+      errorBox: this.errorBox,
+      messageLog: this.messageLog
+    };
+
+    let allValid = true;
+    for (const [name, el] of Object.entries(required)) {
+      if (!el) {
+        console.error(`[PhoneApp] Missing DOM element: ${name}`);
+        allValid = false;
+      }
+    }
+
+    if (!allValid) {
+      this.handleError(
+        'DOM_BINDING_ERROR',
+        new Error('Required DOM element missing in phone.html'),
+        'CRITICAL: One or more DOM elements were not found. Check console for details.'
+      );
+    } else {
+      console.log('[PhoneApp] All required DOM elements validated successfully.');
+    }
+
+    return allValid;
+  }
+
+  /**
+   * Safely detaches listeners and closes existing peer connection & datachannel
+   */
+  cleanupPeerConnection() {
+    if (this.channel) {
+      this.channel.onopen = null;
+      this.channel.onclose = null;
+      this.channel.onerror = null;
+      this.channel.onmessage = null;
+      try {
+        this.channel.close();
+      } catch (_) {}
+      this.channel = null;
+    }
+
+    if (this.pc) {
+      this.pc.onconnectionstatechange = null;
+      this.pc.oniceconnectionstatechange = null;
+      this.pc.onicegatheringstatechange = null;
+      this.pc.onsignalingstatechange = null;
+      this.pc.ondatachannel = null;
+      try {
+        this.pc.close();
+      } catch (_) {}
+      this.pc = null;
+    }
   }
 
   /**
@@ -101,31 +175,16 @@ class PhoneApp {
   resetWebRTC() {
     console.log('[PhoneApp] Resetting WebRTC state...');
     this.clearError();
+    this.cleanupPeerConnection();
 
-    // 1. Close DataChannel
-    if (this.channel) {
-      try {
-        this.channel.close();
-      } catch (_) {}
-      this.channel = null;
-    }
-
-    // 2. Close RTCPeerConnection
-    if (this.pc) {
-      try {
-        this.pc.close();
-      } catch (_) {}
-      this.pc = null;
-    }
-
-    // 3. Clear textareas
+    // Clear textareas
     if (this.offerTextarea) this.offerTextarea.value = '';
     if (this.answerTextarea) this.answerTextarea.value = '';
 
-    // 4. Clear signaling payload diagnostics
+    // Clear signaling diagnostics
     this.renderSignalingDiagnostics('none', '');
 
-    // 5. Reset status
+    // Reset status
     this.updateStatus('DISCONNECTED');
     this.updateDebugStates();
 
@@ -136,16 +195,7 @@ class PhoneApp {
    * Initializes a fresh RTCPeerConnection for iPhone
    */
   initPeerConnection() {
-    if (this.pc) {
-      try {
-        if (this.channel) this.channel.close();
-        this.pc.close();
-      } catch (e) {
-        console.warn('[PhoneApp] Error closing prior peer connection:', e);
-      }
-      this.pc = null;
-      this.channel = null;
-    }
+    this.cleanupPeerConnection();
 
     // Local USB network - no STUN servers required
     this.pc = new RTCPeerConnection({
@@ -252,6 +302,15 @@ class PhoneApp {
    */
   async handleCreateAnswer() {
     this.clearError();
+
+    // DOM safety check before start
+    if (!this.offerTextarea) {
+      throw new Error('DOM_BINDING_ERROR: Offer textarea not found');
+    }
+    if (!this.answerTextarea) {
+      throw new Error('DOM_BINDING_ERROR: Answer textarea not found');
+    }
+
     const raw = this.offerTextarea.value.trim();
     if (!raw) {
       this.handleError('INVALID_PAYLOAD', new Error('Empty payload'), 'Please paste the Offer Signaling JSON from MacBook into Step 1.');
@@ -291,8 +350,10 @@ class PhoneApp {
       // 3. Initialize fresh PeerConnection
       this.initPeerConnection();
       this.updateStatus('CONNECTING');
-      this.btnCreateAnswer.disabled = true;
-      this.btnCreateAnswer.textContent = 'Gathering ICE...';
+      if (this.btnCreateAnswer) {
+        this.btnCreateAnswer.disabled = true;
+        this.btnCreateAnswer.textContent = 'Gathering ICE...';
+      }
       this.logMessage('SYSTEM', 'Applying Offer from MacBook...');
 
       // 4. setRemoteDescription: directly pass offer without modifying SDP!
@@ -331,6 +392,11 @@ class PhoneApp {
       }
       this.updateDebugStates();
 
+      // DOM safety check before write
+      if (!this.answerTextarea) {
+        throw new Error('DOM_BINDING_ERROR: Answer textarea not found');
+      }
+
       // 8. Generate Answer payload directly from browser pc.localDescription without modifying SDP!
       const payload = {
         type: this.pc.localDescription.type,
@@ -347,8 +413,10 @@ class PhoneApp {
     } catch (err) {
       this.handleError('UNKNOWN_ANSWER_ERROR', err, 'Unexpected error creating answer.');
     } finally {
-      this.btnCreateAnswer.disabled = false;
-      this.btnCreateAnswer.textContent = 'Create Answer';
+      if (this.btnCreateAnswer) {
+        this.btnCreateAnswer.disabled = false;
+        this.btnCreateAnswer.textContent = 'Create Answer';
+      }
     }
   }
 
